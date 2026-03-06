@@ -1,0 +1,60 @@
+# ─── Python ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# ─── Virtual environments ─────────────────────────────
+.venv/
+venv/
+env/
+
+# ─── IDE / Editor ─────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS generated ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ─── Datasets (imágenes biométricas – datos sensibles) ─
+dataset/
+dataset_processed/
+
+# ─── Modelo entrenado (generado con train) ────────────
+models/*.xml
+
+# ─── Base de datos local SQLite ───────────────────────
+database/*.db
+database/*.db-shm
+database/*.db-wal
+
+# ─── Logs ─────────────────────────────────────────────
+logs/*.log
+logs/*.log.*
+logs/*.txt
+logs/*.json
+logs/*.csv
+logs/plots/
+
+# ─── Deploy artifacts (generados) ────────────────────
+deploy/
+
+# ─── Archivos de entorno / secretos ──────────────────
+.env
+.env.*
+*.pem
+*.key
+
+# ─── Otros generados ─────────────────────────────────
+*.bak
+*.tmp

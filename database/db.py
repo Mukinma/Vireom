@@ -1,0 +1,258 @@
+import sqlite3
+import time
+import logging
+import re
+from pathlib import Path
+from typing import Any, Optional, Iterable
+
+from config import config
+
+
+logger = logging.getLogger("camerapi.db")
+
+
+class Database:
+    def __init__(self, db_path: str = config.db_path, schema_path: str = "database/schema.sql"):
+        self.db_path = str(db_path)
+        self.schema_path = str(schema_path)
+        self.max_retries = 3
+        self.retry_delay_sec = 0.2
+
+        db_file = Path(self.db_path)
+        db_file.parent.mkdir(parents=True, exist_ok=True)
+
+    def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
+        conn.row_factory = sqlite3.Row
+
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+
+        conn.execute("PRAGMA busy_timeout = 5000;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
+        conn.execute("PRAGMA temp_store = MEMORY;")
+        conn.execute("PRAGMA cache_size = -20000;")
+
+        conn.execute("PRAGMA trusted_schema = OFF;")
+        conn.execute("PRAGMA recursive_triggers = ON;")
+
+    def connect(self) -> sqlite3.Connection:
+        last_error: Optional[Exception] = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                conn = sqlite3.connect(
+                    self.db_path,
+                    check_same_thread=False,
+                    timeout=10,
+                )
+                self._apply_pragmas(conn)
+                return conn
+            except sqlite3.Error as exc:
+                last_error = exc
+                logger.error("db_connect_failed attempt=%s error=%s", attempt, exc)
+                time.sleep(self.retry_delay_sec)
+        raise RuntimeError(f"No se pudo conectar a SQLite: {last_error}")
+
+    def init_db(self, schema_path: Optional[str] = None) -> None:
+        schema_path = schema_path or self.schema_path
+
+        schema_file = Path(schema_path).resolve()
+        if not schema_file.is_file():
+            raise FileNotFoundError(f"Schema no encontrado: {schema_file}")
+
+        try:
+            sql = schema_file.read_text(encoding="utf-8")
+        except Exception as exc:
+            raise RuntimeError(f"No se pudo leer schema: {schema_file}") from exc
+
+        try:
+            with self.connect() as conn:
+                sql_to_execute = sql
+
+                usuarios_cols = {
+                    row["name"]
+                    for row in conn.execute("PRAGMA table_info(usuarios);").fetchall()
+                }
+                if "creado_por_admin_id" in usuarios_cols:
+                    sql_to_execute = re.sub(
+                        r"ALTER\s+TABLE\s+usuarios\s+ADD\s+COLUMN\s+creado_por_admin_id\s+INTEGER\s+NULL\s*;",
+                        "",
+                        sql_to_execute,
+                        flags=re.IGNORECASE,
+                    )
+
+                conn.executescript(sql_to_execute)
+        except Exception:
+            logger.exception("db_init_failed schema_path=%s", schema_file)
+            raise
+
+    def fetch_one(self, query: str, params: tuple = ()) -> Optional[sqlite3.Row]:
+        try:
+            with self.connect() as conn:
+                return conn.execute(query, params).fetchone()
+        except Exception:
+            logger.exception("db_fetch_one_failed query=%s", query)
+            raise
+
+    def fetch_all(self, query: str, params: tuple = ()) -> list[sqlite3.Row]:
+        try:
+            with self.connect() as conn:
+                return conn.execute(query, params).fetchall()
+        except Exception:
+            logger.exception("db_fetch_all_failed query=%s", query)
+            raise
+
+    def execute(self, query: str, params: tuple = ()) -> int:
+        try:
+            with self.connect() as conn:
+                cur = conn.execute(query, params)
+                return cur.lastrowid
+        except Exception:
+            logger.exception("db_execute_failed query=%s", query)
+            raise
+
+    def health_check(self) -> bool:
+        try:
+            row = self.fetch_one("SELECT 1 AS ok")
+            return bool(row and row["ok"] == 1)
+        except Exception:
+            logger.exception("db_health_failed")
+            return False
+
+    def get_config(self) -> dict[str, Any]:
+        row = self.fetch_one(
+            "SELECT umbral_confianza, tiempo_apertura_seg, max_intentos FROM configuracion WHERE id=1"
+        )
+        if not row:
+            return {
+                "umbral_confianza": float(config.default_confidence_threshold),
+                "tiempo_apertura_seg": int(config.default_open_seconds),
+                "max_intentos": int(config.default_max_attempts),
+            }
+        return dict(row)
+
+    def update_config(self, umbral_confianza: float, tiempo_apertura_seg: int, max_intentos: int) -> None:
+        if not (0.0 <= float(umbral_confianza) <= 100.0):
+            raise ValueError("umbral_confianza fuera de rango 0..100")
+        if not (1 <= int(tiempo_apertura_seg) <= 30):
+            raise ValueError("tiempo_apertura_seg fuera de rango 1..30")
+        if not (1 <= int(max_intentos) <= 10):
+            raise ValueError("max_intentos fuera de rango 1..10")
+
+        self.execute(
+            "UPDATE configuracion SET umbral_confianza=?, tiempo_apertura_seg=?, max_intentos=? WHERE id=1",
+            (float(umbral_confianza), int(tiempo_apertura_seg), int(max_intentos)),
+        )
+
+    def create_user(self, nombre: str, activo: bool = True) -> int:
+        nombre_norm = (nombre or "").strip()
+        if not nombre_norm:
+            raise ValueError("nombre vacío")
+        return self.execute(
+            "INSERT INTO usuarios (nombre, activo) VALUES (?, ?)",
+            (nombre_norm, 1 if activo else 0),
+        )
+
+    def set_user_status(self, user_id: int, active: bool) -> None:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        self.execute("UPDATE usuarios SET activo=? WHERE id=?", (1 if active else 0, int(user_id)))
+
+    def list_users(self) -> list[dict[str, Any]]:
+        rows = self.fetch_all("SELECT id, nombre, activo, fecha_registro FROM usuarios ORDER BY id DESC")
+        return [dict(row) for row in rows]
+
+    def get_user(self, user_id: int) -> Optional[dict[str, Any]]:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        row = self.fetch_one("SELECT id, nombre, activo FROM usuarios WHERE id=?", (int(user_id),))
+        return dict(row) if row else None
+
+    def _normalize_imagen_ref(self, imagen_ref: str) -> str:
+        ref = (imagen_ref or "").strip()
+        if not ref:
+            raise ValueError("imagen_ref vacío")
+
+        p = Path(ref)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError("imagen_ref inválido, no se permiten rutas absolutas ni traversal")
+
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-/")
+        if any(ch not in allowed for ch in ref):
+            raise ValueError("imagen_ref contiene caracteres no permitidos")
+
+        return ref
+
+    def insert_sample(self, user_id: int, imagen_ref: str) -> int:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        imagen_ref_norm = self._normalize_imagen_ref(imagen_ref)
+        return self.execute(
+            "INSERT INTO muestras (usuario_id, imagen_ref) VALUES (?, ?)",
+            (int(user_id), imagen_ref_norm),
+        )
+
+    def list_samples(self, user_id: Optional[int] = None) -> list[dict[str, Any]]:
+        if user_id is None:
+            rows = self.fetch_all("SELECT id, usuario_id, imagen_ref, fecha_captura FROM muestras ORDER BY id DESC")
+        else:
+            if int(user_id) <= 0:
+                raise ValueError("user_id inválido")
+            rows = self.fetch_all(
+                "SELECT id, usuario_id, imagen_ref, fecha_captura FROM muestras WHERE usuario_id=? ORDER BY id DESC",
+                (int(user_id),),
+            )
+        return [dict(row) for row in rows]
+
+    def insert_access(
+        self,
+        user_id: Optional[int],
+        confianza: Optional[float],
+        resultado: str,
+        motivo: Optional[str] = None,
+    ) -> int:
+        resultado_norm = (resultado or "").strip().upper()
+        if resultado_norm not in {"AUTORIZADO", "DENEGADO", "DESCONOCIDO", "ERROR"}:
+            raise ValueError("resultado inválido")
+
+        conf = None if confianza is None else float(confianza)
+        if conf is not None and not (0.0 <= conf <= 100.0):
+            raise ValueError("confianza fuera de rango 0..100")
+
+        uid = None if user_id is None else int(user_id)
+        if uid is not None and uid <= 0:
+            raise ValueError("user_id inválido")
+
+        motivo_norm = None
+        if motivo is not None:
+            motivo_norm = motivo.strip()
+            if motivo_norm == "":
+                motivo_norm = None
+            if motivo_norm is not None and len(motivo_norm) > 300:
+                motivo_norm = motivo_norm[:300]
+
+        return self.execute(
+            "INSERT INTO accesos (usuario_id, confianza, resultado, motivo) VALUES (?, ?, ?, ?)",
+            (uid, conf, resultado_norm, motivo_norm),
+        )
+
+    def list_access_logs(self, limit: int = 100) -> list[dict[str, Any]]:
+        lim = int(limit)
+        if lim <= 0:
+            lim = 1
+        if lim > 1000:
+            lim = 1000
+
+        rows = self.fetch_all(
+            """
+            SELECT a.id, a.usuario_id, a.fecha, a.confianza, a.resultado, a.motivo, u.nombre
+            FROM accesos a
+            LEFT JOIN usuarios u ON a.usuario_id = u.id
+            ORDER BY a.id DESC
+            LIMIT ?
+            """,
+            (lim,),
+        )
+        return [dict(row) for row in rows]
+
+
+db = Database()

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;" aria-hidden="true">
+  <symbol id="camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7.5h3.2l1.8-2.5h5.8l1.8 2.5H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"/>
+    <circle cx="12" cy="13.5" r="3.25"/>
+  </symbol>
+
+  <symbol id="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="8" r="4"/>
+    <path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6"/>
+  </symbol>
+
+  <symbol id="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 20v-1.2c0-2.3-2-4.3-4.6-4.3H6.6C4 14.5 2 16.5 2 18.8V20"/>
+    <circle cx="9" cy="8" r="3.2"/>
+    <path d="M22 20v-1.2c0-1.7-1.1-3.2-2.8-3.9"/>
+    <path d="M16.8 4.9a3.1 3.1 0 0 1 0 6.2"/>
+  </symbol>
+
+  <symbol id="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3 5 6v5.8c0 4.7 2.8 7.7 7 9.2 4.2-1.5 7-4.5 7-9.2V6l-7-3Z"/>
+  </symbol>
+
+  <symbol id="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="11" width="16" height="10" rx="2"/>
+    <path d="M8 11V8a4 4 0 1 1 8 0v3"/>
+  </symbol>
+
+  <symbol id="unlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="11" width="16" height="10" rx="2"/>
+    <path d="M8 11V8a4 4 0 0 1 7.6-1.8"/>
+  </symbol>
+
+  <symbol id="settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3.2"/>
+    <path d="M19.2 12a7.8 7.8 0 0 0-.1-1l2-1.5-2-3.4-2.4.8a8 8 0 0 0-1.7-1L14.6 3h-5.2l-.4 2.9a8 8 0 0 0-1.7 1l-2.4-.8-2 3.4 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.4 2.4-.8a8 8 0 0 0 1.7 1l.4 2.9h5.2l.4-2.9a8 8 0 0 0 1.7-1l2.4.8 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/>
+  </symbol>
+
+  <symbol id="database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="5" rx="8.5" ry="3"/>
+    <path d="M3.5 5v6c0 1.7 3.8 3 8.5 3s8.5-1.3 8.5-3V5"/>
+    <path d="M3.5 11v6c0 1.7 3.8 3 8.5 3s8.5-1.3 8.5-3v-6"/>
+  </symbol>
+
+  <symbol id="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m5 12.5 4.2 4.2L19 7"/>
+  </symbol>
+
+  <symbol id="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 6 18 18"/>
+    <path d="M18 6 6 18"/>
+  </symbol>
+
+  <symbol id="alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.8 3.8 2.8 18a1.6 1.6 0 0 0 1.4 2.4h15.6a1.6 1.6 0 0 0 1.4-2.4L13.2 3.8a1.4 1.4 0 0 0-2.4 0Z"/>
+    <path d="M12 9v4.8"/>
+    <circle cx="12" cy="16.8" r=".8" fill="currentColor" stroke="none"/>
+  </symbol>
+
+  <symbol id="clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 7.5V12l3.2 2"/>
+  </symbol>
+</svg>

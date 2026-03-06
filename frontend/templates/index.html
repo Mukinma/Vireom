@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acceso</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="kiosk-body">
+  <div class="kiosk-shell" id="kioskShell">
+    <aside class="kiosk-sidebar" id="kioskSidebar" aria-label="Panel lateral">
+      <div class="sidebar-head">
+        <img
+          class="brand-logo"
+          src="/static/images/logo.svg"
+          alt="Logo del sistema"
+          data-theme-logo
+          data-logo-light="/static/images/logo-white.svg"
+          data-logo-dark="/static/images/logo-white.svg"
+        />
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Acciones rápidas">
+        <a href="/" class="nav-icon is-active" title="Operación" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+          <span class="nav-label">Inicio</span>
+        </a>
+
+        <button id="manualOpen" class="nav-icon" type="button" title="Apertura manual">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock"></use></svg>
+          <span class="nav-label">Abrir</span>
+        </button>
+
+        <a href="/admin" class="nav-icon" title="Administración">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
+          <span class="nav-label">Admin</span>
+        </a>
+
+        <button id="fullscreenBtn" class="nav-icon" type="button" title="Pantalla completa">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#shield"></use></svg>
+          <span class="nav-label">Max</span>
+        </button>
+
+        <button
+          id="themeToggle"
+          class="nav-icon"
+          type="button"
+          data-theme-toggle
+          aria-label="Cambiar tema"
+          title="Cambiar tema"
+        >
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#clock"></use></svg>
+          <span class="nav-label">Tema</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">Accesium</div>
+    </aside>
+
+    <header class="kiosk-topbar" aria-label="Barra superior">
+      <div class="topbar-title">
+        <strong>ACCESIUM</strong>
+      </div>
+      <div class="topbar-time">
+        <strong id="clockTime">--:--</strong>
+        <span>
+          <span id="clockDate">-- --- ----</span>
+        </span>
+      </div>
+    </header>
+
+    <div class="status-hidden" aria-hidden="true">
+      <span>CAM <strong id="camState">-</strong></span>
+      <span>MOD <strong id="modelState">-</strong></span>
+      <span>GPIO <strong id="gpioState">-</strong></span>
+      <span>FPS <strong id="fpsState">0</strong></span>
+      <span id="systemStateBadge" class="state-chip state-processing">Inicializando</span>
+    </div>
+
+    <main class="kiosk-main" aria-label="Área principal de cámara">
+      <div class="camera-shell camera" id="cameraShell">
+        <section class="camera-stage camera" id="cameraStage">
+          <img id="videoFeed" class="camera-feed" src="/api/stream" alt="Cámara en vivo" />
+          <div class="camera-veil" aria-hidden="true"></div>
+
+          <div id="faceIndicator" class="face-indicator idle" aria-hidden="true"></div>
+
+          <div id="scanOverlay" class="scan-overlay is-hidden" aria-hidden="true">
+            <div class="scan-overlay__frame"></div>
+            <div class="scan-overlay__line"></div>
+          </div>
+
+          <button
+            id="analyzeFaceBtn"
+            class="face-action-btn is-idle"
+            type="button"
+            aria-label="Iniciar análisis facial"
+            aria-busy="false"
+          >
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+            <span class="sr-only">Iniciar análisis facial</span>
+          </button>
+
+          <div id="accessToast" class="access-toast is-hidden" role="status" aria-live="polite">
+            <div id="accessToastText" class="access-toast-title">Procesando</div>
+            <div id="accessToastSub" class="access-toast-sub">Esperando validación biométrica</div>
+          </div>
+
+          <aside id="userOverlay" class="user-overlay is-hidden" aria-live="polite">
+            <img id="userPhoto" class="user-photo" src="/static/images/user-placeholder.svg" alt="Usuario reconocido" />
+            <div class="user-meta">
+              <h2 id="recognizedName">-</h2>
+              <p class="user-id">ID: <span id="recognizedId">-</span></p>
+              <p class="user-area"><span id="recognizedArea">-</span></p>
+              <p class="user-confidence">Confianza: <span id="confidence">-</span></p>
+            </div>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/face-action.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

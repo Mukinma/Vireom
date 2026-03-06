@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Admin</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="centered-body">
+  <main class="login-shell">
+    <div class="login-theme-wrap">
+      <button class="icon-btn theme-switch" type="button" data-theme-toggle aria-label="Cambiar tema">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#clock"></use></svg>
+      </button>
+    </div>
+
+    <form class="card login-card" action="/auth/login" method="post">
+      <div class="login-head">
+        <svg class="icon icon-lg" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
+        <h1>Acceso Administrativo</h1>
+      </div>
+
+      <label for="username" class="label">Usuario</label>
+      <input id="username" type="text" name="username" required />
+
+      <label for="password" class="label">Contraseña</label>
+      <input id="password" type="password" name="password" required />
+
+      <div class="login-actions">
+        <button type="submit" class="btn btn-primary large-touch">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check"></use></svg>
+          <span>Ingresar</span>
+        </button>
+        <a href="/" class="btn btn-secondary">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+          <span>Volver a operación</span>
+        </a>
+      </div>
+    </form>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

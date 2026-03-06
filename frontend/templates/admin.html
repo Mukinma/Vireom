@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Admin</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="admin-body">
+  <div class="admin-layout-shell" id="adminShell">
+    {% include "partials/admin-sidebar.html" %}
+    {% include "partials/admin-topbar.html" %}
+
+    <button
+      id="adminSidebarBackdrop"
+      class="admin-sidebar-backdrop is-hidden"
+      type="button"
+      aria-label="Cerrar navegación lateral"
+      tabindex="-1"
+    ></button>
+
+    <main class="kiosk-main admin-main" id="adminMain" aria-label="Área principal administrativa">
+      <div class="admin-shell">
+        <section class="admin-grid">
+          <section class="card">
+            <div class="section-head">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#users"></use></svg>
+              <h2>Registro de usuarios</h2>
+            </div>
+            <div class="inline-form">
+              <input id="newUserName" type="text" placeholder="Nombre del usuario" maxlength="80" />
+              <button id="createUserBtn" class="btn btn-primary" type="button">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
+                <span>Crear</span>
+              </button>
+            </div>
+            <div id="usersList" class="table-wrap"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+              <h2>Captura y entrenamiento</h2>
+            </div>
+
+            <label for="captureUserId" class="label">ID de usuario</label>
+            <input id="captureUserId" type="number" min="1" />
+
+            <button id="captureBtn" class="btn btn-primary large-touch" type="button">Capturar 30 muestras</button>
+            <button id="trainBtn" class="btn btn-primary large-touch" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#database"></use></svg>
+              <span>Entrenar modelo LBPH</span>
+            </button>
+            <p id="trainResult" class="muted"></p>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
+              <h2>Configuración</h2>
+            </div>
+
+            <label for="cfgThreshold" class="label">Umbral de confianza</label>
+            <input id="cfgThreshold" type="number" step="0.1" min="1" max="200" />
+
+            <label for="cfgOpenSec" class="label">Tiempo de apertura (seg)</label>
+            <input id="cfgOpenSec" type="number" min="1" max="20" />
+
+            <label for="cfgMaxAttempts" class="label">Máximo intentos</label>
+            <input id="cfgMaxAttempts" type="number" min="1" max="20" />
+
+            <button id="saveConfigBtn" class="btn btn-primary" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check"></use></svg>
+              <span>Guardar configuración</span>
+            </button>
+            <button id="restartBtn" class="btn btn-danger" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-triangle"></use></svg>
+              <span>Reiniciar sistema</span>
+            </button>
+            <button id="manualOpenAdminBtn" class="btn btn-secondary" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock"></use></svg>
+              <span>Apertura manual</span>
+            </button>
+          </section>
+
+          <section class="card full-span">
+            <div class="section-head">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#database"></use></svg>
+              <h2>Historial de accesos</h2>
+            </div>
+            <div id="logsList" class="table-wrap"></div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <form id="logoutFallbackForm" action="/auth/logout" method="post" class="is-hidden" aria-hidden="true"></form>
+
+  <div id="adminToast" class="admin-toast is-hidden" role="status" aria-live="polite">
+    <div id="adminToastText" class="access-toast-title">Notificación</div>
+    <div id="adminToastSub" class="access-toast-sub">Operación completada</div>
+  </div>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/admin-layout.js"></script>
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

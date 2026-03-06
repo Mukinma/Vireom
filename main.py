@@ -1,0 +1,675 @@
+import logging
+import threading
+import time
+from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import Any, Optional
+
+import cv2
+import uvicorn
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
+
+from api.routes import router
+from config import config
+from database.db import db
+from hardware.gpio_control import RelayController
+from vision.camera import CameraStream
+from vision.detector import HaarFaceDetector
+from vision.recognizer import LBPHRecognizer
+from vision.trainer import FaceTrainer
+
+
+logger = logging.getLogger("camerapi.main")
+
+
+class AccessService:
+    def __init__(self):
+        self.camera = CameraStream()
+        self.detector = HaarFaceDetector()
+        self.recognizer = LBPHRecognizer()
+        self.trainer = FaceTrainer(self.recognizer)
+        self.relay = RelayController(pin=18, active_high=True)
+
+        self.running = False
+        self.thread: Optional[threading.Thread] = None
+        self.watchdog_thread: Optional[threading.Thread] = None
+        self.last_process_ts = 0.0
+        self.lock = threading.Lock()
+        self.analysis_lock = threading.Lock()
+
+        self.system_status: dict[str, Any] = {
+            "camera": "offline",
+            "model": "not_loaded",
+            "gpio": "ready" if self.relay.available else "mock",
+            "fps": 0,
+            "last_user": "-",
+            "last_result": "INICIALIZANDO",
+            "last_confidence": None,
+            "timestamp": int(time.time()),
+            "avg_recognition_ms": 0.0,
+            "avg_pipeline_ms": 0.0,
+            "failed_attempts_consecutive": 0,
+            "processing_errors": 0,
+            "attempts_processed": 0,
+            "gpio_activations": 0,
+            "analysis_mode": "manual_trigger",
+            "analysis_busy": False,
+            "analysis_state": "idle",
+            "face_detected": False,
+            "face_bbox": None,
+            "face_updated_ts": 0,
+            "camera_frame_width": config.frame_width,
+            "camera_frame_height": config.frame_height,
+        }
+        self.consecutive_denied = 0
+        self.last_frame_counter = 0
+        self.last_fps_tick = time.time()
+        self.recognition_time_total_ms = 0.0
+        self.recognition_count = 0
+        self.pipeline_time_total_ms = 0.0
+        self.pipeline_count = 0
+        self.attempts_processed = 0
+        self.last_watchdog_log_ts = 0.0
+        self.gpio_activation_count = 0
+
+        self.detector_params = {
+            "scaleFactor": config.detect_scale_factor,
+            "minNeighbors": config.detect_min_neighbors,
+            "minSize": [config.detect_min_size_w, config.detect_min_size_h],
+            "downscale": config.detect_downscale,
+        }
+
+    def start(self):
+        Path(config.dataset_dir).mkdir(parents=True, exist_ok=True)
+        Path("models").mkdir(parents=True, exist_ok=True)
+        try:
+            cv2.setNumThreads(max(1, int(config.cv_threads)))
+            logger.info("opencv_threads_configured threads=%s", cv2.getNumThreads())
+        except Exception:
+            logger.exception("opencv_threads_configuration_failed")
+
+        try:
+            self.camera.start()
+            self.system_status["camera"] = "online"
+        except Exception:
+            self.system_status["camera"] = "error"
+            logger.critical("camera_start_failed", exc_info=True)
+
+        try:
+            self.system_status["model"] = "loaded" if self.recognizer.load_model(config.model_path) else "not_loaded"
+        except Exception:
+            self.system_status["model"] = "error"
+            logger.critical("model_load_failed path=%s", config.model_path, exc_info=True)
+
+        self.running = True
+        self.thread = threading.Thread(target=self._process_loop, daemon=True)
+        self.thread.start()
+        self.watchdog_thread = threading.Thread(target=self._watchdog_loop, daemon=True)
+        self.watchdog_thread.start()
+        logger.info("service_start_ok")
+
+    def stop(self):
+        self.running = False
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+        if self.watchdog_thread and self.watchdog_thread.is_alive():
+            self.watchdog_thread.join(timeout=1.0)
+        self.camera.stop()
+        self.relay.cleanup()
+        logger.info("service_stop_ok")
+
+    def _watchdog_loop(self):
+        while self.running:
+            try:
+                if not self.camera.ensure_running():
+                    logger.critical("watchdog_camera_not_running")
+                cam_active = self.camera.is_active()
+                self.system_status["camera"] = "online" if cam_active else "degraded"
+                if not cam_active:
+                    logger.critical("watchdog_camera_inactive attempting_restart=true")
+                now = time.time()
+                if now - self.last_watchdog_log_ts >= 60:
+                    capture_alive = self.camera.thread is not None and self.camera.thread.is_alive()
+                    logger.info("capture_thread_status alive=%s camera_active=%s", capture_alive, cam_active)
+                    self.last_watchdog_log_ts = now
+            except Exception:
+                logger.exception("watchdog_loop_failed")
+            time.sleep(2.0)
+
+    def _process_loop(self):
+        interval = max(0.001, config.process_interval_ms / 1000.0)
+        next_tick = time.perf_counter()
+        while self.running:
+            now_perf = time.perf_counter()
+            sleep_s = next_tick - now_perf
+            if sleep_s > 0:
+                time.sleep(sleep_s)
+                continue
+            next_tick = now_perf + interval
+
+            now = time.time()
+            self.last_process_ts = now
+
+            frame = self.camera.get_frame()
+            if frame is None:
+                with self.lock:
+                    self.system_status["face_detected"] = False
+                    self.system_status["face_bbox"] = None
+                continue
+
+            self.last_frame_counter += 1
+            elapsed = now - self.last_fps_tick
+            if elapsed >= 1.0:
+                self.system_status["fps"] = int(self.last_frame_counter / elapsed)
+                self.last_frame_counter = 0
+                self.last_fps_tick = now
+
+            frame_t0 = time.perf_counter()
+            try:
+                self._run_detection_pipeline(frame)
+            except Exception:
+                self.system_status["processing_errors"] = int(self.system_status["processing_errors"]) + 1
+                logger.exception("process_frame_failed")
+            finally:
+                frame_ms = (time.perf_counter() - frame_t0) * 1000.0
+                self.pipeline_time_total_ms += frame_ms
+                self.pipeline_count += 1
+                avg_pipeline_ms = self.pipeline_time_total_ms / max(1, self.pipeline_count)
+                with self.lock:
+                    self.system_status["avg_pipeline_ms"] = round(avg_pipeline_ms, 2)
+                logger.info("frame_processed duration_ms=%.2f fps=%s", frame_ms, self.system_status["fps"])
+
+    @staticmethod
+    def _to_gray(frame):
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    def _detect_primary_face(self, gray_frame):
+        faces = self.detector.detect(gray_frame, self.detector_params)
+        if len(faces) == 0:
+            return None
+        return max(faces, key=lambda f: f[2] * f[3])
+
+    @staticmethod
+    def _normalize_roi(gray_frame, face):
+        x, y, w, h = [int(v) for v in face]
+        x = max(0, x)
+        y = max(0, y)
+        w = max(1, w)
+        h = max(1, h)
+        roi = gray_frame[y : y + h, x : x + w]
+        if roi.size == 0:
+            return None
+        return cv2.resize(roi, (200, 200))
+
+    @staticmethod
+    def _normalize_face_bbox(face, frame_width: int, frame_height: int) -> dict[str, float]:
+        x, y, w, h = [int(v) for v in face]
+        x = max(0, min(x, frame_width - 1))
+        y = max(0, min(y, frame_height - 1))
+        w = max(1, min(w, frame_width - x))
+        h = max(1, min(h, frame_height - y))
+        return {
+            "x": round(x / max(1, frame_width), 6),
+            "y": round(y / max(1, frame_height), 6),
+            "w": round(w / max(1, frame_width), 6),
+            "h": round(h / max(1, frame_height), 6),
+        }
+
+    def _run_detection_pipeline(self, frame) -> None:
+        gray = self._to_gray(frame)
+        frame_height, frame_width = gray.shape[:2]
+        face = self._detect_primary_face(gray)
+        now_ts = int(time.time())
+        bbox = None
+        detected = False
+
+        if face is not None:
+            bbox = self._normalize_face_bbox(face, frame_width, frame_height)
+            detected = True
+
+        with self.lock:
+            self.system_status["face_detected"] = detected
+            self.system_status["face_bbox"] = bbox
+            self.system_status["face_updated_ts"] = now_ts
+            self.system_status["camera_frame_width"] = frame_width
+            self.system_status["camera_frame_height"] = frame_height
+
+    def _apply_access_decision(
+        self,
+        label: Optional[int],
+        confidence: Optional[float],
+        conf: dict[str, Any],
+    ) -> tuple[Optional[int], str, str]:
+        threshold = float(conf["umbral_confianza"])
+        open_sec = int(conf["tiempo_apertura_seg"])
+        max_attempts = int(conf["max_intentos"])
+
+        user_id = None
+        user_name = "Desconocido"
+        result = "DENEGADO"
+
+        if label is not None and confidence is not None and confidence <= threshold:
+            user = db.get_user(label)
+            if user and int(user["activo"]) == 1:
+                user_id = int(user["id"])
+                user_name = str(user["nombre"])
+                result = "AUTORIZADO"
+                self.consecutive_denied = 0
+                logger.info("gpio_activation_start seconds=%s", open_sec)
+                self.relay.open_for(open_sec)
+                self.gpio_activation_count += 1
+        else:
+            self.consecutive_denied += 1
+
+        if self.consecutive_denied >= max_attempts:
+            result = "DENEGADO_BLOQUEO"
+
+        return user_id, user_name, result
+
+    @staticmethod
+    def _event_from_result(result: str) -> str:
+        if result.startswith("AUTORIZADO"):
+            return "authorized"
+        if result == "DENEGADO_BLOQUEO":
+            return "blocked"
+        return "denied"
+
+    def _build_analysis_payload(
+        self,
+        *,
+        ok: bool,
+        event: str,
+        result: str,
+        user_id: Optional[int],
+        user_name: Optional[str],
+        confidence: Optional[float],
+        timestamp: int,
+        analysis_busy: bool = False,
+    ) -> dict[str, Any]:
+        with self.lock:
+            face_detected = bool(self.system_status.get("face_detected", False))
+            face_bbox = self.system_status.get("face_bbox")
+            analysis_state = str(self.system_status.get("analysis_state", "idle"))
+        return {
+            "ok": ok,
+            "event": event,
+            "result": result,
+            "user_id": user_id,
+            "user_name": user_name,
+            "confidence": confidence,
+            "timestamp": timestamp,
+            "analysis_busy": analysis_busy,
+            "analysis_state": analysis_state,
+            "face_detected": face_detected,
+            "face_bbox": face_bbox,
+        }
+
+    def analyze_once(self) -> tuple[dict[str, Any], int]:
+        if not self.analysis_lock.acquire(blocking=False):
+            with self.lock:
+                ts = int(time.time())
+            payload = self._build_analysis_payload(
+                ok=False,
+                event="busy",
+                result="BUSY",
+                user_id=None,
+                user_name=None,
+                confidence=None,
+                timestamp=ts,
+                analysis_busy=True,
+            )
+            return payload, 409
+
+        try:
+            with self.lock:
+                self.system_status["analysis_busy"] = True
+                self.system_status["analysis_state"] = "scanning"
+
+            self.attempts_processed += 1
+            attempt_id = self.attempts_processed
+            with self.lock:
+                self.system_status["attempts_processed"] = self.attempts_processed
+
+            logger.info("recognition_cycle_start attempt_id=%s mode=manual", attempt_id)
+
+            frame = self.camera.get_frame()
+            if frame is None:
+                ts = int(time.time())
+                with self.lock:
+                    self.system_status["analysis_state"] = "error"
+                payload = self._build_analysis_payload(
+                    ok=False,
+                    event="camera_error",
+                    result="CAMERA_UNAVAILABLE",
+                    user_id=None,
+                    user_name=None,
+                    confidence=None,
+                    timestamp=ts,
+                )
+                return payload, 503
+
+            gray = self._to_gray(frame)
+            frame_height, frame_width = gray.shape[:2]
+            with self.lock:
+                self.system_status["camera_frame_width"] = frame_width
+                self.system_status["camera_frame_height"] = frame_height
+
+            model_exists = Path(config.model_path).exists()
+            if not model_exists:
+                ts = int(time.time())
+                with self.lock:
+                    self.system_status["model"] = "not_loaded"
+                    self.system_status["analysis_state"] = "error"
+                payload = self._build_analysis_payload(
+                    ok=False,
+                    event="model_not_loaded",
+                    result="MODEL_MISSING",
+                    user_id=None,
+                    user_name=None,
+                    confidence=None,
+                    timestamp=ts,
+                )
+                logger.error("recognition_cycle_end attempt_id=%s result=model_missing", attempt_id)
+                return payload, 503
+
+            if not self.recognizer.loaded:
+                loaded = self.recognizer.load_model(config.model_path)
+                with self.lock:
+                    self.system_status["model"] = "loaded" if loaded else "not_loaded"
+                if not loaded:
+                    ts = int(time.time())
+                    with self.lock:
+                        self.system_status["analysis_state"] = "error"
+                    payload = self._build_analysis_payload(
+                        ok=False,
+                        event="model_not_loaded",
+                        result="MODEL_NOT_LOADED",
+                        user_id=None,
+                        user_name=None,
+                        confidence=None,
+                        timestamp=ts,
+                    )
+                    logger.error("recognition_cycle_end attempt_id=%s result=model_not_loaded", attempt_id)
+                    return payload, 503
+
+            face = self._detect_primary_face(gray)
+            if face is None:
+                ts = int(time.time())
+                with self.lock:
+                    self.system_status["face_detected"] = False
+                    self.system_status["face_bbox"] = None
+                    self.system_status["face_updated_ts"] = ts
+                    self.system_status["analysis_state"] = "error"
+                payload = self._build_analysis_payload(
+                    ok=False,
+                    event="no_face",
+                    result="NO_FACE",
+                    user_id=None,
+                    user_name=None,
+                    confidence=None,
+                    timestamp=ts,
+                )
+                logger.info("recognition_cycle_end attempt_id=%s result=no_face", attempt_id)
+                return payload, 200
+
+            roi = self._normalize_roi(gray, face)
+            if roi is None:
+                ts = int(time.time())
+                with self.lock:
+                    self.system_status["face_detected"] = False
+                    self.system_status["face_bbox"] = None
+                    self.system_status["face_updated_ts"] = ts
+                    self.system_status["analysis_state"] = "error"
+                payload = self._build_analysis_payload(
+                    ok=False,
+                    event="no_face",
+                    result="NO_FACE",
+                    user_id=None,
+                    user_name=None,
+                    confidence=None,
+                    timestamp=ts,
+                )
+                logger.info("recognition_cycle_end attempt_id=%s result=no_face", attempt_id)
+                return payload, 200
+
+            face_bbox = self._normalize_face_bbox(face, frame_width, frame_height)
+            with self.lock:
+                self.system_status["face_detected"] = True
+                self.system_status["face_bbox"] = face_bbox
+                self.system_status["face_updated_ts"] = int(time.time())
+
+            conf = db.get_config()
+            predict_t0 = time.perf_counter()
+            label, confidence = self.recognizer.predict(roi)
+            predict_ms = (time.perf_counter() - predict_t0) * 1000.0
+            self.recognition_time_total_ms += predict_ms
+            self.recognition_count += 1
+            avg_ms = self.recognition_time_total_ms / max(1, self.recognition_count)
+
+            user_id, user_name, result = self._apply_access_decision(label, confidence, conf)
+            db.insert_access(user_id=user_id, confianza=confidence, resultado=result)
+
+            ts = int(time.time())
+            event = self._event_from_result(result)
+            analysis_state = "success" if event == "authorized" else "error"
+            with self.lock:
+                self.system_status["last_user"] = user_name
+                self.system_status["last_result"] = result
+                self.system_status["last_confidence"] = confidence
+                self.system_status["timestamp"] = ts
+                self.system_status["avg_recognition_ms"] = round(avg_ms, 2)
+                self.system_status["failed_attempts_consecutive"] = self.consecutive_denied
+                self.system_status["attempts_processed"] = self.attempts_processed
+                self.system_status["gpio_activations"] = self.gpio_activation_count
+                self.system_status["analysis_state"] = analysis_state
+
+            logger.info(
+                "recognition_cycle_end attempt_id=%s result=%s confidence=%s avg_recognition_ms=%.2f",
+                attempt_id,
+                result,
+                confidence,
+                avg_ms,
+            )
+
+            payload = self._build_analysis_payload(
+                ok=True,
+                event=event,
+                result=result,
+                user_id=user_id,
+                user_name=user_name,
+                confidence=confidence,
+                timestamp=ts,
+            )
+            return payload, 200
+        except Exception:
+            ts = int(time.time())
+            self.system_status["processing_errors"] = int(self.system_status["processing_errors"]) + 1
+            with self.lock:
+                self.system_status["analysis_state"] = "error"
+            logger.exception("recognize_once_failed")
+            payload = self._build_analysis_payload(
+                ok=False,
+                event="camera_error",
+                result="PROCESSING_ERROR",
+                user_id=None,
+                user_name=None,
+                confidence=None,
+                timestamp=ts,
+            )
+            return payload, 503
+        finally:
+            with self.lock:
+                self.system_status["analysis_busy"] = False
+            self.analysis_lock.release()
+
+    def capture_sample(self, user_id: int, sample_index: int) -> Optional[str]:
+        frame = self.camera.get_frame()
+        if frame is None:
+            return None
+        gray = self._to_gray(frame)
+        face = self._detect_primary_face(gray)
+        if face is None:
+            return None
+        roi = self._normalize_roi(gray, face)
+        if roi is None:
+            return None
+
+        user_dir = Path(config.dataset_dir) / f"user_{user_id}"
+        user_dir.mkdir(parents=True, exist_ok=True)
+        path = user_dir / f"sample_{sample_index:03d}.jpg"
+        cv2.imwrite(str(path), roi)
+        return str(path)
+
+    def manual_open(self):
+        conf = db.get_config()
+        self.relay.open_for(int(conf["tiempo_apertura_seg"]))
+        self.gpio_activation_count += 1
+        with self.lock:
+            self.system_status["gpio_activations"] = self.gpio_activation_count
+        db.insert_access(user_id=None, confianza=None, resultado="MANUAL")
+
+    def get_status(self) -> dict[str, Any]:
+        with self.lock:
+            return dict(self.system_status)
+
+    def health(self) -> dict[str, Any]:
+        camera_ok = self.camera.is_active()
+        model_ok = Path(config.model_path).exists() and self.recognizer.loaded
+        db_ok = db.health_check()
+        gpio_ok = self.relay.is_healthy()
+        healthy = bool(camera_ok and model_ok and db_ok and gpio_ok)
+        return {
+            "healthy": healthy,
+            "camera_active": camera_ok,
+            "model_loaded": model_ok,
+            "db_accessible": db_ok,
+            "gpio_initialized": gpio_ok,
+            "metrics": {
+                "avg_recognition_ms": self.system_status.get("avg_recognition_ms", 0.0),
+                "avg_pipeline_ms": self.system_status.get("avg_pipeline_ms", 0.0),
+                "fps": self.system_status.get("fps", 0),
+                "failed_attempts_consecutive": self.consecutive_denied,
+                "attempts_processed": self.attempts_processed,
+                "gpio_activations": self.gpio_activation_count,
+            },
+        }
+
+    def simulate_access_attempt(self, is_valid: bool, confidence: Optional[float] = None) -> dict[str, Any]:
+        conf = db.get_config()
+        threshold = float(conf["umbral_confianza"])
+        open_sec = int(conf["tiempo_apertura_seg"])
+        max_attempts = int(conf["max_intentos"])
+
+        user_id = None
+        user_name = "Desconocido"
+        result = "DENEGADO"
+
+        if is_valid:
+            active_user = db.fetch_one("SELECT id, nombre FROM usuarios WHERE activo=1 ORDER BY id ASC LIMIT 1")
+            if active_user:
+                user_id = int(active_user["id"])
+                user_name = str(active_user["nombre"])
+                result = "AUTORIZADO"
+                self.consecutive_denied = 0
+                confidence_value = float(confidence if confidence is not None else max(1.0, threshold - 5.0))
+                self.relay.open_for(open_sec)
+                self.gpio_activation_count += 1
+            else:
+                confidence_value = float(confidence if confidence is not None else threshold + 10.0)
+                result = "DENEGADO"
+                self.consecutive_denied += 1
+        else:
+            confidence_value = float(confidence if confidence is not None else threshold + 10.0)
+            self.consecutive_denied += 1
+
+        if self.consecutive_denied >= max_attempts:
+            result = "DENEGADO_BLOQUEO"
+
+        self.attempts_processed += 1
+        db.insert_access(user_id=user_id, confianza=confidence_value, resultado=result)
+
+        with self.lock:
+            self.system_status["last_user"] = user_name
+            self.system_status["last_result"] = result
+            self.system_status["last_confidence"] = confidence_value
+            self.system_status["timestamp"] = int(time.time())
+            self.system_status["failed_attempts_consecutive"] = self.consecutive_denied
+            self.system_status["attempts_processed"] = self.attempts_processed
+            self.system_status["gpio_activations"] = self.gpio_activation_count
+
+        return {
+            "result": result,
+            "user_id": user_id,
+            "confidence": confidence_value,
+            "failed_attempts_consecutive": self.consecutive_denied,
+            "gpio_activations": self.gpio_activation_count,
+        }
+
+
+def setup_logging() -> None:
+    Path("logs").mkdir(parents=True, exist_ok=True)
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.handlers.clear()
+
+    formatter = logging.Formatter(
+        "%(asctime)s level=%(levelname)s logger=%(name)s msg=%(message)s"
+    )
+
+    file_handler = RotatingFileHandler(
+        config.logs_path,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    root.addHandler(file_handler)
+    root.addHandler(console_handler)
+
+
+def create_app() -> FastAPI:
+    setup_logging()
+    try:
+        db.init_db()
+    except Exception:
+        logger.critical("startup_db_init_failed", exc_info=True)
+        raise
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.state.service.start()
+        try:
+            yield
+        finally:
+            app.state.service.stop()
+
+    app = FastAPI(title=config.app_name, lifespan=lifespan)
+    app.add_middleware(SessionMiddleware, secret_key=config.secret_key)
+
+    app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+    app.state.templates = Jinja2Templates(directory="frontend/templates")
+    app.state.service = AccessService()
+
+    app.include_router(router)
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    try:
+        uvicorn.run("main:app", host=config.host, port=config.port, reload=False)
+    except KeyboardInterrupt:
+        logger.info("keyboard_interrupt_received shutting_down=true")
+    except Exception:
+        logger.critical("fatal_runtime_error", exc_info=True)
+        raise

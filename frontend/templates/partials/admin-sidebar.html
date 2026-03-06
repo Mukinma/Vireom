@@ -1,0 +1,51 @@
+<aside class="kiosk-sidebar admin-sidebar" id="adminSidebar" aria-label="Panel lateral de administración">
+  <div class="sidebar-head">
+    <img
+      class="brand-logo"
+      src="/static/images/logo.svg"
+      alt="Logo del sistema"
+      data-theme-logo
+      data-logo-light="/static/images/logo-white.svg"
+      data-logo-dark="/static/images/logo-white.svg"
+    />
+  </div>
+
+  <nav class="sidebar-nav admin-sidebar-nav" aria-label="Navegación principal">
+    <a href="/" class="nav-icon" data-nav-route="/" title="Inicio">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+      <span class="nav-label">Inicio</span>
+    </a>
+
+    <a href="/admin" class="nav-icon" data-nav-route="/admin" title="Administración">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
+      <span class="nav-label">Admin</span>
+    </a>
+
+    <button
+      id="adminThemeToggle"
+      class="nav-icon"
+      type="button"
+      data-theme-toggle
+      aria-label="Cambiar tema"
+      title="Cambiar tema"
+    >
+      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#clock"></use></svg>
+      <span class="nav-label">Tema</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-foot admin-sidebar-foot">
+    <span class="sidebar-brand">Accesium</span>
+    <button
+      id="sidebarLogoutBtn"
+      class="sidebar-logout-btn"
+      type="button"
+      onclick="logout()"
+      title="Cerrar sesión"
+      aria-label="Cerrar sesión"
+    >
+      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
+      <span class="sidebar-logout-label">Cerrar sesión</span>
+    </button>
+  </div>
+</aside>
