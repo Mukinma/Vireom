@@ -92,8 +92,8 @@ CameraPI/
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/<tu-usuario>/CameraPI.git
-cd CameraPI
+git https://github.com/Mukinma/Vireom.git
+cd Vireom
 
 # 2. Crear entorno virtual
 python3 -m venv .venv
