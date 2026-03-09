@@ -1,7 +1,61 @@
 PRAGMA foreign_keys = ON;
 
 -- =========================
--- 1. Tabla administradores
+-- 1. Tabla usuarios
+-- =========================
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    activo INTEGER NOT NULL DEFAULT 1 CHECK(activo IN (0,1)),
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por_admin_id INTEGER NULL
+);
+
+-- =========================
+-- 2. Tabla muestras
+-- =========================
+
+CREATE TABLE IF NOT EXISTS muestras (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    imagen_ref TEXT NOT NULL,
+    fecha_captura DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- =========================
+-- 3. Tabla accesos
+-- =========================
+
+CREATE TABLE IF NOT EXISTS accesos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER,
+    confianza REAL,
+    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resultado TEXT NOT NULL CHECK(resultado IN ('AUTORIZADO','DENEGADO','DESCONOCIDO','ERROR','MANUAL','DENEGADO_BLOQUEO')),
+    motivo TEXT,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- =========================
+-- 4. Tabla configuracion
+-- =========================
+
+CREATE TABLE IF NOT EXISTS configuracion (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    umbral_confianza REAL NOT NULL,
+    tiempo_apertura_seg INTEGER NOT NULL,
+    max_intentos INTEGER NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insertar configuración por defecto si no existe
+INSERT OR IGNORE INTO configuracion (id, umbral_confianza, tiempo_apertura_seg, max_intentos)
+VALUES (1, 60.0, 5, 3);
+
+-- =========================
+-- 5. Tabla administradores
 -- =========================
 
 CREATE TABLE IF NOT EXISTS administradores (
@@ -17,29 +71,24 @@ CREATE INDEX IF NOT EXISTS idx_admin_rol ON administradores(rol);
 CREATE INDEX IF NOT EXISTS idx_admin_activo ON administradores(activo);
 
 -- =========================
--- 2. Agregar campo en usuarios
+-- 6. Índices de rendimiento
 -- =========================
 
-ALTER TABLE usuarios ADD COLUMN creado_por_admin_id INTEGER NULL;
+CREATE INDEX IF NOT EXISTS idx_accesos_fecha ON accesos(fecha);
+CREATE INDEX IF NOT EXISTS idx_accesos_usuario ON accesos(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_muestras_usuario ON muestras(usuario_id);
 
--- Nota:
--- SQLite no permite agregar FK con ALTER directamente.
--- Pero sí podemos documentar la relación a nivel conceptual.
--- Alternativamente se valida en lógica de aplicación.
-
--- =========================   
--- 3. Crear relación lógica por consistencia
 -- =========================
-
--- Esta vista ayuda a auditoría administrativa
+-- 7. Vista de auditoría administrativa
+-- =========================
 
 CREATE VIEW IF NOT EXISTS vista_usuarios_con_admin AS
-SELECT 
+SELECT
     u.id,
     u.nombre,
     u.activo,
     u.fecha_registro,
     a.username AS creado_por
 FROM usuarios u
-LEFT JOIN administradores a 
+LEFT JOIN administradores a
     ON u.creado_por_admin_id = a.id;

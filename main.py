@@ -520,9 +520,10 @@ class AccessService:
 
         user_dir = Path(config.dataset_dir) / f"user_{user_id}"
         user_dir.mkdir(parents=True, exist_ok=True)
-        path = user_dir / f"sample_{sample_index:03d}.jpg"
-        cv2.imwrite(str(path), roi)
-        return str(path)
+        relative_path = f"{config.dataset_dir}/user_{user_id}/sample_{sample_index:03d}.jpg"
+        full_path = user_dir / f"sample_{sample_index:03d}.jpg"
+        cv2.imwrite(str(full_path), roi)
+        return relative_path
 
     def manual_open(self):
         conf = db.get_config()

@@ -157,6 +157,22 @@ class Database:
             raise ValueError("user_id inválido")
         self.execute("UPDATE usuarios SET activo=? WHERE id=?", (1 if active else 0, int(user_id)))
 
+    def delete_user(self, user_id: int) -> bool:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        user = self.get_user(user_id)
+        if not user:
+            return False
+        try:
+            with self.connect() as conn:
+                conn.execute("DELETE FROM muestras WHERE usuario_id=?", (int(user_id),))
+                conn.execute("UPDATE accesos SET usuario_id=NULL WHERE usuario_id=?", (int(user_id),))
+                conn.execute("DELETE FROM usuarios WHERE id=?", (int(user_id),))
+            return True
+        except Exception:
+            logger.exception("db_delete_user_failed user_id=%s", user_id)
+            raise
+
     def list_users(self) -> list[dict[str, Any]]:
         rows = self.fetch_all("SELECT id, nombre, activo, fecha_registro FROM usuarios ORDER BY id DESC")
         return [dict(row) for row in rows]
@@ -235,12 +251,13 @@ class Database:
             (uid, conf, resultado_norm, motivo_norm),
         )
 
-    def list_access_logs(self, limit: int = 100) -> list[dict[str, Any]]:
+    def list_access_logs(self, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
         lim = int(limit)
         if lim <= 0:
             lim = 1
         if lim > 1000:
             lim = 1000
+        off = max(0, int(offset))
 
         rows = self.fetch_all(
             """
@@ -248,9 +265,9 @@ class Database:
             FROM accesos a
             LEFT JOIN usuarios u ON a.usuario_id = u.id
             ORDER BY a.id DESC
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
-            (lim,),
+            (lim, off),
         )
         return [dict(row) for row in rows]
 

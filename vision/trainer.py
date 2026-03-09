@@ -17,7 +17,7 @@ class FaceTrainer:
         labels = []
 
         for sample in samples:
-            path = Path(sample["ruta_imagen"])
+            path = Path(sample["imagen_ref"])
             if not path.exists():
                 continue
             image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)

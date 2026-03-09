@@ -126,6 +126,15 @@ def update_user(user_id: int, payload: UserStatusUpdate, request: Request):
     return {"ok": True}
 
 
+@router.delete("/api/users/{user_id}")
+def delete_user(user_id: int, request: Request):
+    _admin_required(request)
+    deleted = db.delete_user(user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {"ok": True}
+
+
 @router.post("/api/users/{user_id}/capture")
 def capture_samples(user_id: int, request: Request, count: int = 30):
     _admin_required(request)
@@ -171,10 +180,11 @@ def update_config(payload: ConfigUpdate, request: Request):
 
 
 @router.get("/api/access-logs")
-def access_logs(request: Request, limit: int = 100):
+def access_logs(request: Request, limit: int = 100, offset: int = 0):
     _admin_required(request)
     limit = max(1, min(500, limit))
-    return db.list_access_logs(limit=limit)
+    offset = max(0, offset)
+    return db.list_access_logs(limit=limit, offset=offset)
 
 
 @router.post("/api/restart")
