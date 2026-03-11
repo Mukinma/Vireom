@@ -11,12 +11,17 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from api.routes import router
 from config import config
 from database.db import db
 from hardware.gpio_control import RelayController
+from rate_limit import limiter
 from vision.camera import CameraStream
 from vision.detector import HaarFaceDetector
 from vision.recognizer import LBPHRecognizer
@@ -537,11 +542,20 @@ class AccessService:
         with self.lock:
             return dict(self.system_status)
 
-    def health(self) -> dict[str, Any]:
+    def _health_components(self) -> tuple[bool, bool, bool, bool]:
         camera_ok = self.camera.is_active()
         model_ok = Path(config.model_path).exists() and self.recognizer.loaded
         db_ok = db.health_check()
         gpio_ok = self.relay.is_healthy()
+        return camera_ok, model_ok, db_ok, gpio_ok
+
+    def health_liveness(self) -> dict[str, Any]:
+        camera_ok, model_ok, db_ok, gpio_ok = self._health_components()
+        healthy = bool(camera_ok and model_ok and db_ok and gpio_ok)
+        return {"healthy": healthy}
+
+    def health_detail(self) -> dict[str, Any]:
+        camera_ok, model_ok, db_ok, gpio_ok = self._health_components()
         healthy = bool(camera_ok and model_ok and db_ok and gpio_ok)
         return {
             "healthy": healthy,
@@ -644,6 +658,11 @@ def create_app() -> FastAPI:
         logger.critical("startup_db_init_failed", exc_info=True)
         raise
 
+    if not config.debug and not config.secret_key:
+        raise RuntimeError("CAMERAPI_SECRET es obligatorio cuando CAMERAPI_DEBUG=false")
+    if config.debug and config.secret_key == "camerapi-local-secret":
+        logger.warning("using_development_secret_key debug=true")
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.service.start()
@@ -653,6 +672,18 @@ def create_app() -> FastAPI:
             app.state.service.stop()
 
     app = FastAPI(title=config.app_name, lifespan=lifespan)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+    if config.cors_origins:
+        allow_credentials = config.cors_origins != ["*"]
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=config.cors_origins,
+            allow_credentials=allow_credentials,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+        )
     app.add_middleware(SessionMiddleware, secret_key=config.secret_key)
 
     app.mount("/static", StaticFiles(directory="frontend/static"), name="static")

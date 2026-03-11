@@ -1,5 +1,30 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _resolve_secret_key() -> str:
+    debug = _env_bool("CAMERAPI_DEBUG", False)
+    if debug:
+        return os.getenv("CAMERAPI_SECRET", "camerapi-local-secret")
+    return os.getenv("CAMERAPI_SECRET", "")
+
+
+def _resolve_cors_origins() -> list[str]:
+    debug = _env_bool("CAMERAPI_DEBUG", False)
+    raw = os.getenv("CAMERAPI_CORS_ORIGINS", "")
+    origins = [value.strip() for value in raw.split(",") if value.strip()]
+    if origins:
+        return origins
+    if debug:
+        return ["*"]
+    return []
 
 
 @dataclass
@@ -7,7 +32,9 @@ class AppConfig:
     app_name: str = "CameraPI Access"
     host: str = "0.0.0.0"
     port: int = 8000
-    secret_key: str = os.getenv("CAMERAPI_SECRET", "camerapi-local-secret")
+    debug: bool = _env_bool("CAMERAPI_DEBUG", False)
+    secret_key: str = _resolve_secret_key()
+    cors_origins: list[str] = field(default_factory=_resolve_cors_origins)
 
     db_path: str = "database/camerapi.db"
     model_path: str = "models/lbph_model.xml"
@@ -43,7 +70,7 @@ class AppConfig:
     default_max_attempts: int = 3
 
     admin_user: str = os.getenv("CAMERAPI_ADMIN_USER", "admin")
-    admin_password: str = os.getenv("CAMERAPI_ADMIN_PASSWORD", "admin123")
+    admin_password: str = os.getenv("CAMERAPI_ADMIN_PASSWORD", "")
 
 
 config = AppConfig()

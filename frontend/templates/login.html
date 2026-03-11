@@ -19,6 +19,9 @@
         <svg class="icon icon-lg" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
         <h1>Acceso Administrativo</h1>
       </div>
+      {% if login_error %}
+      <p class="label" role="alert" style="color:#ef4444;">Credenciales inválidas.</p>
+      {% endif %}
 
       <label for="username" class="label">Usuario</label>
       <input id="username" type="text" name="username" required />
