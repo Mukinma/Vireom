@@ -1,16 +1,20 @@
 <!doctype html>
-<html lang="es" class="theme-dark">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login Admin</title>
   <link rel="stylesheet" href="/static/css/styles.css" />
+  <script>
+    (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
+  </script>
 </head>
 <body class="centered-body">
   <main class="login-shell">
     <div class="login-theme-wrap">
       <button class="icon-btn theme-switch" type="button" data-theme-toggle aria-label="Cambiar tema">
-        <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#clock"></use></svg>
+        <svg class="icon theme-icon-dark" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sun"></use></svg>
+        <svg class="icon theme-icon-light" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#moon"></use></svg>
       </button>
     </div>
 
