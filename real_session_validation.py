@@ -60,7 +60,7 @@ def load_from_database() -> Dict[int, Dict[str, List[Path]]]:
     db.init_db()
     rows = db.fetch_all(
         """
-        SELECT u.id AS user_id, m.ruta_imagen
+        SELECT u.id AS user_id, m.imagen_ref
         FROM usuarios u
         JOIN muestras m ON m.usuario_id = u.id
         WHERE u.activo = 1
@@ -71,7 +71,7 @@ def load_from_database() -> Dict[int, Dict[str, List[Path]]]:
     result: Dict[int, Dict[str, List[Path]]] = {}
     for row in rows:
         uid = int(row["user_id"])
-        path = Path(row["ruta_imagen"])
+        path = Path(row["imagen_ref"])
         if not path.exists():
             continue
 

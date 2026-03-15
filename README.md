@@ -136,9 +136,10 @@ La interfaz estará disponible en:
 |---|---|---|
 | `CAMERAPI_SECRET` | Clave secreta para sesiones | `camerapi-local-secret` |
 | `CAMERAPI_ADMIN_USER` | Usuario administrador | `admin` |
-| `CAMERAPI_ADMIN_PASSWORD` | Contraseña administrador | `admin123` |
+| `CAMERAPI_ADMIN_PASSWORD` | Contraseña administrador | `""` (debe definirse) |
 
 > **Importante:** cambia estos valores antes de cualquier despliegue en producción.
+> `CAMERAPI_ADMIN_PASSWORD` vacío deshabilita el login administrativo.
 
 ## Scripts de validación y análisis
 

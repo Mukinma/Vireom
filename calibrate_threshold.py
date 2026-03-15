@@ -48,8 +48,8 @@ def load_user_samples() -> dict[int, list[Path]]:
     user_samples: dict[int, list[Path]] = {}
     for row in users:
         uid = int(row["id"])
-        samples = db.fetch_all("SELECT ruta_imagen FROM muestras WHERE usuario_id=?", (uid,))
-        paths = [Path(s["ruta_imagen"]) for s in samples if Path(s["ruta_imagen"]).exists()]
+        samples = db.fetch_all("SELECT imagen_ref FROM muestras WHERE usuario_id=?", (uid,))
+        paths = [Path(s["imagen_ref"]) for s in samples if Path(s["imagen_ref"]).exists()]
         if len(paths) >= MIN_SAMPLES_PER_USER:
             user_samples[uid] = sorted(paths)
 

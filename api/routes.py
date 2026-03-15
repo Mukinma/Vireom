@@ -102,10 +102,12 @@ def stream(request: Request):
     service = request.app.state.service
 
     def generate():
+        last_seq = 0
         while True:
-            frame = service.camera.get_jpeg()
+            frame, last_seq = service.camera.get_jpeg(last_seq=last_seq, timeout=0.5)
             if frame is None:
-                time.sleep(0.05)
+                if not service.running:
+                    break
                 continue
             yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
 

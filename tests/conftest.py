@@ -12,13 +12,14 @@ from rate_limit import limiter
 
 
 class _DummyCamera:
-    def get_jpeg(self):
-        return b"jpeg-bytes"
+    def get_jpeg(self, last_seq=0, timeout=0.5):
+        return b"jpeg-bytes", int(last_seq) + 1
 
 
 class _DummyService:
     def __init__(self):
         self.camera = _DummyCamera()
+        self.running = True
 
     def analyze_once(self):
         return {"ok": True, "event": "authorized", "result": "AUTORIZADO"}, 200

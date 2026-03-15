@@ -51,7 +51,7 @@ def ensure_user(user_id: int) -> bool:
 
 def insert_sample_if_missing(user_id: int, image_path: str) -> None:
     existing = db.fetch_one(
-        "SELECT id FROM muestras WHERE usuario_id=? AND ruta_imagen=?",
+        "SELECT id FROM muestras WHERE usuario_id=? AND imagen_ref=?",
         (user_id, image_path),
     )
     if existing:
