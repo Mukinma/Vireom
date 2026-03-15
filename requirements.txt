@@ -6,3 +6,4 @@ itsdangerous==2.2.0
 numpy==1.26.4
 slowapi==0.1.9
 opencv-contrib-python==4.10.0.84
+python-dotenv==1.1.0
