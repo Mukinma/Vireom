@@ -88,6 +88,7 @@ class CameraStream:
             return False, None
         try:
             frame = self._picam.capture_array()
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             return True, frame
         except Exception:
             logger.exception("picamera2_capture_failed")
