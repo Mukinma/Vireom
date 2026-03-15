@@ -1,20 +1,25 @@
+import logging
+import sys
 import threading
 import time
-import sys
 from typing import Optional
 
 import cv2
-import logging
 
 from config import config
 
-
 logger = logging.getLogger("camerapi.camera")
+
+try:
+    from picamera2 import Picamera2
+
+    _HAS_PICAMERA2 = True
+except ImportError:
+    _HAS_PICAMERA2 = False
 
 
 class CameraStream:
     def __init__(self):
-        self.cap: Optional[cv2.VideoCapture] = None
         self.lock = threading.Lock()
         self.frame = None
         self.running = False
@@ -22,6 +27,73 @@ class CameraStream:
         self.last_frame_time = 0.0
         self.retry_delay_sec = 2.0
         self.max_open_retries = 5
+
+        self._use_picamera2 = _HAS_PICAMERA2 and sys.platform == "linux"
+
+        # OpenCV backend
+        self.cap: Optional[cv2.VideoCapture] = None
+
+        # Picamera2 backend
+        self._picam: Optional["Picamera2"] = None
+        self._picam_started = False
+
+        if self._use_picamera2:
+            logger.info("camera_backend=picamera2")
+        else:
+            logger.info("camera_backend=opencv")
+
+    # ── Picamera2 backend ────────────────────────────────────────────
+
+    def _open_picamera2(self) -> bool:
+        for attempt in range(1, self.max_open_retries + 1):
+            try:
+                self._release_picamera2()
+                picam = Picamera2()
+                video_cfg = picam.create_video_configuration(
+                    main={
+                        "format": "BGR888",
+                        "size": (config.frame_width, config.frame_height),
+                    },
+                )
+                picam.configure(video_cfg)
+                picam.start()
+                time.sleep(0.5)
+                self._picam = picam
+                self._picam_started = True
+                logger.info(
+                    "picamera2_open_ok attempt=%s size=%sx%s",
+                    attempt,
+                    config.frame_width,
+                    config.frame_height,
+                )
+                return True
+            except Exception:
+                logger.exception("picamera2_open_failed attempt=%s", attempt)
+                time.sleep(self.retry_delay_sec)
+        return False
+
+    def _release_picamera2(self) -> None:
+        if self._picam is not None:
+            try:
+                if self._picam_started:
+                    self._picam.stop()
+                self._picam.close()
+            except Exception:
+                logger.exception("picamera2_release_failed")
+        self._picam = None
+        self._picam_started = False
+
+    def _read_picamera2(self):
+        if self._picam is None:
+            return False, None
+        try:
+            frame = self._picam.capture_array()
+            return True, frame
+        except Exception:
+            logger.exception("picamera2_capture_failed")
+            return False, None
+
+    # ── OpenCV backend ───────────────────────────────────────────────
 
     def _preferred_backends(self) -> list[tuple[str, Optional[int]]]:
         if sys.platform == "darwin" and hasattr(cv2, "CAP_AVFOUNDATION"):
@@ -38,14 +110,6 @@ class CameraStream:
             except Exception:
                 logger.debug("camera_buffer_size_unsupported")
 
-    def _release_capture(self) -> None:
-        if self.cap is not None:
-            try:
-                self.cap.release()
-            except Exception:
-                logger.exception("camera_release_failed")
-        self.cap = None
-
     def _open_single(self, backend: Optional[int]) -> Optional[cv2.VideoCapture]:
         if backend is None:
             cap = cv2.VideoCapture(config.camera_index)
@@ -54,14 +118,14 @@ class CameraStream:
         self._configure_capture(cap)
         return cap
 
-    def _open_camera(self) -> bool:
+    def _open_opencv(self) -> bool:
         for attempt in range(1, self.max_open_retries + 1):
             for backend_name, backend in self._preferred_backends():
                 cap: Optional[cv2.VideoCapture] = None
                 try:
                     cap = self._open_single(backend)
                     if cap.isOpened():
-                        self._release_capture()
+                        self._release_opencv()
                         self.cap = cap
                         logger.info(
                             "camera_open_ok attempt=%s index=%s backend=%s",
@@ -82,9 +146,48 @@ class CameraStream:
                             cap.release()
                         except Exception:
                             logger.debug("camera_open_temp_release_failed")
-            logger.error("camera_open_failed attempt=%s retry_in=%ss", attempt, self.retry_delay_sec)
+            logger.error(
+                "camera_open_failed attempt=%s retry_in=%ss",
+                attempt,
+                self.retry_delay_sec,
+            )
             time.sleep(self.retry_delay_sec)
         return False
+
+    def _release_opencv(self) -> None:
+        if self.cap is not None:
+            try:
+                self.cap.release()
+            except Exception:
+                logger.exception("camera_release_failed")
+        self.cap = None
+
+    # ── Unified interface ────────────────────────────────────────────
+
+    def _open_camera(self) -> bool:
+        if self._use_picamera2:
+            return self._open_picamera2()
+        return self._open_opencv()
+
+    def _release_capture(self) -> None:
+        if self._use_picamera2:
+            self._release_picamera2()
+        else:
+            self._release_opencv()
+
+    def _camera_lost(self) -> bool:
+        if self._use_picamera2:
+            return self._picam is None or not self._picam_started
+        return self.cap is None or not self.cap.isOpened()
+
+    def _read_frame(self):
+        if self._use_picamera2:
+            return self._read_picamera2()
+        if self.cap is not None:
+            return self.cap.read()
+        return False, None
+
+    # ── Lifecycle ────────────────────────────────────────────────────
 
     def start(self) -> None:
         if self.running:
@@ -106,13 +209,14 @@ class CameraStream:
                 continue
             next_tick = now_perf + min_interval
 
-            if self.cap is None or not self.cap.isOpened():
+            if self._camera_lost():
                 logger.error("camera_stream_lost reopening=true")
                 if not self._open_camera():
                     time.sleep(self.retry_delay_sec)
                     next_tick = time.perf_counter() + min_interval
                     continue
-            ok, raw = self.cap.read() if self.cap is not None else (False, None)
+
+            ok, raw = self._read_frame()
             if ok:
                 with self.lock:
                     self.frame = raw
@@ -145,8 +249,8 @@ class CameraStream:
     def is_active(self) -> bool:
         recent = (time.time() - self.last_frame_time) < 3.0
         thread_alive = self.thread is not None and self.thread.is_alive()
-        cap_ok = self.cap is not None and self.cap.isOpened()
-        return bool(self.running and thread_alive and cap_ok and recent)
+        cam_ok = not self._camera_lost()
+        return bool(self.running and thread_alive and cam_ok and recent)
 
     def ensure_running(self) -> bool:
         if not self.running:
