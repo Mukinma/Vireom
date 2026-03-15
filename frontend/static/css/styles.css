@@ -1,3 +1,12 @@
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 @font-face {
   font-family: "Inter";
   src: url("/static/fonts/inter/Inter-Regular.woff2") format("woff2");
@@ -1744,6 +1753,24 @@ html.theme-light .state-chip::before {
   pointer-events: none;
 }
 
+html.theme-dark .user-overlay {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+}
+
+html.theme-dark .user-overlay .user-meta h2 {
+  color: #f1f5f9;
+}
+
+html.theme-dark .user-overlay .user-meta p {
+  color: #cbd5e1;
+}
+
+html.theme-dark .user-overlay .user-confidence {
+  color: #94a3b8;
+}
+
 html.theme-light .user-overlay {
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.95), rgba(242, 248, 255, 0.92));
   border-color: var(--border-soft);
@@ -2604,8 +2631,18 @@ html.theme-light .admin-body .btn-secondary:focus-visible {
 }
 
 html.theme-light .admin-body .btn-danger {
-  border-color: var(--admin-danger-border);
-  box-shadow: var(--admin-danger-shadow-layer);
+  color: #ffffff;
+  background: #ef4444;
+  border-color: #dc2626;
+  box-shadow:
+    0 12px 24px rgba(239, 68, 68, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+html.theme-light .admin-body .btn-danger:hover,
+html.theme-light .admin-body .btn-danger:focus-visible {
+  transform: var(--admin-btn-hover-transform);
+  background: #dc2626;
 }
 
 html.theme-light .admin-body input {
