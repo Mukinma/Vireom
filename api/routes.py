@@ -157,6 +157,21 @@ def create_user(payload: UserCreate, request: Request):
     return {"id": user_id}
 
 
+@router.get("/api/users/{user_id}")
+def get_user_detail(user_id: int, request: Request):
+    _admin_required(request)
+    user = db.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    samples_count = db.count_user_samples(user_id)
+    recent_logs = db.list_user_access_logs(user_id, limit=50)
+    return {
+        "user": user,
+        "samples_count": samples_count,
+        "recent_logs": recent_logs,
+    }
+
+
 @router.patch("/api/users/{user_id}")
 def update_user(user_id: int, payload: UserStatusUpdate, request: Request):
     _admin_required(request)
