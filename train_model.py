@@ -36,8 +36,8 @@ def load_eligible_samples():
     user_sample_map = {}
     for user in users:
         uid = int(user["id"])
-        rows = db.fetch_all("SELECT ruta_imagen FROM muestras WHERE usuario_id=?", (uid,))
-        valid_paths = [Path(r["ruta_imagen"]) for r in rows if Path(r["ruta_imagen"]).exists()]
+        rows = db.fetch_all("SELECT imagen_ref FROM muestras WHERE usuario_id=?", (uid,))
+        valid_paths = [Path(r["imagen_ref"]) for r in rows if Path(r["imagen_ref"]).exists()]
         user_sample_map[uid] = valid_paths
         if len(valid_paths) >= MIN_SAMPLES_PER_USER:
             eligible_users.append(uid)

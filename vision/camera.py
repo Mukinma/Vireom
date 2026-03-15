@@ -21,7 +21,10 @@ except ImportError:
 class CameraStream:
     def __init__(self):
         self.lock = threading.Lock()
+        self.frame_cond = threading.Condition(self.lock)
         self.frame = None
+        self.jpeg_frame: Optional[bytes] = None
+        self.frame_seq = 0
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.last_frame_time = 0.0
@@ -219,9 +222,17 @@ class CameraStream:
 
             ok, raw = self._read_frame()
             if ok:
-                with self.lock:
+                encoded_ok, encoded = cv2.imencode(
+                    ".jpg",
+                    raw,
+                    [cv2.IMWRITE_JPEG_QUALITY, 80],
+                )
+                with self.frame_cond:
                     self.frame = raw
+                    self.jpeg_frame = encoded.tobytes() if encoded_ok else None
+                    self.frame_seq += 1
                     self.last_frame_time = time.time()
+                    self.frame_cond.notify_all()
             else:
                 logger.error("camera_frame_read_failed")
                 self._release_capture()
@@ -232,20 +243,25 @@ class CameraStream:
         with self.lock:
             return None if self.frame is None else self.frame.copy()
 
-    def get_jpeg(self) -> Optional[bytes]:
-        frame = self.get_frame()
-        if frame is None:
-            return None
-        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        return buf.tobytes() if ok else None
+    def get_jpeg(self, last_seq: int = 0, timeout: float = 0.5) -> tuple[Optional[bytes], int]:
+        deadline = time.monotonic() + max(0.0, timeout)
+        with self.frame_cond:
+            while self.running and self.frame_seq <= last_seq:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self.frame_cond.wait(timeout=remaining)
+            return self.jpeg_frame, self.frame_seq
 
     def stop(self) -> None:
         self.running = False
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
         self._release_capture()
-        with self.lock:
+        with self.frame_cond:
             self.frame = None
+            self.jpeg_frame = None
+            self.frame_cond.notify_all()
 
     def is_active(self) -> bool:
         recent = (time.time() - self.last_frame_time) < 3.0

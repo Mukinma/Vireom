@@ -32,7 +32,7 @@ def setup_logging() -> None:
 def load_valid_samples() -> Dict[int, List[Path]]:
     rows = db.fetch_all(
         """
-        SELECT u.id AS usuario_id, m.ruta_imagen
+        SELECT u.id AS usuario_id, m.imagen_ref
         FROM usuarios u
         JOIN muestras m ON m.usuario_id = u.id
         WHERE u.activo = 1
@@ -42,7 +42,7 @@ def load_valid_samples() -> Dict[int, List[Path]]:
     grouped: Dict[int, List[Path]] = defaultdict(list)
     for row in rows:
         user_id = int(row["usuario_id"])
-        image_path = Path(row["ruta_imagen"])
+        image_path = Path(row["imagen_ref"])
         if image_path.exists():
             grouped[user_id].append(image_path)
     return grouped

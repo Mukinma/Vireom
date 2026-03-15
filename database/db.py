@@ -9,6 +9,14 @@ from config import config
 
 
 logger = logging.getLogger("camerapi.db")
+ACCESS_RESULTS_ALLOWED = {
+    "AUTORIZADO",
+    "DENEGADO",
+    "DESCONOCIDO",
+    "ERROR",
+    "MANUAL",
+    "DENEGADO_BLOQUEO",
+}
 
 
 class Database:
@@ -227,7 +235,7 @@ class Database:
         motivo: Optional[str] = None,
     ) -> int:
         resultado_norm = (resultado or "").strip().upper()
-        if resultado_norm not in {"AUTORIZADO", "DENEGADO", "DESCONOCIDO", "ERROR"}:
+        if resultado_norm not in ACCESS_RESULTS_ALLOWED:
             raise ValueError("resultado inválido")
 
         conf = None if confianza is None else float(confianza)
