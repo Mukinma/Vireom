@@ -30,6 +30,10 @@ class CameraStream:
         self.last_frame_time = 0.0
         self.retry_delay_sec = 2.0
         self.max_open_retries = 5
+        self.capture_fps = 0.0
+        self._fps_tick_perf = time.perf_counter()
+        self._fps_counter = 0
+        self._jpeg_clients = 0
 
         self._use_picamera2 = _HAS_PICAMERA2 and sys.platform == "linux"
 
@@ -47,6 +51,24 @@ class CameraStream:
 
     # ── Picamera2 backend ────────────────────────────────────────────
 
+    @staticmethod
+    def _target_frame_duration_us() -> int:
+        return int(round(1_000_000 / float(max(1, config.max_fps))))
+
+    def _configure_picamera2_controls(self, picam: "Picamera2") -> None:
+        target_fps = float(max(1, config.max_fps))
+        frame_duration_us = self._target_frame_duration_us()
+        controls = (
+            {"FrameDurationLimits": (frame_duration_us, frame_duration_us)},
+            {"FrameRate": target_fps},
+        )
+        for control in controls:
+            try:
+                picam.set_controls(control)
+            except Exception:
+                key = next(iter(control.keys()))
+                logger.debug("picamera2_control_unsupported control=%s", key)
+
     def _open_picamera2(self) -> bool:
         for attempt in range(1, self.max_open_retries + 1):
             try:
@@ -60,14 +82,16 @@ class CameraStream:
                 )
                 picam.configure(video_cfg)
                 picam.start()
+                self._configure_picamera2_controls(picam)
                 time.sleep(0.5)
                 self._picam = picam
                 self._picam_started = True
                 logger.info(
-                    "picamera2_open_ok attempt=%s size=%sx%s",
+                    "picamera2_open_ok attempt=%s size=%sx%s fps=%s",
                     attempt,
                     config.frame_width,
                     config.frame_height,
+                    config.max_fps,
                 )
                 return True
             except Exception:
@@ -91,7 +115,10 @@ class CameraStream:
             return False, None
         try:
             frame = self._picam.capture_array()
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            if frame is None or frame.size == 0:
+                return False, None
+            if len(frame.shape) == 3 and frame.shape[2] == 4:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
             return True, frame
         except Exception:
             logger.exception("picamera2_capture_failed")
@@ -105,6 +132,11 @@ class CameraStream:
         return [("DEFAULT", None)]
 
     def _configure_capture(self, cap: cv2.VideoCapture) -> None:
+        if hasattr(cv2, "CAP_PROP_FOURCC"):
+            try:
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            except Exception:
+                logger.debug("camera_fourcc_mjpg_unsupported")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.frame_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.frame_height)
         cap.set(cv2.CAP_PROP_FPS, config.max_fps)
@@ -222,16 +254,30 @@ class CameraStream:
 
             ok, raw = self._read_frame()
             if ok:
-                encoded_ok, encoded = cv2.imencode(
-                    ".jpg",
-                    raw,
-                    [cv2.IMWRITE_JPEG_QUALITY, 80],
-                )
+                with self.lock:
+                    encode_jpeg = self._jpeg_clients > 0
+
+                jpeg = None
+                if encode_jpeg:
+                    encoded_ok, encoded = cv2.imencode(
+                        ".jpg",
+                        raw,
+                        [cv2.IMWRITE_JPEG_QUALITY, config.camera_jpeg_quality],
+                    )
+                    if encoded_ok:
+                        jpeg = encoded.tobytes()
                 with self.frame_cond:
                     self.frame = raw
-                    self.jpeg_frame = encoded.tobytes() if encoded_ok else None
+                    self.jpeg_frame = jpeg if encode_jpeg else None
                     self.frame_seq += 1
                     self.last_frame_time = time.time()
+                    self._fps_counter += 1
+                    frame_tick_perf = time.perf_counter()
+                    elapsed = frame_tick_perf - self._fps_tick_perf
+                    if elapsed >= 1.0:
+                        self.capture_fps = self._fps_counter / elapsed
+                        self._fps_counter = 0
+                        self._fps_tick_perf = frame_tick_perf
                     self.frame_cond.notify_all()
             else:
                 logger.error("camera_frame_read_failed")
@@ -239,9 +285,23 @@ class CameraStream:
                 time.sleep(self.retry_delay_sec)
                 next_tick = time.perf_counter() + min_interval
 
-    def get_frame(self):
+    def get_frame(self, copy: bool = True):
         with self.lock:
-            return None if self.frame is None else self.frame.copy()
+            if self.frame is None:
+                return None
+            return self.frame.copy() if copy else self.frame
+
+    def get_capture_fps(self) -> float:
+        with self.lock:
+            return float(self.capture_fps)
+
+    def register_jpeg_client(self) -> None:
+        with self.lock:
+            self._jpeg_clients += 1
+
+    def unregister_jpeg_client(self) -> None:
+        with self.lock:
+            self._jpeg_clients = max(0, self._jpeg_clients - 1)
 
     def get_jpeg(self, last_seq: int = 0, timeout: float = 0.5) -> tuple[Optional[bytes], int]:
         deadline = time.monotonic() + max(0.0, timeout)
@@ -262,6 +322,11 @@ class CameraStream:
             self.frame = None
             self.jpeg_frame = None
             self.frame_cond.notify_all()
+        with self.lock:
+            self.capture_fps = 0.0
+            self._fps_tick_perf = time.perf_counter()
+            self._fps_counter = 0
+            self._jpeg_clients = 0
 
     def is_active(self) -> bool:
         recent = (time.time() - self.last_frame_time) < 3.0

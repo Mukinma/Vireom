@@ -137,6 +137,11 @@ La interfaz estará disponible en:
 | `CAMERAPI_SECRET` | Clave secreta para sesiones | `camerapi-local-secret` |
 | `CAMERAPI_ADMIN_USER` | Usuario administrador | `admin` |
 | `CAMERAPI_ADMIN_PASSWORD` | Contraseña administrador | `""` (debe definirse) |
+| `CAMERAPI_MAX_FPS` | FPS objetivo del stream de cámara | `30` |
+| `CAMERAPI_PROCESS_INTERVAL_MS` | Intervalo del loop de detección/análisis | `200` |
+| `CAMERAPI_CV_THREADS` | Hilos internos de OpenCV | `2` |
+| `CAMERAPI_CAMERA_BUFFER_SIZE` | Buffer de captura de cámara | `1` |
+| `CAMERAPI_CAMERA_JPEG_QUALITY` | Calidad JPEG del stream MJPEG | `80` |
 
 > **Importante:** cambia estos valores antes de cualquier despliegue en producción.
 > `CAMERAPI_ADMIN_PASSWORD` vacío deshabilita el login administrativo.

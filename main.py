@@ -51,6 +51,8 @@ class AccessService:
             "model": "not_loaded",
             "gpio": "ready" if self.relay.available else "mock",
             "fps": 0,
+            "camera_fps": 0.0,
+            "analysis_fps": 0.0,
             "last_user": "-",
             "last_result": "INICIALIZANDO",
             "last_confidence": None,
@@ -80,6 +82,7 @@ class AccessService:
         self.attempts_processed = 0
         self.last_watchdog_log_ts = 0.0
         self.gpio_activation_count = 0
+        self.last_perf_log_ts = 0.0
 
         self.detector_params = {
             "scaleFactor": config.detect_scale_factor,
@@ -158,8 +161,12 @@ class AccessService:
 
             now = time.time()
             self.last_process_ts = now
+            camera_fps = self.camera.get_capture_fps()
+            with self.lock:
+                self.system_status["camera_fps"] = round(camera_fps, 2)
+                self.system_status["fps"] = int(round(camera_fps))
 
-            frame = self.camera.get_frame()
+            frame = self.camera.get_frame(copy=False)
             if frame is None:
                 with self.lock:
                     self.system_status["face_detected"] = False
@@ -169,7 +176,9 @@ class AccessService:
             self.last_frame_counter += 1
             elapsed = now - self.last_fps_tick
             if elapsed >= 1.0:
-                self.system_status["fps"] = int(self.last_frame_counter / elapsed)
+                analysis_fps = self.last_frame_counter / elapsed
+                with self.lock:
+                    self.system_status["analysis_fps"] = round(analysis_fps, 2)
                 self.last_frame_counter = 0
                 self.last_fps_tick = now
 
@@ -186,7 +195,14 @@ class AccessService:
                 avg_pipeline_ms = self.pipeline_time_total_ms / max(1, self.pipeline_count)
                 with self.lock:
                     self.system_status["avg_pipeline_ms"] = round(avg_pipeline_ms, 2)
-                logger.info("frame_processed duration_ms=%.2f fps=%s", frame_ms, self.system_status["fps"])
+                if now - self.last_perf_log_ts >= 5.0:
+                    logger.info(
+                        "processing_perf camera_fps=%.2f analysis_fps=%.2f avg_pipeline_ms=%.2f",
+                        camera_fps,
+                        float(self.system_status.get("analysis_fps", 0.0)),
+                        float(self.system_status.get("avg_pipeline_ms", 0.0)),
+                    )
+                    self.last_perf_log_ts = now
 
     @staticmethod
     def _to_gray(frame):
@@ -567,6 +583,8 @@ class AccessService:
                 "avg_recognition_ms": self.system_status.get("avg_recognition_ms", 0.0),
                 "avg_pipeline_ms": self.system_status.get("avg_pipeline_ms", 0.0),
                 "fps": self.system_status.get("fps", 0),
+                "camera_fps": self.system_status.get("camera_fps", 0.0),
+                "analysis_fps": self.system_status.get("analysis_fps", 0.0),
                 "failed_attempts_consecutive": self.consecutive_denied,
                 "attempts_processed": self.attempts_processed,
                 "gpio_activations": self.gpio_activation_count,

@@ -14,6 +14,20 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw.strip())
+    except ValueError:
+        return default
+
+
+def _clamp_int(value: int, minimum: int, maximum: int) -> int:
+    return max(minimum, min(maximum, int(value)))
+
+
 def _resolve_secret_key() -> str:
     debug = _env_bool("CAMERAPI_DEBUG", False)
     if debug:
@@ -49,10 +63,11 @@ class AppConfig:
     camera_index: int = 0
     frame_width: int = 640
     frame_height: int = 480
-    max_fps: int = 15
-    process_interval_ms: int = 200
-    cv_threads: int = 2
-    camera_buffer_size: int = 1
+    max_fps: int = _clamp_int(_env_int("CAMERAPI_MAX_FPS", 30), 1, 120)
+    process_interval_ms: int = _clamp_int(_env_int("CAMERAPI_PROCESS_INTERVAL_MS", 200), 10, 2000)
+    cv_threads: int = _clamp_int(_env_int("CAMERAPI_CV_THREADS", 2), 1, 16)
+    camera_buffer_size: int = _clamp_int(_env_int("CAMERAPI_CAMERA_BUFFER_SIZE", 1), 1, 8)
+    camera_jpeg_quality: int = _clamp_int(_env_int("CAMERAPI_CAMERA_JPEG_QUALITY", 80), 55, 95)
 
     cascade_filename: str = "haarcascade_frontalface_default.xml"
     detect_downscale: float = 0.5
