@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Acceso</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Osvium · Terminal de acceso biométrico</title>
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <script>
@@ -12,64 +12,25 @@
 </head>
 <body class="kiosk-body">
   <div class="kiosk-shell" id="kioskShell">
-    <aside class="kiosk-sidebar" id="kioskSidebar" aria-label="Panel lateral">
-      <div class="sidebar-head">
+
+    <header class="kiosk-header">
+      <div class="kiosk-header__brand">
         <img
-          class="brand-logo"
-          src="/static/images/logo.svg"
-          alt="Logo del sistema"
+          class="kiosk-header__logo"
+          src="/static/images/logo-white.svg"
+          alt="Osvium"
           data-theme-logo
           data-logo-light="/static/images/logo-white.svg"
           data-logo-dark="/static/images/logo-white.svg"
         />
+        <div class="kiosk-header__text">
+          <strong>Osvium</strong>
+          <span>Terminal de acceso biométrico</span>
+        </div>
       </div>
-
-      <nav class="sidebar-nav" aria-label="Acciones rápidas">
-        <a href="/" class="nav-icon is-active" title="Operación" aria-current="page">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-          <span class="nav-label">Inicio</span>
-        </a>
-
-        <button id="manualOpen" class="nav-icon" type="button" title="Apertura manual">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock"></use></svg>
-          <span class="nav-label">Abrir</span>
-        </button>
-
-        <a href="/admin" class="nav-icon" title="Administración">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
-          <span class="nav-label">Admin</span>
-        </a>
-
-        <button id="fullscreenBtn" class="nav-icon" type="button" title="Pantalla completa">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#shield"></use></svg>
-          <span class="nav-label">Max</span>
-        </button>
-
-        <button
-          id="themeToggle"
-          class="nav-icon"
-          type="button"
-          data-theme-toggle
-          aria-label="Cambiar tema"
-          title="Cambiar tema"
-        >
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#clock"></use></svg>
-          <span class="nav-label">Tema</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-foot">Accesium</div>
-    </aside>
-
-    <header class="kiosk-topbar" aria-label="Barra superior">
-      <div class="topbar-title">
-        <strong>ACCESIUM</strong>
-      </div>
-      <div class="topbar-time">
+      <div class="kiosk-header__clock">
         <strong id="clockTime">--:--</strong>
-        <span>
-          <span id="clockDate">-- --- ----</span>
-        </span>
+        <span id="clockDate">-- --- ----</span>
       </div>
     </header>
 
@@ -81,47 +42,97 @@
       <span id="systemStateBadge" class="state-chip state-processing">Inicializando</span>
     </div>
 
-    <main class="kiosk-main" aria-label="Área principal de cámara">
-      <div class="camera-shell camera" id="cameraShell">
-        <section class="camera-stage camera" id="cameraStage">
-          <img id="videoFeed" class="camera-feed" src="/api/stream" alt="Cámara en vivo" />
-          <div class="camera-veil" aria-hidden="true"></div>
+    <main class="kiosk-content">
+      <div class="kiosk-viewport">
 
-          <div id="faceIndicator" class="face-indicator idle" aria-hidden="true"></div>
+        <div class="kiosk-camera" id="cameraShell">
+          <div class="kiosk-camera__stage" id="cameraStage">
+            <img id="videoFeed" class="kiosk-camera__feed" src="/api/stream" alt="Cámara en vivo" />
+            <div class="kiosk-camera__veil" aria-hidden="true"></div>
 
-          <div id="scanOverlay" class="scan-overlay is-hidden" aria-hidden="true">
-            <div class="scan-overlay__frame"></div>
-            <div class="scan-overlay__line"></div>
-          </div>
-
-          <button
-            id="analyzeFaceBtn"
-            class="face-action-btn is-idle"
-            type="button"
-            aria-label="Iniciar análisis facial"
-            aria-busy="false"
-          >
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-            <span class="sr-only">Iniciar análisis facial</span>
-          </button>
-
-          <div id="accessToast" class="access-toast is-hidden" role="status" aria-live="polite">
-            <div id="accessToastText" class="access-toast-title">Procesando</div>
-            <div id="accessToastSub" class="access-toast-sub">Esperando validación biométrica</div>
-          </div>
-
-          <aside id="userOverlay" class="user-overlay is-hidden" aria-live="polite">
-            <img id="userPhoto" class="user-photo" src="/static/images/user-placeholder.svg" alt="Usuario reconocido" />
-            <div class="user-meta">
-              <h2 id="recognizedName">-</h2>
-              <p class="user-id">ID: <span id="recognizedId">-</span></p>
-              <p class="user-area"><span id="recognizedArea">-</span></p>
-              <p class="user-confidence">Confianza: <span id="confidence">-</span></p>
+            <div id="faceGuide" class="face-guide is-idle" aria-hidden="true">
+              <div class="face-guide__frame"></div>
+              <div class="face-guide__oval"></div>
+              <span class="face-guide__corner face-guide__corner--tl"></span>
+              <span class="face-guide__corner face-guide__corner--tr"></span>
+              <span class="face-guide__corner face-guide__corner--bl"></span>
+              <span class="face-guide__corner face-guide__corner--br"></span>
+              <span class="face-guide__tick face-guide__tick--t"></span>
+              <span class="face-guide__tick face-guide__tick--b"></span>
+              <span class="face-guide__tick face-guide__tick--l"></span>
+              <span class="face-guide__tick face-guide__tick--r"></span>
             </div>
-          </aside>
-        </section>
+
+            <div id="cameraBadge" class="camera-badge is-idle">
+              <span class="camera-badge__dot"></span>
+              <span id="cameraBadgeText">Inicializando</span>
+            </div>
+
+            <div id="faceIndicator" class="face-indicator idle" aria-hidden="true" hidden></div>
+
+            <div id="scanOverlay" class="scan-overlay is-hidden" aria-hidden="true">
+              <div class="scan-overlay__frame"></div>
+              <div class="scan-overlay__line"></div>
+            </div>
+
+            <button
+              id="analyzeFaceBtn"
+              class="face-action-btn is-idle"
+              type="button"
+              aria-label="Iniciar análisis facial"
+              aria-busy="false"
+              hidden
+            >
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+              <span class="sr-only">Iniciar análisis facial</span>
+            </button>
+
+            <div id="accessToast" class="access-toast is-hidden" role="status" aria-live="polite">
+              <div id="accessToastText" class="access-toast-title">Procesando</div>
+              <div id="accessToastSub" class="access-toast-sub">Esperando validación biométrica</div>
+            </div>
+
+            <aside id="userOverlay" class="user-overlay is-hidden" aria-live="polite">
+              <img id="userPhoto" class="user-photo" src="/static/images/user-placeholder.svg" alt="Usuario reconocido" />
+              <div class="user-meta">
+                <h2 id="recognizedName">-</h2>
+                <p class="user-id">ID: <span id="recognizedId">-</span></p>
+                <p class="user-area"><span id="recognizedArea">-</span></p>
+                <p class="user-confidence">Confianza: <span id="confidence">-</span></p>
+              </div>
+            </aside>
+          </div>
+
+          <div class="kiosk-camera__instructions">
+            <h2 class="kiosk-camera__title" id="cameraTitle">Validando identidad</h2>
+            <p>Mantén la mirada al frente</p>
+            <p>Tu rostro debe permanecer dentro de la guía</p>
+          </div>
+        </div>
+
+        <aside class="kiosk-info" id="infoPanel">
+          <span class="kiosk-info__label">Reconocimiento facial</span>
+          <h1 class="kiosk-info__title" id="infoTitle">Validando<br>identidad</h1>
+          <p class="kiosk-info__desc" id="infoDesc">
+            Espera un momento mientras<br>
+            <strong>verificamos tu acceso</strong>
+          </p>
+          <div class="kiosk-info__rules">
+            <p>Mantén la mirada al frente</p>
+            <p>Tu rostro debe permanecer<br>dentro de la guía</p>
+          </div>
+        </aside>
+
       </div>
+
+      <footer class="kiosk-hint">
+        <span class="kiosk-hint__text">
+          Colócate a una distancia adecuada<br>y evita mover la cabeza
+        </span>
+        <span class="kiosk-hint__diamond" aria-hidden="true"></span>
+      </footer>
     </main>
+
   </div>
 
   <script src="/static/js/theme.js"></script>
