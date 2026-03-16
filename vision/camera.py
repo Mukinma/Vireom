@@ -117,8 +117,12 @@ class CameraStream:
             frame = self._picam.capture_array()
             if frame is None or frame.size == 0:
                 return False, None
-            if len(frame.shape) == 3 and frame.shape[2] == 4:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+            if len(frame.shape) == 3:
+                if frame.shape[2] == 4:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                elif frame.shape[2] == 3:
+                    # Picamera2 puede entregar RGB aunque se configure BGR888 en algunos drivers.
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             return True, frame
         except Exception:
             logger.exception("picamera2_capture_failed")
