@@ -103,13 +103,21 @@ def stream(request: Request):
 
     def generate():
         last_seq = 0
-        while True:
-            frame, last_seq = service.camera.get_jpeg(last_seq=last_seq, timeout=0.5)
-            if frame is None:
-                if not service.running:
-                    break
-                continue
-            yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+        register = getattr(service.camera, "register_jpeg_client", None)
+        unregister = getattr(service.camera, "unregister_jpeg_client", None)
+        if callable(register):
+            register()
+        try:
+            while True:
+                frame, last_seq = service.camera.get_jpeg(last_seq=last_seq, timeout=0.5)
+                if frame is None:
+                    if not service.running:
+                        break
+                    continue
+                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+        finally:
+            if callable(unregister):
+                unregister()
 
     return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")
 
