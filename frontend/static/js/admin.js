@@ -17,7 +17,6 @@ const adminToastText = document.getElementById('adminToastText');
 const adminToastSub = document.getElementById('adminToastSub');
 
 let adminToastTimer = null;
-let restartConfirmUntil = 0;
 
 function showAdminToast({
   text = 'Notificación',
@@ -124,6 +123,8 @@ async function loadConfig() {
 }
 
 window.toggleUser = async function(userId, active) {
+  const action = active ? 'activar' : 'desactivar';
+  if (!confirm(`¿Estás seguro de que deseas ${action} al usuario ID ${userId}?`)) return;
   try {
     await api(`/api/users/${userId}`, {
       method: 'PATCH',
@@ -176,7 +177,13 @@ captureBtn?.addEventListener('click', async () => {
   const userId = Number(captureUserId.value);
   if (!userId) return;
   captureBtn.disabled = true;
-  captureBtn.textContent = 'Capturando...';
+  captureBtn.innerHTML = '<svg class="icon spin" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#loader"></use></svg> Capturando...';
+  showAdminToast({
+    text: 'Capturando muestras...',
+    sub: 'Mirá la cámara, esto puede tardar unos segundos',
+    cls: 'processing',
+    timeout: 15000,
+  });
   try {
     const result = await api(`/api/users/${userId}/capture?count=30`, { method: 'POST' });
     showAdminToast({
@@ -200,8 +207,15 @@ captureBtn?.addEventListener('click', async () => {
 });
 
 trainBtn?.addEventListener('click', async () => {
+  if (!confirm('¿Deseas reentrenar el modelo LBPH? Esto reemplazará el modelo actual.')) return;
   trainBtn.disabled = true;
-  trainBtn.textContent = 'Entrenando...';
+  trainBtn.innerHTML = '<svg class="icon spin" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#loader"></use></svg> Entrenando...';
+  showAdminToast({
+    text: 'Entrenando modelo...',
+    sub: 'Esto puede tardar unos segundos',
+    cls: 'processing',
+    timeout: 15000,
+  });
   try {
     const result = await api('/api/train', { method: 'POST' });
     trainResult.textContent = `Entrenado con ${result.samples_used} muestras de ${result.unique_users} usuarios.`;
@@ -253,17 +267,7 @@ saveConfigBtn?.addEventListener('click', async () => {
 });
 
 restartBtn?.addEventListener('click', async () => {
-  if (Date.now() > restartConfirmUntil) {
-    restartConfirmUntil = Date.now() + 3200;
-    showAdminToast({
-      text: 'Confirmar reinicio',
-      sub: 'Presiona nuevamente en los próximos 3 segundos',
-      cls: 'warning',
-      timeout: 3000,
-    });
-    return;
-  }
-  restartConfirmUntil = 0;
+  if (!confirm('¿Estás seguro de que deseas reiniciar el sistema? Se interrumpirá el servicio momentáneamente.')) return;
   try {
     await api('/api/restart', { method: 'POST' });
     showAdminToast({

@@ -259,6 +259,31 @@ class Database:
             (uid, conf, resultado_norm, motivo_norm),
         )
 
+    def list_user_access_logs(self, user_id: int, limit: int = 50) -> list[dict[str, Any]]:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        lim = max(1, min(500, int(limit)))
+        rows = self.fetch_all(
+            """
+            SELECT a.id, a.fecha, a.confianza, a.resultado, a.motivo
+            FROM accesos a
+            WHERE a.usuario_id = ?
+            ORDER BY a.id DESC
+            LIMIT ?
+            """,
+            (int(user_id), lim),
+        )
+        return [dict(row) for row in rows]
+
+    def count_user_samples(self, user_id: int) -> int:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        row = self.fetch_one(
+            "SELECT COUNT(*) AS total FROM muestras WHERE usuario_id=?",
+            (int(user_id),),
+        )
+        return row["total"] if row else 0
+
     def list_access_logs(self, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
         lim = int(limit)
         if lim <= 0:

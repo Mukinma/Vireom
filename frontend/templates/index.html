@@ -1,10 +1,14 @@
 <!doctype html>
-<html lang="es" class="theme-dark">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Osvium · Terminal de acceso biométrico</title>
+  <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
+  <script>
+    (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
+  </script>
 </head>
 <body class="kiosk-body">
   <div class="kiosk-shell" id="kioskShell">
