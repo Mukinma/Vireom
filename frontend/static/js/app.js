@@ -24,6 +24,15 @@ const cameraShell = document.getElementById('cameraShell');
 const cameraStage = document.getElementById('cameraStage');
 const cameraRingHost = cameraShell || cameraStage;
 
+const faceGuide = document.getElementById('faceGuide');
+const cameraBadge = document.getElementById('cameraBadge');
+const cameraBadgeText = document.getElementById('cameraBadgeText');
+const infoTitle = document.getElementById('infoTitle');
+const infoDesc = document.getElementById('infoDesc');
+const cameraTitle = document.getElementById('cameraTitle');
+
+const AUTO_TRIGGER_COOLDOWN_MS = 4000;
+let lastAutoTriggerMs = 0;
 let toastTimer = null;
 
 const toastMap = {
@@ -84,33 +93,81 @@ function showToast(type) {
 }
 
 function updateFaceIndicator(stateKey) {
-  if (!faceIndicator) {
-    return;
+  if (faceIndicator) {
+    faceIndicator.classList.remove('idle', 'tracking', 'granted', 'denied', 'blocked');
+    if (stateKey === 'granted') faceIndicator.classList.add('granted');
+    else if (stateKey === 'denied' || stateKey === 'unrecognized') faceIndicator.classList.add('denied');
+    else if (stateKey === 'blocked') faceIndicator.classList.add('blocked');
+    else if (stateKey === 'processing') faceIndicator.classList.add('tracking');
+    else faceIndicator.classList.add('idle');
   }
 
-  faceIndicator.classList.remove('idle', 'tracking', 'granted', 'denied', 'blocked');
-
-  if (stateKey === 'granted') {
-    faceIndicator.classList.add('granted');
-    return;
+  if (faceGuide) {
+    faceGuide.classList.remove('is-idle', 'is-tracking', 'is-granted', 'is-denied');
+    if (stateKey === 'granted') faceGuide.classList.add('is-granted');
+    else if (stateKey === 'denied' || stateKey === 'unrecognized' || stateKey === 'blocked') faceGuide.classList.add('is-denied');
+    else if (stateKey === 'processing') faceGuide.classList.add('is-tracking');
+    else faceGuide.classList.add('is-idle');
   }
 
-  if (stateKey === 'denied' || stateKey === 'unrecognized') {
-    faceIndicator.classList.add('denied');
-    return;
+  if (cameraBadge && cameraBadgeText) {
+    cameraBadge.classList.remove('is-idle', 'is-tracking', 'is-granted', 'is-denied', 'is-blocked');
+    const badgeCfg = {
+      granted:      { text: 'Acceso concedido',    cls: 'is-granted'  },
+      denied:       { text: 'Acceso denegado',     cls: 'is-denied'   },
+      blocked:      { text: 'Acceso restringido',  cls: 'is-blocked'  },
+      unrecognized: { text: 'No reconocido',       cls: 'is-denied'   },
+      processing:   { text: 'Rostro detectado',    cls: 'is-tracking' },
+      noface:       { text: 'Esperando detección', cls: 'is-idle'     },
+      cameraError:  { text: 'Error de cámara',     cls: 'is-denied'   },
+      initializing: { text: 'Inicializando',       cls: 'is-idle'     },
+    };
+    const cfg = badgeCfg[stateKey] || badgeCfg.initializing;
+    cameraBadgeText.textContent = cfg.text;
+    cameraBadge.classList.add(cfg.cls);
   }
 
-  if (stateKey === 'blocked') {
-    faceIndicator.classList.add('blocked');
-    return;
+  if (infoTitle) {
+    const titleMap = {
+      granted:      'Acceso<br>concedido',
+      denied:       'Acceso<br>denegado',
+      blocked:      'Acceso<br>restringido',
+      unrecognized: 'No<br>reconocido',
+      processing:   'Validando<br>identidad',
+      noface:       'Esperando<br>detección',
+      cameraError:  'Error de<br>cámara',
+      initializing: 'Iniciando<br>sistema',
+    };
+    infoTitle.innerHTML = titleMap[stateKey] || titleMap.processing;
   }
 
-  if (stateKey === 'processing') {
-    faceIndicator.classList.add('tracking');
-    return;
+  if (infoDesc) {
+    const descMap = {
+      granted:      'Identidad verificada<br><strong>acceso autorizado</strong>',
+      denied:       'Identidad no autorizada<br><strong>acceso denegado</strong>',
+      blocked:      'Demasiados intentos<br><strong>acceso restringido</strong>',
+      unrecognized: 'Rostro no registrado<br><strong>en el sistema</strong>',
+      processing:   'Espera un momento mientras<br><strong>verificamos tu acceso</strong>',
+      noface:       'Coloca tu rostro frente<br><strong>a la cámara</strong>',
+      cameraError:  'Verifique la conexión<br><strong>del dispositivo</strong>',
+      initializing: 'Preparando el sistema<br><strong>de reconocimiento</strong>',
+    };
+    infoDesc.innerHTML = descMap[stateKey] || descMap.processing;
   }
 
-  faceIndicator.classList.add('idle');
+  if (cameraTitle) {
+    const ctMap = {
+      granted:      'Acceso concedido',
+      denied:       'Acceso denegado',
+      blocked:      'Acceso restringido',
+      unrecognized: 'No reconocido',
+      processing:   'Validando identidad',
+      noface:       'Esperando detección',
+      cameraError:  'Error de cámara',
+      initializing: 'Iniciando sistema',
+    };
+    cameraTitle.textContent = ctMap[stateKey] || ctMap.processing;
+  }
 }
 
 function showUserOverlay(data) {
@@ -237,6 +294,14 @@ async function loadStatus() {
     updateFaceIndicator(uiState.key);
     showUserOverlay(data);
     faceAction?.updateStatus(data);
+
+    if (data.face_detected && !data.analysis_busy && faceAction && !faceAction.localBusy && faceAction.isReady(data)) {
+      const now = Date.now();
+      if (now - lastAutoTriggerMs >= AUTO_TRIGGER_COOLDOWN_MS) {
+        lastAutoTriggerMs = now;
+        faceAction.handleAnalyzeClick();
+      }
+    }
   } catch (error) {
     console.error(error);
     setSystemBadge('Error de conexión', 'state-error');
