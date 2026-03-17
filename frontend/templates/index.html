@@ -11,6 +11,20 @@
   </script>
 </head>
 <body class="kiosk-body">
+
+  <div class="lockscreen" id="lockScreen" role="dialog" aria-label="Pantalla de bloqueo">
+    <div class="lockscreen__bg"></div>
+    <div class="lockscreen__content">
+      <div class="lockscreen__clock-box">
+        <span class="lockscreen__day" id="lockDay">--</span>
+        <span class="lockscreen__number" id="lockNumber">--</span>
+        <span class="lockscreen__month" id="lockMonth">---</span>
+        <span class="lockscreen__time" id="lockTime">--:--</span>
+      </div>
+      <p class="lockscreen__hint">Toca para continuar</p>
+    </div>
+  </div>
+
   <div class="kiosk-shell" id="kioskShell">
 
     <header class="kiosk-header">
@@ -136,6 +150,7 @@
   </div>
 
   <script src="/static/js/theme.js"></script>
+  <script src="/static/js/lockscreen.js"></script>
   <script src="/static/js/face-action.js"></script>
   <script src="/static/js/app.js"></script>
 </body>

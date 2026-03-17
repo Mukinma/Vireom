@@ -684,6 +684,131 @@ input::placeholder {
   color: var(--text-primary);
 }
 
+/* ═══════════════════════════════════════════════════════
+   Lock Screen
+   ═══════════════════════════════════════════════════════ */
+
+.lockscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.lockscreen.is-dismissed {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.lockscreen__bg {
+  position: absolute;
+  inset: 0;
+  background-color: var(--bg-main);
+  background-image: var(--kiosk-bg-image);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.lockscreen__bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(620px 420px at 10% 12%, rgba(var(--accent-rgb), var(--bg-radial-strength-a)), transparent 62%),
+    radial-gradient(560px 420px at 88% 85%, rgba(var(--primary-rgb), var(--bg-radial-strength-b)), transparent 62%);
+}
+
+.lockscreen__bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: var(--bg-grid-opacity);
+}
+
+.lockscreen__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  padding-top: 10vh;
+}
+
+.lockscreen__clock-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 56px;
+  border: 2px solid var(--border-soft);
+  border-radius: var(--radius-glass);
+  background:
+    linear-gradient(160deg, rgba(var(--accent-rgb), 0.08), transparent 60%),
+    var(--surface-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  box-shadow: var(--shadow-soft);
+}
+
+.lockscreen__day {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.lockscreen__number {
+  font-size: 4.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.lockscreen__month {
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.lockscreen__time {
+  margin-top: 6px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+
+.lockscreen__hint {
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  animation: lockscreen-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes lockscreen-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
+
 .kiosk-body {
   overflow: hidden;
 }
