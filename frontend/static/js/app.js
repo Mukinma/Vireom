@@ -120,7 +120,8 @@ function updateFaceIndicator(stateKey) {
       processing:   { text: 'Rostro detectado',    cls: 'is-tracking' },
       noface:       { text: 'Esperando detección', cls: 'is-idle'     },
       cameraError:  { text: 'Error de cámara',     cls: 'is-denied'   },
-      initializing: { text: 'Inicializando',       cls: 'is-idle'     },
+      initializing: { text: 'Cargando modelo',     cls: 'is-idle'     },
+      nomodel:      { text: 'Sin modelo',          cls: 'is-idle'     },
     };
     const cfg = badgeCfg[stateKey] || badgeCfg.initializing;
     cameraBadgeText.textContent = cfg.text;
@@ -136,7 +137,8 @@ function updateFaceIndicator(stateKey) {
       processing:   'Validando<br>identidad',
       noface:       'Esperando<br>detección',
       cameraError:  'Error de<br>cámara',
-      initializing: 'Iniciando<br>sistema',
+      initializing: 'Cargando<br>modelo',
+      nomodel:      'Sin<br>modelo',
     };
     infoTitle.innerHTML = titleMap[stateKey] || titleMap.processing;
   }
@@ -150,7 +152,8 @@ function updateFaceIndicator(stateKey) {
       processing:   'Espera un momento mientras<br><strong>verificamos tu acceso</strong>',
       noface:       'Coloca tu rostro frente<br><strong>a la cámara</strong>',
       cameraError:  'Verifique la conexión<br><strong>del dispositivo</strong>',
-      initializing: 'Preparando el sistema<br><strong>de reconocimiento</strong>',
+      initializing: 'Cargando modelo<br><strong>de reconocimiento</strong>',
+      nomodel:      'Entrena un modelo desde<br><strong>el panel de administración</strong>',
     };
     infoDesc.innerHTML = descMap[stateKey] || descMap.processing;
   }
@@ -164,9 +167,27 @@ function updateFaceIndicator(stateKey) {
       processing:   'Validando identidad',
       noface:       'Esperando detección',
       cameraError:  'Error de cámara',
-      initializing: 'Iniciando sistema',
+      initializing: 'Cargando modelo',
+      nomodel:      'Sin modelo',
     };
     cameraTitle.textContent = ctMap[stateKey] || ctMap.processing;
+  }
+
+  const authProgressBar = document.getElementById('authProgressBar');
+  if (authProgressBar) {
+    if (stateKey === 'granted') {
+      authProgressBar.style.width = '100%';
+      authProgressBar.style.backgroundColor = 'var(--success)';
+    } else if (['denied', 'unrecognized', 'blocked'].includes(stateKey)) {
+      authProgressBar.style.width = '100%';
+      authProgressBar.style.backgroundColor = 'var(--danger)';
+    } else if (stateKey === 'processing') {
+      authProgressBar.style.width = '85%';
+      authProgressBar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+    } else {
+      authProgressBar.style.width = '0%';
+      authProgressBar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+    }
   }
 }
 
@@ -236,21 +257,14 @@ function classifyState(data) {
   const statusAge = Math.max(0, Math.floor(Date.now() / 1000) - Number(data.timestamp || 0));
   const faceDetected = Boolean(data.face_detected);
   const analysisBusy = Boolean(data.analysis_busy);
+  const modelLoaded = data.model === 'loaded';
 
   if (data.camera === 'error' || data.camera === 'offline' || data.camera === 'degraded') {
     return { key: 'cameraError', badge: ['Error de cámara', 'state-error'] };
   }
 
-  if (data.model !== 'loaded') {
-    return { key: 'initializing', badge: ['Inicializando', 'state-processing'] };
-  }
-
   if (analysisBusy) {
     return { key: 'processing', badge: ['Analizando', 'state-processing'] };
-  }
-
-  if (!faceDetected) {
-    return { key: 'noface', badge: ['Sin rostro detectado', 'state-warning'] };
   }
 
   if (statusAge <= 3 && result.startsWith('AUTORIZADO')) {
@@ -266,8 +280,15 @@ function classifyState(data) {
     if (userName && userName !== 'desconocido') {
       return { key: 'denied', badge: ['Acceso denegado', 'state-error'] };
     }
-
     return { key: 'unrecognized', badge: ['Rostro no reconocido', 'state-warning'] };
+  }
+
+  if (!modelLoaded) {
+    return { key: 'nomodel', badge: ['Sin modelo', 'state-warning'] };
+  }
+
+  if (!faceDetected) {
+    return { key: 'noface', badge: ['Esperando detección', 'state-neutral'] };
   }
 
   return { key: 'processing', badge: ['Rostro detectado', 'state-processing'] };
