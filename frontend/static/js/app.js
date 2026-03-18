@@ -377,3 +377,24 @@ updateClock();
 setInterval(updateClock, 1000);
 setInterval(loadStatus, 600);
 loadStatus();
+
+(function initAdminShortcut() {
+  const header = document.querySelector('.kiosk-header');
+  if (!header) return;
+
+  let tapCount = 0;
+  let tapTimer = null;
+
+  header.addEventListener('click', () => {
+    tapCount++;
+    if (tapTimer) clearTimeout(tapTimer);
+
+    if (tapCount >= 3) {
+      tapCount = 0;
+      window.location.href = '/admin';
+      return;
+    }
+
+    tapTimer = setTimeout(() => { tapCount = 0; }, 1200);
+  });
+})();

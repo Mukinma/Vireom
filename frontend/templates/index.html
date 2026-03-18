@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Osvium · Terminal de acceso biométrico</title>
-  <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/static/images/logo-white.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <script>
     (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
@@ -83,23 +83,6 @@
             </div>
 
             <div id="faceIndicator" class="face-indicator idle" aria-hidden="true" hidden></div>
-
-            <div id="scanOverlay" class="scan-overlay is-hidden" aria-hidden="true">
-              <div class="scan-overlay__frame"></div>
-              <div class="scan-overlay__line"></div>
-            </div>
-
-            <button
-              id="analyzeFaceBtn"
-              class="face-action-btn is-idle"
-              type="button"
-              aria-label="Iniciar análisis facial"
-              aria-busy="false"
-              hidden
-            >
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-              <span class="sr-only">Iniciar análisis facial</span>
-            </button>
 
             <div id="accessToast" class="access-toast is-hidden" role="status" aria-live="polite">
               <div id="accessToastText" class="access-toast-title">Procesando</div>
