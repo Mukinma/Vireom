@@ -28,7 +28,12 @@
   <div class="kiosk-shell" id="kioskShell">
 
     <header class="kiosk-header">
-      <div class="kiosk-header__brand">
+      <button
+        id="headerLogoButton"
+        class="kiosk-header__brand logo-clickable"
+        type="button"
+        aria-label="Ir a configuración o login"
+      >
         <img
           class="kiosk-header__logo"
           src="/static/images/logo-white.svg"
@@ -41,7 +46,7 @@
           <strong>Osvium</strong>
           <span>Terminal de acceso biométrico</span>
         </div>
-      </div>
+      </button>
       <div class="kiosk-header__clock">
         <strong id="clockTime">--:--</strong>
         <span id="clockDate">-- --- ----</span>
@@ -136,6 +141,7 @@
   <script src="/static/js/lockscreen.js"></script>
   <script src="/static/js/face-action.js"></script>
   <script src="/static/js/tips-carousel.js"></script>
+  <script src="/static/js/logo-navigation.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>
