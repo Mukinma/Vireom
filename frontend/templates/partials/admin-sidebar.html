@@ -1,13 +1,20 @@
 <aside class="kiosk-sidebar admin-sidebar" id="adminSidebar" aria-label="Panel lateral de administración">
   <div class="sidebar-head">
-    <img
-      class="brand-logo"
-      src="/static/images/logo.svg"
-      alt="Logo del sistema"
-      data-theme-logo
-      data-logo-light="/static/images/logo-white.svg"
-      data-logo-dark="/static/images/logo-white.svg"
-    />
+    <button
+      id="sidebarLogoButton"
+      class="brand-logo-btn logo-clickable"
+      type="button"
+      aria-label="Ir a configuración o login"
+    >
+      <img
+        class="brand-logo"
+        src="/static/images/logo.svg"
+        alt="Logo del sistema"
+        data-theme-logo
+        data-logo-light="/static/images/logo-white.svg"
+        data-logo-dark="/static/images/logo-white.svg"
+      />
+    </button>
   </div>
 
   <nav class="sidebar-nav admin-sidebar-nav" aria-label="Navegación principal">

@@ -885,6 +885,13 @@ input::placeholder {
   padding-bottom: 4px;
 }
 
+.brand-logo-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  line-height: 0;
+}
+
 .brand-logo {
   width: 42px;
   height: 42px;
@@ -3189,6 +3196,34 @@ html.theme-light .admin-body tbody tr:hover {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.kiosk-header__brand.logo-clickable {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+
+.logo-clickable {
+  cursor: pointer;
+  transition: transform var(--ease-fast), opacity var(--ease-fast), filter var(--ease-fast);
+}
+
+.logo-clickable:hover {
+  opacity: 0.92;
+  filter: brightness(1.06);
+}
+
+.logo-clickable:active {
+  transform: scale(0.985);
+}
+
+.logo-clickable:focus-visible {
+  outline: 2px solid rgba(173, 210, 255, 0.7);
+  outline-offset: 4px;
+  border-radius: 10px;
 }
 
 .kiosk-header__logo {
