@@ -6,19 +6,20 @@
   <title>Login Admin</title>
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/login.css" />
   <script>
     (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
   </script>
 </head>
 <body class="centered-body">
   <main class="login-shell">
-    <form class="card login-card" action="/auth/login" method="post">
+    <form class="login-card" action="/auth/login" method="post">
       <div class="login-head">
         <svg class="icon icon-lg" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
         <h1>Acceso Administrativo</h1>
       </div>
       {% if login_error %}
-      <p class="label" role="alert" style="color:#ef4444;">Credenciales inválidas.</p>
+      <p class="label login-error" role="alert">Credenciales inválidas.</p>
       {% endif %}
 
       <label for="username" class="label">Usuario</label>
