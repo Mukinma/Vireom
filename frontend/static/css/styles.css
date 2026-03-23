@@ -2404,6 +2404,64 @@ html.theme-light .centered-body input:focus-visible {
   grid-column: 1 / -1;
 }
 
+/* ── Delete user button ── */
+.user-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-delete-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.btn-delete-user:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btn-delete-user:active {
+  transform: translateY(0);
+}
+
+.btn-delete-user .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Logs filters ── */
+.logs-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: grid;
+  gap: 4px;
+}
+
+.filter-group .label {
+  font-size: 0.74rem;
+}
+
+.filter-group input {
+  min-width: 140px;
+}
+
 .table-wrap {
   max-height: 300px;
   overflow: auto;
