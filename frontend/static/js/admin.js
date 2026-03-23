@@ -17,6 +17,7 @@ const adminToastText = document.getElementById('adminToastText');
 const adminToastSub = document.getElementById('adminToastSub');
 
 let adminToastTimer = null;
+let allLogs = [];
 
 function showAdminToast({
   text = 'Notificación',
@@ -70,9 +71,12 @@ function renderUsers(users) {
       <td>${u.id}</td>
       <td>${u.nombre}</td>
       <td>${u.activo ? 'Sí' : 'No'}</td>
-      <td>
+      <td class="user-actions-cell">
         <button class="btn btn-secondary" onclick="toggleUser(${u.id}, ${u.activo ? 'false' : 'true'})">
           ${u.activo ? 'Desactivar' : 'Activar'}
+        </button>
+        <button class="btn-delete-user" onclick="deleteUser(${u.id}, '${u.nombre.replace(/'/g, "\\'")}')" title="Eliminar usuario" aria-label="Eliminar ${u.nombre}">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
         </button>
       </td>
     </tr>
@@ -111,8 +115,26 @@ async function loadUsers() {
 }
 
 async function loadLogs() {
-  const logs = await api('/api/access-logs?limit=120');
-  renderLogs(logs);
+  allLogs = await api('/api/access-logs?limit=500');
+  applyLogFilters();
+}
+
+function applyLogFilters() {
+  const filterDate = document.getElementById('filterDate')?.value || '';
+  const filterUserId = document.getElementById('filterUserId')?.value || '';
+
+  let filtered = allLogs;
+
+  if (filterDate) {
+    filtered = filtered.filter((l) => l.fecha && l.fecha.startsWith(filterDate));
+  }
+
+  if (filterUserId) {
+    const uid = Number(filterUserId);
+    filtered = filtered.filter((l) => l.usuario_id === uid);
+  }
+
+  renderLogs(filtered);
 }
 
 async function loadConfig() {
@@ -140,6 +162,27 @@ window.toggleUser = async function(userId, active) {
     console.error(error);
     showAdminToast({
       text: 'No se pudo actualizar',
+      sub: getErrorMessage(error),
+      cls: 'error',
+      timeout: 3200,
+    });
+  }
+};
+
+window.deleteUser = async function(userId, nombre) {
+  if (!confirm(`¿Eliminar al usuario "${nombre}" (ID ${userId})? Se borrarán sus muestras y se desvinculará de los accesos. Esta acción no se puede deshacer.`)) return;
+  try {
+    await api(`/api/users/${userId}`, { method: 'DELETE' });
+    await loadUsers();
+    showAdminToast({
+      text: 'Usuario eliminado',
+      sub: `${nombre} (ID ${userId}) fue eliminado`,
+      cls: 'success',
+    });
+  } catch (error) {
+    console.error(error);
+    showAdminToast({
+      text: 'No se pudo eliminar',
       sub: getErrorMessage(error),
       cls: 'error',
       timeout: 3200,
@@ -309,6 +352,18 @@ manualOpenAdminBtn?.addEventListener('click', async () => {
 async function init() {
   window.CameraPITheme?.initTheme();
   window.CameraPITheme?.bindToggleButtons();
+
+  const filterDate = document.getElementById('filterDate');
+  const filterUserId = document.getElementById('filterUserId');
+  const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+  filterDate?.addEventListener('change', applyLogFilters);
+  filterUserId?.addEventListener('input', applyLogFilters);
+  clearFiltersBtn?.addEventListener('click', () => {
+    if (filterDate) filterDate.value = '';
+    if (filterUserId) filterUserId.value = '';
+    applyLogFilters();
+  });
 
   await loadUsers();
   await loadLogs();

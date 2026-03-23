@@ -92,6 +92,17 @@
               <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#database"></use></svg>
               <h2>Historial de accesos</h2>
             </div>
+            <div class="logs-filters">
+              <div class="filter-group">
+                <label for="filterDate" class="label">Fecha</label>
+                <input id="filterDate" type="date" />
+              </div>
+              <div class="filter-group">
+                <label for="filterUserId" class="label">ID Usuario</label>
+                <input id="filterUserId" type="number" min="1" placeholder="Ej: 5" />
+              </div>
+              <button id="clearFiltersBtn" class="btn btn-secondary" type="button">Limpiar</button>
+            </div>
             <div id="logsList" class="table-wrap"></div>
           </section>
         </section>
