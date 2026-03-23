@@ -31,6 +31,283 @@ from vision.trainer import FaceTrainer
 logger = logging.getLogger("camerapi.main")
 
 
+# ── Face Guidance Engine ─────────────────────────────────────────────
+
+class FaceGuidanceEngine:
+    """Máquina de estados para guiar al usuario a alinear su rostro con la zona objetivo."""
+
+    # ── Zona objetivo (coordenadas normalizadas 0-1) ──
+    TARGET_CX = 0.50
+    TARGET_CY = 0.42
+    TARGET_W = 0.28
+    TARGET_H = 0.38
+
+    # ── Umbrales de alineación (entrada) ──
+    ALIGN_OFFSET_X = 0.08
+    ALIGN_OFFSET_Y = 0.10
+    ALIGN_SCALE_MIN = 0.65
+    ALIGN_SCALE_MAX = 1.45
+
+    # ── Hysteresis (salida — más tolerante) ──
+    HYSTERESIS_OFFSET_X = 0.11
+    HYSTERESIS_OFFSET_Y = 0.13
+    HYSTERESIS_SCALE_MIN = 0.55
+    HYSTERESIS_SCALE_MAX = 1.60
+
+    # ── Estabilidad temporal ──
+    STEADY_WINDOW_MS = 800
+    HOLD_THRESHOLD_MS = 300
+    STABILITY_EMA_ALPHA = 0.30
+    MAX_STABLE_JITTER = 0.025
+
+    # ── EMA para posición ──
+    POSITION_EMA_ALPHA = 0.35
+
+    # ── Tolerancias de dirección ──
+    DIR_THRESHOLD_X = 0.06
+    DIR_THRESHOLD_Y = 0.06
+    SCALE_TOO_CLOSE = 1.35
+    SCALE_TOO_FAR = 0.70
+
+    # ── Lost grace period ──
+    LOST_GRACE_MS = 800
+
+    # ── Estados válidos ──
+    STATES = frozenset({
+        "idle", "searching", "detected_misaligned", "aligned",
+        "hold_steady", "ready", "capture_in_progress", "lost", "error",
+    })
+
+    def __init__(self):
+        self._state: str = "idle"
+        self._prev_state: str = "idle"
+
+        # EMA de posición suavizada
+        self._smooth_cx: Optional[float] = None
+        self._smooth_cy: Optional[float] = None
+        self._smooth_w: Optional[float] = None
+        self._smooth_h: Optional[float] = None
+
+        # Estabilidad: jitter tracking
+        self._prev_cx: Optional[float] = None
+        self._prev_cy: Optional[float] = None
+        self._stability_score: float = 0.0
+
+        # Ventana temporal
+        self._aligned_since_ms: Optional[float] = None
+        self._last_face_seen_ms: float = 0.0
+
+        # Conteo de rostros
+        self._faces_count: int = 0
+
+    def _ema(self, prev: Optional[float], current: float, alpha: float) -> float:
+        if prev is None:
+            return current
+        return alpha * current + (1.0 - alpha) * prev
+
+    def _now_ms(self) -> float:
+        return time.time() * 1000.0
+
+    def _compute_offsets(self) -> tuple[float, float, float]:
+        """Retorna (offset_x, offset_y, scale_ratio) del rostro suavizado vs zona objetivo."""
+        if self._smooth_cx is None or self._smooth_w is None:
+            return 0.0, 0.0, 0.0
+        offset_x = self._smooth_cx - self.TARGET_CX
+        offset_y = self._smooth_cy - self.TARGET_CY
+        scale_ratio = self._smooth_w / max(0.01, self.TARGET_W)
+        return offset_x, offset_y, scale_ratio
+
+    def _is_within_align(self, ox: float, oy: float, sr: float) -> bool:
+        return (
+            abs(ox) <= self.ALIGN_OFFSET_X
+            and abs(oy) <= self.ALIGN_OFFSET_Y
+            and self.ALIGN_SCALE_MIN <= sr <= self.ALIGN_SCALE_MAX
+        )
+
+    def _is_within_hysteresis(self, ox: float, oy: float, sr: float) -> bool:
+        return (
+            abs(ox) <= self.HYSTERESIS_OFFSET_X
+            and abs(oy) <= self.HYSTERESIS_OFFSET_Y
+            and self.HYSTERESIS_SCALE_MIN <= sr <= self.HYSTERESIS_SCALE_MAX
+        )
+
+    def _compute_stability(self, cx: float, cy: float) -> float:
+        if self._prev_cx is None:
+            self._prev_cx = cx
+            self._prev_cy = cy
+            return 0.0
+        jitter = abs(cx - self._prev_cx) + abs(cy - self._prev_cy)
+        self._prev_cx = cx
+        self._prev_cy = cy
+        is_stable = 1.0 if jitter < self.MAX_STABLE_JITTER else 0.0
+        self._stability_score = self._ema(
+            self._stability_score, is_stable, self.STABILITY_EMA_ALPHA
+        )
+        return self._stability_score
+
+    def _direction_message(self, ox: float, oy: float, sr: float) -> str:
+        if sr > self.SCALE_TOO_CLOSE:
+            return "Aléjate un poco"
+        if sr < self.SCALE_TOO_FAR:
+            return "Acércate un poco"
+        if ox < -self.DIR_THRESHOLD_X:
+            return "Muévete a la derecha"
+        if ox > self.DIR_THRESHOLD_X:
+            return "Muévete a la izquierda"
+        if oy < -self.DIR_THRESHOLD_Y:
+            return "Baja ligeramente la cabeza"
+        if oy > self.DIR_THRESHOLD_Y:
+            return "Sube ligeramente la cabeza"
+        return "Ajusta tu posición"
+
+    def _transition(self, new_state: str) -> None:
+        if new_state != self._state:
+            self._prev_state = self._state
+            self._state = new_state
+
+    def update(
+        self,
+        face_detected: bool,
+        face_bbox: Optional[dict],
+        faces_count: int,
+        camera_ok: bool,
+        model_loaded: bool,
+    ) -> dict[str, Any]:
+        """Actualiza la máquina de estados y retorna el dict face_guidance."""
+        now = self._now_ms()
+        self._faces_count = faces_count
+
+        # ── Error conditions ──
+        if not camera_ok:
+            self._reset_tracking()
+            self._transition("error")
+            return self._build("Cámara no disponible")
+
+        if not model_loaded:
+            self._reset_tracking()
+            self._transition("idle")
+            return self._build("Coloca tu rostro dentro de la guía")
+
+        # ── Multiple faces ──
+        if faces_count > 1:
+            self._reset_tracking()
+            self._transition("detected_misaligned")
+            return self._build("Solo debe haber una persona")
+
+        # ── No face ──
+        if not face_detected or face_bbox is None:
+            elapsed_since_face = now - self._last_face_seen_ms
+            if self._state in ("aligned", "hold_steady", "ready", "detected_misaligned"):
+                if elapsed_since_face < self.LOST_GRACE_MS:
+                    self._transition("lost")
+                    return self._build("Rostro fuera de la zona de captura")
+                else:
+                    self._reset_tracking()
+                    self._transition("searching")
+                    return self._build("Buscando rostro…")
+            elif self._state == "lost":
+                if elapsed_since_face >= self.LOST_GRACE_MS:
+                    self._reset_tracking()
+                    self._transition("searching")
+                    return self._build("Buscando rostro…")
+                return self._build("Rostro fuera de la zona de captura")
+            else:
+                self._transition("searching")
+                return self._build("Buscando rostro…")
+
+        # ── Face detected — smooth position ──
+        self._last_face_seen_ms = now
+        raw_cx = face_bbox["x"] + face_bbox["w"] / 2.0
+        raw_cy = face_bbox["y"] + face_bbox["h"] / 2.0
+        raw_w = face_bbox["w"]
+        raw_h = face_bbox["h"]
+
+        self._smooth_cx = self._ema(self._smooth_cx, raw_cx, self.POSITION_EMA_ALPHA)
+        self._smooth_cy = self._ema(self._smooth_cy, raw_cy, self.POSITION_EMA_ALPHA)
+        self._smooth_w = self._ema(self._smooth_w, raw_w, self.POSITION_EMA_ALPHA)
+        self._smooth_h = self._ema(self._smooth_h, raw_h, self.POSITION_EMA_ALPHA)
+
+        ox, oy, sr = self._compute_offsets()
+        stability = self._compute_stability(self._smooth_cx, self._smooth_cy)
+
+        # ── State transitions ──
+        currently_aligned = self._state in ("aligned", "hold_steady", "ready")
+
+        if currently_aligned:
+            # Use hysteresis for exit
+            still_ok = self._is_within_hysteresis(ox, oy, sr)
+            if not still_ok:
+                self._aligned_since_ms = None
+                self._transition("detected_misaligned")
+                return self._build(self._direction_message(ox, oy, sr), ox, oy, sr, stability)
+
+            # Check stability progression
+            elapsed_aligned = now - (self._aligned_since_ms or now)
+
+            if elapsed_aligned >= self.STEADY_WINDOW_MS and stability >= 0.6:
+                self._transition("ready")
+                return self._build("Listo para escaneo", ox, oy, sr, stability)
+            elif elapsed_aligned >= self.HOLD_THRESHOLD_MS:
+                self._transition("hold_steady")
+                return self._build("Mantente quieto", ox, oy, sr, stability)
+            else:
+                self._transition("aligned")
+                return self._build("Rostro alineado", ox, oy, sr, stability)
+        else:
+            # Use strict threshold for entry
+            if self._is_within_align(ox, oy, sr):
+                if self._aligned_since_ms is None:
+                    self._aligned_since_ms = now
+                self._transition("aligned")
+                return self._build("Rostro alineado", ox, oy, sr, stability)
+            else:
+                self._aligned_since_ms = None
+                self._transition("detected_misaligned")
+                return self._build(self._direction_message(ox, oy, sr), ox, oy, sr, stability)
+
+    def set_capturing(self) -> None:
+        """Llamar cuando inicia un ciclo de captura/reconocimiento."""
+        self._transition("capture_in_progress")
+
+    def _reset_tracking(self) -> None:
+        self._smooth_cx = None
+        self._smooth_cy = None
+        self._smooth_w = None
+        self._smooth_h = None
+        self._prev_cx = None
+        self._prev_cy = None
+        self._stability_score = 0.0
+        self._aligned_since_ms = None
+
+    def _build(
+        self,
+        message: str,
+        ox: float = 0.0,
+        oy: float = 0.0,
+        sr: float = 0.0,
+        stability: float = 0.0,
+    ) -> dict[str, Any]:
+        now = self._now_ms()
+        steady_ms = 0
+        if self._aligned_since_ms is not None:
+            steady_ms = int(now - self._aligned_since_ms)
+        is_aligned = self._state in ("aligned", "hold_steady", "ready")
+        is_stable = self._state in ("hold_steady", "ready")
+        return {
+            "state": self._state,
+            "message": message,
+            "is_aligned": is_aligned,
+            "is_stable": is_stable,
+            "ready": self._state == "ready",
+            "faces_count": self._faces_count,
+            "offset_x": round(ox, 4),
+            "offset_y": round(oy, 4),
+            "scale_ratio": round(sr, 3),
+            "stability_score": round(stability, 3),
+            "steady_ms": steady_ms,
+        }
+
+
 class AccessService:
     def __init__(self):
         self.camera = CameraStream()
@@ -38,6 +315,7 @@ class AccessService:
         self.recognizer = LBPHRecognizer()
         self.trainer = FaceTrainer(self.recognizer)
         self.relay = RelayController(pin=18, active_high=True)
+        self.guidance = FaceGuidanceEngine()
 
         self.running = False
         self.thread: Optional[threading.Thread] = None
@@ -71,6 +349,7 @@ class AccessService:
             "face_updated_ts": 0,
             "camera_frame_width": config.frame_width,
             "camera_frame_height": config.frame_height,
+            "face_guidance": None,
         }
         self.consecutive_denied = 0
         self.last_frame_counter = 0
@@ -208,11 +487,14 @@ class AccessService:
     def _to_gray(frame):
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    def _detect_primary_face(self, gray_frame):
+    def _detect_faces(self, gray_frame):
+        """Detecta rostros y retorna (rostro principal, total de rostros)."""
         faces = self.detector.detect(gray_frame, self.detector_params)
-        if len(faces) == 0:
-            return None
-        return max(faces, key=lambda f: f[2] * f[3])
+        count = len(faces)
+        if count == 0:
+            return None, 0
+        primary = max(faces, key=lambda f: f[2] * f[3])
+        return primary, count
 
     @staticmethod
     def _normalize_roi(gray_frame, face):
@@ -243,7 +525,7 @@ class AccessService:
     def _run_detection_pipeline(self, frame) -> None:
         gray = self._to_gray(frame)
         frame_height, frame_width = gray.shape[:2]
-        face = self._detect_primary_face(gray)
+        face, faces_count = self._detect_faces(gray)
         now_ts = int(time.time())
         bbox = None
         detected = False
@@ -252,12 +534,24 @@ class AccessService:
             bbox = self._normalize_face_bbox(face, frame_width, frame_height)
             detected = True
 
+        # ── Face guidance engine ──
+        camera_ok = self.system_status.get("camera") in ("online", "degraded")
+        model_loaded = self.system_status.get("model") == "loaded"
+        guidance = self.guidance.update(
+            face_detected=detected,
+            face_bbox=bbox,
+            faces_count=faces_count,
+            camera_ok=camera_ok,
+            model_loaded=model_loaded,
+        )
+
         with self.lock:
             self.system_status["face_detected"] = detected
             self.system_status["face_bbox"] = bbox
             self.system_status["face_updated_ts"] = now_ts
             self.system_status["camera_frame_width"] = frame_width
             self.system_status["camera_frame_height"] = frame_height
+            self.system_status["face_guidance"] = guidance
 
     def _apply_access_decision(
         self,
@@ -417,7 +711,7 @@ class AccessService:
                     logger.error("recognition_cycle_end attempt_id=%s result=model_not_loaded", attempt_id)
                     return payload, 503
 
-            face = self._detect_primary_face(gray)
+            face, _ = self._detect_faces(gray)
             if face is None:
                 ts = int(time.time())
                 with self.lock:
@@ -532,7 +826,7 @@ class AccessService:
         if frame is None:
             return None
         gray = self._to_gray(frame)
-        face = self._detect_primary_face(gray)
+        face, _ = self._detect_faces(gray)
         if face is None:
             return None
         roi = self._normalize_roi(gray, face)

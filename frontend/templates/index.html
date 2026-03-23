@@ -70,14 +70,19 @@
             <div class="kiosk-camera__veil" aria-hidden="true"></div>
 
             <div id="faceGuide" class="face-guide is-idle" aria-hidden="true">
-              <div class="face-guide__bracket face-guide__bracket--tl"></div>
-              <div class="face-guide__bracket face-guide__bracket--tr"></div>
-              <div class="face-guide__bracket face-guide__bracket--bl"></div>
-              <div class="face-guide__bracket face-guide__bracket--br"></div>
-              <div class="face-guide__center-v"></div>
-              <div class="face-guide__center-h"></div>
-              <div class="face-guide__circle-l"></div>
-              <div class="face-guide__circle-r"></div>
+              <!-- Silhouette contour -->
+              <svg class="face-guide__silhouette" viewBox="0 0 400 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="200" cy="230" rx="130" ry="172"
+                  stroke="currentColor" stroke-width="2.5" fill="none"
+                  stroke-dasharray="8 4" opacity="0.7"/>
+                <!-- Chin accent -->
+                <path d="M120 360 Q200 440 280 360" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/>
+                <!-- Center crosshair (subtle) -->
+                <line x1="200" y1="200" x2="200" y2="260" stroke="currentColor" stroke-width="0.8" opacity="0.25"/>
+                <line x1="170" y1="230" x2="230" y2="230" stroke="currentColor" stroke-width="0.8" opacity="0.25"/>
+              </svg>
+              <!-- Guidance message -->
+              <div class="face-guide__msg" id="guidanceMessage">Coloca tu rostro dentro de la guía</div>
             </div>
 
             <div id="cameraBadge" class="camera-badge is-idle">
