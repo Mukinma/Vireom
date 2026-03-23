@@ -137,7 +137,7 @@
   /* ──── Bootstrap ──── */
 
   function bindLogoClick() {
-    const logoButtons = document.querySelectorAll('.logo-clickable');
+    const logoButtons = document.querySelectorAll('[data-logo-gate="admin-access"]');
     logoButtons.forEach((button) => {
       button.addEventListener('click', handleLogoClick);
     });
