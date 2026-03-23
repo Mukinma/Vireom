@@ -25,7 +25,27 @@ class _DummyService:
         return {"ok": True, "event": "authorized", "result": "AUTORIZADO"}, 200
 
     def get_status(self):
-        return {"status": "ok"}
+        return {
+            "status": "ok",
+            "camera": "online",
+            "model": "loaded",
+            "face_detected": False,
+            "face_bbox": None,
+            "analysis_busy": False,
+            "face_guidance": {
+                "state": "idle",
+                "message": "Coloca tu rostro dentro de la guía",
+                "is_aligned": False,
+                "is_stable": False,
+                "ready": False,
+                "faces_count": 0,
+                "offset_x": 0.0,
+                "offset_y": 0.0,
+                "scale_ratio": 0.0,
+                "stability_score": 0.0,
+                "steady_ms": 0,
+            },
+        }
 
     def health_liveness(self):
         return {"healthy": True}

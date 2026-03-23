@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel Admin</title>
+  <title>Osvium · Administración</title>
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/admin.css" />
   <script>
     (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
   </script>
 </head>
 <body class="admin-body">
   <div class="admin-layout-shell" id="adminShell">
-    {% include "partials/admin-sidebar.html" %}
-    {% include "partials/admin-topbar.html" %}
+    <div class="admin-chrome-frame" id="adminChromeFrame">
+      {% include "partials/admin-sidebar.html" %}
+      {% include "partials/admin-topbar.html" %}
+    </div>
 
     <button
       id="adminSidebarBackdrop"
@@ -23,90 +26,259 @@
       tabindex="-1"
     ></button>
 
-    <main class="kiosk-main admin-main" id="adminMain" aria-label="Área principal administrativa">
-      <div class="admin-shell">
-        <section class="admin-grid">
-          <section class="card">
-            <div class="section-head">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#users"></use></svg>
-              <h2>Registro de usuarios</h2>
+    <main class="admin-main" id="adminMain" aria-label="Área principal">
+
+      <!-- ═══════════════ VIEW: RESUMEN ═══════════════ -->
+      <section class="admin-view" id="view-resumen">
+        <div class="resumen-layout">
+          <section class="card resumen-hero" id="resumenHero" aria-labelledby="resumenStatusTitle">
+            <div class="resumen-hero__topline">
+              <span class="resumen-hero__eyebrow">Centro de control</span>
+              <span class="resumen-status-chip" id="resumenStatusChip">Monitoreando</span>
             </div>
-            <div class="inline-form">
-              <input id="newUserName" type="text" placeholder="Nombre del usuario" maxlength="80" />
-              <button id="createUserBtn" class="btn btn-primary" type="button">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
-                <span>Crear</span>
+
+            <div class="resumen-hero__copy">
+              <p class="resumen-hero__label" id="resumenStatusLabel">Estado actual</p>
+              <h2 class="resumen-hero__title" id="resumenStatusTitle">Cargando estado operativo…</h2>
+              <p class="resumen-hero__meta" id="resumenStatusMeta">Sincronizando estado y actividad.</p>
+              <p class="resumen-hero__caption" id="resumenStatusCaption">Cámara, modelo y puerta en una sola lectura.</p>
+            </div>
+
+            <div class="resumen-alert-inline" id="resumenInlineAlert" hidden>
+              <span class="resumen-alert-inline__badge" id="resumenInlineAlertBadge">Atención</span>
+              <p class="resumen-alert-inline__text" id="resumenInlineAlertText">El sistema mostrará aquí la incidencia principal.</p>
+            </div>
+
+            <div class="resumen-metric-strip" aria-label="Indicadores operativos">
+              <article class="resumen-metric">
+                <span class="resumen-metric__value" id="resumenMetricActiveUsers">—</span>
+                <span class="resumen-metric__label">Personas activas</span>
+              </article>
+              <article class="resumen-metric">
+                <span class="resumen-metric__value" id="resumenMetricToday">—</span>
+                <span class="resumen-metric__label">Actividad hoy</span>
+              </article>
+              <article class="resumen-metric resumen-metric--accent">
+                <span class="resumen-metric__value" id="resumenMetricSuccess">—</span>
+                <span class="resumen-metric__label">Tasa de reconocimiento</span>
+              </article>
+              <article class="resumen-metric">
+                <span class="resumen-metric__value" id="resumenMetricManual">—</span>
+                <span class="resumen-metric__label">Manuales hoy</span>
+              </article>
+            </div>
+          </section>
+
+          <section class="card resumen-actions" aria-labelledby="resumenActionTitle">
+            <div class="resumen-panel-head resumen-panel-head--stack">
+              <p class="resumen-panel-head__eyebrow">Siguiente movimiento</p>
+              <h2 class="resumen-panel-title" id="resumenActionTitle">Acción sugerida</h2>
+            </div>
+            <p class="resumen-action-hint" id="resumenActionHint">Seleccionando la mejor acción.</p>
+
+            <div class="resumen-action-stack" id="resumenActionStack">
+              <button id="resumenActionRegistro" class="resumen-action-btn" type="button" data-quick="registro">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
+                <span class="resumen-action-btn__content">
+                  <strong>Registro facial</strong>
+                  <small>Captura y entrena.</small>
+                </span>
+              </button>
+              <button id="resumenActionAccesos" class="resumen-action-btn" type="button" data-quick="accesos">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#list-filled"></use></svg>
+                <span class="resumen-action-btn__content">
+                  <strong>Ver accesos</strong>
+                  <small>Revisa rechazos.</small>
+                </span>
+              </button>
+              <button id="resumenActionPersonas" class="resumen-action-btn" type="button" data-quick="personas">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
+                <span class="resumen-action-btn__content">
+                  <strong>Agregar persona</strong>
+                  <small>Crea identidad.</small>
+                </span>
               </button>
             </div>
-            <div id="usersList" class="table-wrap"></div>
           </section>
 
-          <section class="card">
-            <div class="section-head">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-              <h2>Captura y entrenamiento</h2>
+          <section class="card resumen-timeline" aria-labelledby="resumenTimelineTitle">
+            <div class="section-head-row resumen-timeline__head">
+              <div>
+                <p class="resumen-panel-head__eyebrow">Actividad reciente</p>
+                <h2 id="resumenTimelineTitle">Lo último</h2>
+              </div>
+              <p class="muted text-sm resumen-timeline__meta" id="resumenTimelineMeta">Sin movimiento</p>
             </div>
 
-            <label for="captureUserId" class="label">ID de usuario</label>
-            <input id="captureUserId" type="number" min="1" />
+            <div class="resumen-timeline__list" id="resumenTimelineList" aria-live="polite">
+              <p class="resumen-empty-state">Sin accesos recientes.</p>
+            </div>
+          </section>
+        </div>
+      </section>
 
-            <button id="captureBtn" class="btn btn-primary large-touch" type="button">Capturar 30 muestras</button>
-            <button id="trainBtn" class="btn btn-primary large-touch" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#database"></use></svg>
-              <span>Entrenar modelo LBPH</span>
+      <!-- ═══════════════ VIEW: PERSONAS ═══════════════ -->
+      <section class="admin-view" id="view-personas" hidden>
+        <div class="card">
+          <div class="admin-form-bar">
+            <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" />
+            <button id="createUserBtn" class="btn btn-primary" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
+              <span>Agregar</span>
             </button>
-            <p id="trainResult" class="muted"></p>
-          </section>
+          </div>
+          <p id="createResult" class="create-result" hidden></p>
+        </div>
 
-          <section class="card">
-            <div class="section-head">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
-              <h2>Configuración</h2>
+        <div class="card">
+          <div class="section-head-row">
+            <h2>Personas registradas</h2>
+            <div class="search-wrap">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#search-filled"></use></svg>
+              <input id="userSearch" type="text" placeholder="Buscar…" />
             </div>
+          </div>
+          <div id="usersList" class="table-wrap"></div>
+        </div>
+      </section>
 
-            <label for="cfgThreshold" class="label">Umbral de confianza</label>
+      <!-- ═══════════════ VIEW: REGISTRO FACIAL ═══════════════ -->
+      <section class="admin-view" id="view-registro" hidden>
+        <div class="card">
+          <div class="section-head">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
+            <h2>Capturar rostro</h2>
+          </div>
+
+          <label for="captureUserSelect" class="label">Persona</label>
+          <select id="captureUserSelect" class="select-input">
+            <option value="">Seleccionar persona…</option>
+          </select>
+
+          <div class="action-stack mt-4">
+            <button id="captureBtn" class="btn btn-primary large-touch" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#focus-filled"></use></svg>
+              <span>Tomar 30 fotos del rostro</span>
+            </button>
+            <button id="trainBtn" class="btn btn-secondary large-touch" type="button">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg>
+              <span>Actualizar reconocimiento</span>
+            </button>
+          </div>
+          <p id="trainResult" class="muted mt-3 text-sm"></p>
+        </div>
+
+        <div class="card card--tips-compact">
+          <h3>Consejos para buenas fotos</h3>
+          <ul class="tips-list tips-list--compact">
+            <li>La persona debe mirar directamente a la cámara</li>
+            <li>Mantener una expresión natural y neutra</li>
+            <li>Buena iluminación, sin sombras fuertes en la cara</li>
+            <li>No usar lentes de sol ni accesorios que cubran el rostro</li>
+            <li>Permanecer quieto durante la captura</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ═══════════════ VIEW: ACCESOS ═══════════════ -->
+      <section class="admin-view" id="view-accesos" hidden>
+        <div class="stats-row" id="statsRow">
+          <div class="stat-card">
+            <span class="stat-value" id="statToday">—</span>
+            <span class="stat-label">Hoy</span>
+          </div>
+          <div class="stat-card stat-card--success">
+            <span class="stat-value" id="statGranted">—</span>
+            <span class="stat-label">Reconocidos</span>
+          </div>
+          <div class="stat-card stat-card--danger">
+            <span class="stat-value" id="statDenied">—</span>
+            <span class="stat-label">Rechazados</span>
+          </div>
+          <div class="stat-card stat-card--muted">
+            <span class="stat-value" id="statManual">—</span>
+            <span class="stat-label">Manuales</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-head-row">
+            <h2>Historial reciente</h2>
+            <div class="filter-bar">
+              <label for="logFilterResult" class="sr-only">Filtrar por resultado</label>
+              <select id="logFilterResult" class="select-input select-input--sm">
+                <option value="">Todos</option>
+                <option value="autorizado">Reconocidos</option>
+                <option value="rechazado">Rechazados</option>
+                <option value="manual">Manuales</option>
+              </select>
+            </div>
+          </div>
+          <div id="logsList" class="table-wrap table-wrap--tall"></div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA ═══════════════ -->
+      <section class="admin-view" id="view-sistema" hidden>
+        <div class="card">
+          <div class="section-head">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sliders-filled"></use></svg>
+            <h2>Reconocimiento</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="cfgThreshold" class="label">Nivel de coincidencia (1–200)</label>
+            <p class="text-micro muted">Menor = más estricto. Mayor = más flexible.</p>
             <input id="cfgThreshold" type="number" step="0.1" min="1" max="200" />
+          </div>
 
-            <label for="cfgOpenSec" class="label">Tiempo de apertura (seg)</label>
-            <input id="cfgOpenSec" type="number" min="1" max="20" />
-
-            <label for="cfgMaxAttempts" class="label">Máximo intentos</label>
+          <div class="form-group mt-3">
+            <label for="cfgMaxAttempts" class="label">Intentos permitidos sin éxito</label>
             <input id="cfgMaxAttempts" type="number" min="1" max="20" />
+          </div>
 
-            <button id="saveConfigBtn" class="btn btn-primary" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check"></use></svg>
-              <span>Guardar configuración</span>
-            </button>
-            <button id="restartBtn" class="btn btn-danger" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-triangle"></use></svg>
-              <span>Reiniciar sistema</span>
-            </button>
-            <button id="manualOpenAdminBtn" class="btn btn-secondary" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock"></use></svg>
-              <span>Apertura manual</span>
-            </button>
-          </section>
+          <hr class="separator my-4" />
 
-          <section class="card full-span">
-            <div class="section-head">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#database"></use></svg>
-              <h2>Historial de accesos</h2>
-            </div>
-            <div class="logs-filters">
-              <div class="filter-group">
-                <label for="filterDate" class="label">Fecha</label>
-                <input id="filterDate" type="date" />
-              </div>
-              <div class="filter-group">
-                <label for="filterUserId" class="label">ID Usuario</label>
-                <input id="filterUserId" type="number" min="1" placeholder="Ej: 5" />
-              </div>
-              <button id="clearFiltersBtn" class="btn btn-secondary" type="button">Limpiar</button>
-            </div>
-            <div id="logsList" class="table-wrap"></div>
-          </section>
-        </section>
-      </div>
+          <div class="section-head">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#door-filled"></use></svg>
+            <h2>Puerta</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="cfgOpenSec" class="label">Tiempo de apertura (segundos)</label>
+            <input id="cfgOpenSec" type="number" min="1" max="20" />
+          </div>
+
+          <button id="saveConfigBtn" class="btn btn-primary mt-4 w-full" type="button">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg>
+            <span>Guardar ajustes</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="section-head">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#wrench-filled"></use></svg>
+            <h2>Mantenimiento</h2>
+          </div>
+          <button id="manualOpenAdminBtn" class="btn btn-secondary large-touch w-full" type="button">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock-filled"></use></svg>
+            <span>Abrir puerta ahora</span>
+          </button>
+        </div>
+
+        <div class="card card--danger-zone">
+          <div class="section-head">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-filled"></use></svg>
+            <h2>Zona delicada</h2>
+          </div>
+          <p class="text-hint text-sm mb-3">Esta acción interrumpirá brevemente el servicio.</p>
+          <button id="restartBtn" class="btn btn-danger" type="button">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#power-filled"></use></svg>
+            <span>Reiniciar sistema</span>
+          </button>
+        </div>
+      </section>
+
     </main>
   </div>
 

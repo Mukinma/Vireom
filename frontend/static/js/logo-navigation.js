@@ -1,9 +1,18 @@
 (function () {
   const ROUTES = {
-    // En esta app, /admin funciona como panel si hay sesión y como login si no.
     config: '/admin',
     login: '/admin',
   };
+
+  const TRIPLE_CLICK = {
+    requiredClicks: 3,
+    windowMs: 1200,  // 1.2 s max entre el primer y el tercer clic
+  };
+
+  let _clickCount = 0;
+  let _clickTimer = null;
+
+  /* ──── Detección de autenticación ──── */
 
   function getAuthStateFromGlobalStore() {
     try {
@@ -82,8 +91,9 @@
     return hasActiveAdminSession();
   }
 
+  /* ──── Navegación ──── */
+
   function navigate(route) {
-    // Compatibilidad si el frontend migra a Next.js.
     if (window.next?.router?.push) {
       window.next.router.push(route);
       return;
@@ -91,15 +101,43 @@
     window.location.assign(route);
   }
 
-  async function handleLogoClick(event) {
-    event?.preventDefault?.();
+  async function executeNavigation() {
     const authenticated = await isUserAuthenticated();
     const targetRoute = authenticated ? ROUTES.config : ROUTES.login;
     navigate(targetRoute);
   }
 
+  /* ──── Triple-click gate ──── */
+
+  function resetClickSequence() {
+    _clickCount = 0;
+    if (_clickTimer !== null) {
+      clearTimeout(_clickTimer);
+      _clickTimer = null;
+    }
+  }
+
+  function handleLogoClick(event) {
+    event?.preventDefault?.();
+
+    _clickCount += 1;
+
+    if (_clickCount === 1) {
+      // Primer clic → arrancar temporizador
+      _clickTimer = setTimeout(resetClickSequence, TRIPLE_CLICK.windowMs);
+    }
+
+    if (_clickCount >= TRIPLE_CLICK.requiredClicks) {
+      // Tercer clic alcanzado → navegar y limpiar
+      resetClickSequence();
+      executeNavigation();
+    }
+  }
+
+  /* ──── Bootstrap ──── */
+
   function bindLogoClick() {
-    const logoButtons = document.querySelectorAll('.logo-clickable');
+    const logoButtons = document.querySelectorAll('[data-logo-gate="admin-access"]');
     logoButtons.forEach((button) => {
       button.addEventListener('click', handleLogoClick);
     });

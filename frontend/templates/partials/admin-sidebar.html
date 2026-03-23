@@ -1,58 +1,129 @@
-<aside class="kiosk-sidebar admin-sidebar" id="adminSidebar" aria-label="Panel lateral de administración">
-  <div class="sidebar-head">
-    <button
-      id="sidebarLogoButton"
-      class="brand-logo-btn logo-clickable"
-      type="button"
-      aria-label="Ir a configuración o login"
-    >
-      <img
-        class="brand-logo"
-        src="/static/images/logo.svg"
-        alt="Logo del sistema"
-        data-theme-logo
-        data-logo-light="/static/images/logo-white.svg"
-        data-logo-dark="/static/images/logo-white.svg"
-      />
-    </button>
-  </div>
+<aside class="admin-sidebar" id="adminSidebar" aria-label="Navegación principal">
+  <div class="admin-rail">
+    <div class="admin-sidebar__header">
+      <div class="admin-sidebar__intro">
+        <span class="admin-sidebar__brand-mark" aria-hidden="true">
+          <img
+            src="/static/images/logo.svg"
+            alt=""
+            data-theme-logo
+            data-logo-light="/static/images/logo.svg"
+            data-logo-dark="/static/images/logo-white.svg"
+          />
+        </span>
 
-  <nav class="sidebar-nav admin-sidebar-nav" aria-label="Navegación principal">
-    <a href="/" class="nav-icon" data-nav-route="/" title="Inicio">
-      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-      <span class="nav-label">Inicio</span>
-    </a>
+        <div class="admin-sidebar__intro-copy">
+          <p class="admin-sidebar__eyebrow">Administración</p>
+          <strong class="admin-sidebar__title">Centro operativo</strong>
+          <span class="admin-sidebar__summary">Personas, accesos y ajustes</span>
+        </div>
+      </div>
 
-    <a href="/admin" class="nav-icon" data-nav-route="/admin" title="Administración">
-      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
-      <span class="nav-label">Admin</span>
-    </a>
+      <button
+        id="sidebarToggle"
+        class="admin-sidebar__toggle"
+        type="button"
+        aria-label="Alternar navegación lateral"
+        aria-controls="adminSidebar"
+        aria-expanded="false"
+      >
+        <span class="admin-sidebar__toggle-lines" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <span class="sr-only">Alternar navegación lateral</span>
+      </button>
+    </div>
 
-    <button
-      id="adminThemeToggle"
-      class="nav-icon"
-      type="button"
-      data-theme-toggle
-      aria-label="Cambiar tema"
-      title="Cambiar tema"
-    >
-      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#clock"></use></svg>
-      <span class="nav-label">Tema</span>
-    </button>
-  </nav>
+    <nav class="admin-sidebar-nav" aria-label="Secciones principales">
+      <div class="admin-nav-group">
+        <p class="admin-nav-caption">Principal</p>
 
-  <div class="sidebar-foot admin-sidebar-foot">
-    <span class="sidebar-brand">Osvium</span>
-    <button
-      id="sidebarLogoutBtn"
-      class="sidebar-logout-btn"
-      type="button"
-      onclick="logout()"
-      title="Cerrar sesión"
-      aria-label="Cerrar sesión"
-    >
-      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
-      <span class="sidebar-logout-label">Cerrar sesión</span>
-    </button>
+        <button class="admin-nav-btn" data-view="resumen" type="button" title="Centro de control" aria-label="Centro de control">
+          <span class="admin-nav-btn__icon">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#home-filled"></use></svg>
+          </span>
+          <span class="admin-nav-copy">
+            <span class="nav-label">Centro de control</span>
+            <small class="admin-nav-meta">Estado y actividad</small>
+          </span>
+        </button>
+
+        <button class="admin-nav-btn" data-view="personas" type="button" title="Personas" aria-label="Personas">
+          <span class="admin-nav-btn__icon">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#users-filled"></use></svg>
+          </span>
+          <span class="admin-nav-copy">
+            <span class="nav-label">Personas</span>
+            <small class="admin-nav-meta">Altas y estado</small>
+          </span>
+        </button>
+
+        <button class="admin-nav-btn" data-view="registro" type="button" title="Registro facial" aria-label="Registro facial">
+          <span class="admin-nav-btn__icon">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
+          </span>
+          <span class="admin-nav-copy">
+            <span class="nav-label">Registro facial</span>
+            <small class="admin-nav-meta">Captura y entrenamiento</small>
+          </span>
+        </button>
+
+        <button class="admin-nav-btn" data-view="accesos" type="button" title="Accesos" aria-label="Accesos">
+          <span class="admin-nav-btn__icon">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#shield-filled"></use></svg>
+          </span>
+          <span class="admin-nav-copy">
+            <span class="nav-label">Accesos</span>
+            <small class="admin-nav-meta">Historial reciente</small>
+          </span>
+        </button>
+      </div>
+
+      <div class="admin-nav-group admin-nav-group--secondary">
+        <p class="admin-nav-caption">Configuración</p>
+
+        <button class="admin-nav-btn" data-view="sistema" type="button" title="Sistema" aria-label="Sistema">
+          <span class="admin-nav-btn__icon">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings-filled"></use></svg>
+          </span>
+          <span class="admin-nav-copy">
+            <span class="nav-label">Sistema</span>
+            <small class="admin-nav-meta">Puerta y ajustes</small>
+          </span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="admin-utility-dock" role="group" aria-label="Utilidades">
+      <button
+        id="adminThemeToggle"
+        class="admin-utility-btn"
+        type="button"
+        data-theme-toggle
+        aria-label="Cambiar apariencia"
+        title="Apariencia"
+      >
+        <span class="admin-utility-btn__icon">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#contrast-filled"></use></svg>
+        </span>
+        <span class="admin-utility-label">Tema</span>
+      </button>
+
+      <button
+        id="sidebarLogoutBtn"
+        class="admin-utility-btn admin-utility-btn--danger"
+        type="button"
+        onclick="logout()"
+        title="Cerrar sesión"
+        aria-label="Cerrar sesión"
+      >
+        <span class="admin-utility-btn__icon">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#logout-filled"></use></svg>
+        </span>
+        <span class="admin-utility-label">Salir</span>
+      </button>
+    </div>
   </div>
 </aside>

@@ -25,6 +25,7 @@ const cameraStage = document.getElementById('cameraStage');
 const cameraRingHost = cameraShell || cameraStage;
 
 const faceGuide = document.getElementById('faceGuide');
+const guidanceMessage = document.getElementById('guidanceMessage');
 const cameraBadge = document.getElementById('cameraBadge');
 const cameraBadgeText = document.getElementById('cameraBadgeText');
 const infoTitle = document.getElementById('infoTitle');
@@ -103,11 +104,14 @@ function updateFaceIndicator(stateKey) {
   }
 
   if (faceGuide) {
-    faceGuide.classList.remove('is-idle', 'is-tracking', 'is-granted', 'is-denied');
-    if (stateKey === 'granted') faceGuide.classList.add('is-granted');
-    else if (stateKey === 'denied' || stateKey === 'unrecognized' || stateKey === 'blocked') faceGuide.classList.add('is-denied');
-    else if (stateKey === 'processing') faceGuide.classList.add('is-tracking');
-    else faceGuide.classList.add('is-idle');
+    /* Face guide silhouette states are now driven by updateFaceGuidance() */
+    /* Keep post-recognition override states */
+    if (stateKey === 'granted') {
+      setFaceGuideState('is-granted');
+    } else if (stateKey === 'denied' || stateKey === 'unrecognized' || stateKey === 'blocked') {
+      setFaceGuideState('is-denied');
+    }
+    /* Other states are handled by updateFaceGuidance with face_guidance data */
   }
 
   if (cameraBadge && cameraBadgeText) {
@@ -188,6 +192,56 @@ function updateFaceIndicator(stateKey) {
       authProgressBar.style.width = '0%';
       authProgressBar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
     }
+  }
+}
+
+/* ── Face guidance state classes ── */
+
+const GUIDANCE_ALL_CLASSES = [
+  'is-idle', 'is-searching', 'is-misaligned', 'is-aligned',
+  'is-hold', 'is-ready', 'is-capturing', 'is-lost', 'is-error',
+  'is-granted', 'is-denied', 'is-tracking',
+];
+
+const GUIDANCE_STATE_TO_CLASS = {
+  idle: 'is-idle',
+  searching: 'is-searching',
+  detected_misaligned: 'is-misaligned',
+  aligned: 'is-aligned',
+  hold_steady: 'is-hold',
+  ready: 'is-ready',
+  capture_in_progress: 'is-capturing',
+  lost: 'is-lost',
+  error: 'is-error',
+};
+
+function setFaceGuideState(cls) {
+  if (!faceGuide) return;
+  faceGuide.classList.remove(...GUIDANCE_ALL_CLASSES);
+  faceGuide.classList.add(cls);
+}
+
+function updateFaceGuidance(guidance, uiStateKey) {
+  if (!faceGuide) return;
+
+  // Post-recognition overrides are handled by updateFaceIndicator
+  if (['granted', 'denied', 'unrecognized', 'blocked'].includes(uiStateKey)) {
+    return;
+  }
+
+  if (!guidance || !guidance.state) {
+    setFaceGuideState('is-idle');
+    if (guidanceMessage) {
+      guidanceMessage.textContent = 'Coloca tu rostro dentro de la guía';
+    }
+    return;
+  }
+
+  const cls = GUIDANCE_STATE_TO_CLASS[guidance.state] || 'is-idle';
+  setFaceGuideState(cls);
+
+  if (guidanceMessage && guidance.message) {
+    guidanceMessage.textContent = guidance.message;
   }
 }
 
@@ -313,10 +367,12 @@ async function loadStatus() {
     setSystemBadge(uiState.badge[0], uiState.badge[1]);
 
     updateFaceIndicator(uiState.key);
+    updateFaceGuidance(data.face_guidance, uiState.key);
     showUserOverlay(data);
     faceAction?.updateStatus(data);
 
-    if (data.face_detected && !data.analysis_busy && faceAction && !faceAction.localBusy && faceAction.isReady(data)) {
+    const guidanceReady = data.face_guidance && data.face_guidance.ready;
+    if (guidanceReady && !data.analysis_busy && faceAction && !faceAction.localBusy && faceAction.isReady(data)) {
       const now = Date.now();
       if (now - lastAutoTriggerMs >= AUTO_TRIGGER_COOLDOWN_MS) {
         lastAutoTriggerMs = now;

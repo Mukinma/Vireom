@@ -1,19 +1,25 @@
-<header class="kiosk-topbar admin-topbar" aria-label="Barra superior administrativa">
-  <div class="topbar-title">
-    <strong>Osvium</strong>
-    <span>Panel Administrativo</span>
+<header class="admin-topbar" aria-label="Barra superior">
+  <div class="admin-topbar__left">
+    <div class="admin-topbar__brand">
+      <img
+        class="admin-topbar__brand-logo"
+        src="/static/images/logo.svg"
+        alt="Osvium"
+        data-theme-logo
+        data-logo-light="/static/images/logo.svg"
+        data-logo-dark="/static/images/logo-white.svg"
+      />
+      <strong class="admin-topbar__brand-name">Osvium</strong>
+    </div>
+
+    <span class="admin-topbar__divider" aria-hidden="true"></span>
+    <strong id="viewTitle" class="admin-topbar__view">Centro de control</strong>
   </div>
 
-  <div class="admin-topbar-actions">
-    <button
-      id="sidebarToggle"
-      class="icon-btn admin-sidebar-toggle"
-      type="button"
-      aria-label="Alternar navegación lateral"
-      aria-controls="adminSidebar"
-      aria-expanded="false"
-    >
-      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings"></use></svg>
-    </button>
+  <div class="admin-topbar__right">
+    <div class="admin-topbar__clock" aria-label="Hora actual">
+      <strong id="adminClockTime">--:--</strong>
+      <span id="adminClockDate">-- --- ----</span>
+    </div>
   </div>
 </header>
