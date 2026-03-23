@@ -277,6 +277,9 @@ function renderUsers(users) {
         <button class="btn btn--sm btn-secondary" onclick="toggleUser(${user.id}, ${user.activo ? 'false' : 'true'})">
           ${user.activo ? 'Desactivar' : 'Activar'}
         </button>
+        <button class="btn-delete-user" onclick="deleteUser(${u.id}, '${u.nombre.replace(/'/g, "\\'")}')" title="Eliminar usuario" aria-label="Eliminar ${u.nombre}">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
+        </button>
       </td>
     </tr>
   `).join('');
@@ -677,6 +680,27 @@ window.toggleUser = async function (userId, active) {
   } catch (error) {
     console.error(error);
     showAdminToast({ text: 'No se pudo actualizar', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
+  }
+};
+
+window.deleteUser = async function(userId, nombre) {
+  if (!confirm(`¿Eliminar al usuario "${nombre}" (ID ${userId})? Se borrarán sus muestras y se desvinculará de los accesos. Esta acción no se puede deshacer.`)) return;
+  try {
+    await api(`/api/users/${userId}`, { method: 'DELETE' });
+    await loadUsers();
+    showAdminToast({
+      text: 'Usuario eliminado',
+      sub: `${nombre} (ID ${userId}) fue eliminado`,
+      cls: 'success',
+    });
+  } catch (error) {
+    console.error(error);
+    showAdminToast({
+      text: 'No se pudo eliminar',
+      sub: getErrorMessage(error),
+      cls: 'error',
+      timeout: 3200,
+    });
   }
 };
 
