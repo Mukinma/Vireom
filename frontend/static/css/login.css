@@ -1,0 +1,132 @@
+.centered-body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  position: relative;
+  overflow-x: hidden;
+  background-color: var(--bg-main);
+  background-image: var(--kiosk-bg-image);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.centered-body::before,
+.centered-body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.centered-body::before {
+  background:
+    radial-gradient(620px 420px at 10% 12%, rgba(var(--accent-rgb), 0.12), transparent 62%),
+    radial-gradient(560px 420px at 88% 85%, rgba(var(--primary-rgb), 0.1), transparent 62%);
+}
+
+.centered-body::after {
+  background-image:
+    linear-gradient(90deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.26;
+}
+
+.login-shell {
+  width: min(460px, 100%);
+  position: relative;
+  z-index: 1;
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 100%);
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-glass);
+  background:
+    linear-gradient(160deg, rgba(var(--accent-rgb), 0.08), transparent 60%),
+    var(--surface-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  box-shadow: var(--shadow-soft);
+}
+
+.login-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-head h1 {
+  font-size: 1.34rem;
+}
+
+.login-head .icon {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.login-error {
+  color: rgba(var(--danger-rgb), 0.95);
+}
+
+.login-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+html.theme-light .centered-body .btn-primary {
+  background: linear-gradient(145deg, #3b6eff, #2f5dff);
+  color: #ffffff;
+  border-color: rgba(47, 93, 255, 0.3);
+  box-shadow:
+    0 4px 14px rgba(47, 93, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+html.theme-light .centered-body .btn-primary:hover,
+html.theme-light .centered-body .btn-primary:focus-visible {
+  background: linear-gradient(145deg, #4a7aff, #3b6eff);
+  box-shadow:
+    0 6px 20px rgba(47, 93, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+html.theme-light .centered-body .btn-secondary {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(191, 209, 238, 0.6);
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+html.theme-light .centered-body .login-card {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+html.theme-light .centered-body input {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(191, 209, 238, 0.5);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.06);
+}
+
+html.theme-light .centered-body input:focus-visible {
+  border-color: #2f5dff;
+  box-shadow:
+    inset 0 2px 4px rgba(15, 23, 42, 0.06),
+    0 0 0 3px rgba(47, 93, 255, 0.15);
+}

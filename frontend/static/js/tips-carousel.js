@@ -87,5 +87,4 @@
   const interval = prefersReduced ? INTERVAL_MS * 2 : INTERVAL_MS;
 
   initCarousel('tipsCarouselCamera');
-  initCarousel('tipsCarouselPanel');
 })();

@@ -6,6 +6,7 @@
   <title>Osvium · Terminal de acceso biométrico</title>
   <link rel="icon" type="image/svg+xml" href="/static/images/logo-white.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/kiosk.css" />
   <script>
     (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
   </script>
@@ -131,7 +132,7 @@
           
           <div class="kiosk-info__footer">
             <div class="kiosk-info__progress">
-              <div class="kiosk-info__progress-bar" id="authProgressBar"></div>
+              <div class="kiosk-info__progress-bar is-idle" id="authProgressBar"></div>
             </div>
             <div class="kiosk-info__hint">
               Colócate a una distancia adecuada<br>y evita mover la cabeza

@@ -1,5 +1,4 @@
 const shell = document.getElementById('kioskShell');
-const sidebarToggle = document.getElementById('sidebarToggle');
 const accessToast = document.getElementById('accessToast');
 const accessToastText = document.getElementById('accessToastText');
 const accessToastSub = document.getElementById('accessToastSub');
@@ -17,8 +16,6 @@ const fpsState = document.getElementById('fpsState');
 const systemStateBadge = document.getElementById('systemStateBadge');
 const clockTime = document.getElementById('clockTime');
 const clockDate = document.getElementById('clockDate');
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-const manualOpen = document.getElementById('manualOpen');
 const videoFeed = document.getElementById('videoFeed');
 const cameraShell = document.getElementById('cameraShell');
 const cameraStage = document.getElementById('cameraStage');
@@ -35,6 +32,7 @@ const cameraTitle = document.getElementById('cameraTitle');
 const AUTO_TRIGGER_COOLDOWN_MS = 4000;
 let lastAutoTriggerMs = 0;
 let toastTimer = null;
+const AUTH_PROGRESS_STATE_CLASSES = ['is-idle', 'is-processing', 'is-success', 'is-error'];
 
 const toastMap = {
   granted: { text: 'Acceso concedido', sub: 'Validación biométrica exitosa', cls: 'success', timeout: 2600 },
@@ -46,8 +44,6 @@ const toastMap = {
   unrecognized: { text: 'Rostro no reconocido', sub: 'No coincide con usuarios activos', cls: 'warning', timeout: 2200 },
   cameraError: { text: 'Error de cámara', sub: 'Verifique conexión del dispositivo', cls: 'error', timeout: 2800 },
   busy: { text: 'Análisis en curso', sub: 'Espere a que finalice el proceso actual', cls: 'warning', timeout: 1600 },
-  manualOpen: { text: 'Apertura manual', sub: 'Comando enviado al actuador', cls: 'processing', timeout: 2400 },
-  adminRequired: { text: 'Acceso administrativo requerido', sub: 'Inicie sesión para apertura manual', cls: 'warning', timeout: 3200 },
 };
 
 const analysisEventToToast = {
@@ -179,18 +175,16 @@ function updateFaceIndicator(stateKey) {
 
   const authProgressBar = document.getElementById('authProgressBar');
   if (authProgressBar) {
+    authProgressBar.classList.remove(...AUTH_PROGRESS_STATE_CLASSES);
+
     if (stateKey === 'granted') {
-      authProgressBar.style.width = '100%';
-      authProgressBar.style.backgroundColor = 'var(--success)';
+      authProgressBar.classList.add('is-success');
     } else if (['denied', 'unrecognized', 'blocked'].includes(stateKey)) {
-      authProgressBar.style.width = '100%';
-      authProgressBar.style.backgroundColor = 'var(--danger)';
+      authProgressBar.classList.add('is-error');
     } else if (stateKey === 'processing') {
-      authProgressBar.style.width = '85%';
-      authProgressBar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+      authProgressBar.classList.add('is-processing');
     } else {
-      authProgressBar.style.width = '0%';
-      authProgressBar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+      authProgressBar.classList.add('is-idle');
     }
   }
 }
@@ -396,41 +390,6 @@ function handleAnalysisResult(payload, statusCode) {
   showToast(toastKey);
 }
 
-function initializeResponsiveSidebar() {
-  if (window.innerWidth <= 1366) {
-    shell.classList.add('sidebar-collapsed');
-  }
-}
-
-fullscreenBtn?.addEventListener('click', async () => {
-  if (!document.fullscreenElement) {
-    await document.documentElement.requestFullscreen();
-  } else {
-    await document.exitFullscreen();
-  }
-});
-
-manualOpen?.addEventListener('click', async () => {
-  try {
-    const response = await fetch('/api/manual-open', { method: 'POST' });
-    if (response.status === 401) {
-      showToast('adminRequired');
-      return;
-    }
-    if (!response.ok) {
-      throw new Error(`manual_open_http_${response.status}`);
-    }
-    showToast('manualOpen');
-  } catch (error) {
-    console.error(error);
-    showToast('cameraError');
-  }
-});
-
-sidebarToggle?.addEventListener('click', () => {
-  shell.classList.toggle('sidebar-collapsed');
-});
-
 videoFeed?.addEventListener('error', () => {
   setSystemBadge('Error de cámara', 'state-error');
   setCameraStageActive(false);
@@ -449,7 +408,6 @@ faceAction = window.CameraPIFaceAction?.create({
 
 window.CameraPITheme?.initTheme();
 window.CameraPITheme?.bindToggleButtons();
-initializeResponsiveSidebar();
 updateClock();
 setInterval(updateClock, 1000);
 setInterval(loadStatus, 600);
