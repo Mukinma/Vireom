@@ -134,6 +134,18 @@ def recognize(request: Request):
     return JSONResponse(payload, status_code=status_code)
 
 
+@router.post("/api/kiosk/sleep")
+def kiosk_sleep(request: Request):
+    _session_required(request)
+    return request.app.state.service.set_backend_sleep(True)
+
+
+@router.post("/api/kiosk/wake")
+def kiosk_wake(request: Request):
+    _session_required(request)
+    return request.app.state.service.set_backend_sleep(False)
+
+
 @router.get("/health")
 def health(request: Request):
     return request.app.state.service.health_liveness()

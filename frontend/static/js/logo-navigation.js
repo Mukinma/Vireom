@@ -119,6 +119,12 @@
 
   function handleLogoClick(event) {
     event?.preventDefault?.();
+    if (document.getElementById('kioskShell')) {
+      const lockScreen = document.getElementById('lockScreen');
+      if (lockScreen && !lockScreen.classList.contains('is-dismissed')) {
+        return;
+      }
+    }
 
     _clickCount += 1;
 

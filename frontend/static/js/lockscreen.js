@@ -6,12 +6,12 @@
   const lockNumber = document.getElementById('lockNumber');
   const lockMonth = document.getElementById('lockMonth');
   const lockTime = document.getElementById('lockTime');
-
+  const hint = lockScreen.querySelector('.lockscreen__hint');
   const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  let onTap = null;
 
   function updateLockClock() {
     const now = new Date();
-
     lockDay.textContent = DAYS[now.getDay()];
     lockNumber.textContent = now.getDate();
 
@@ -26,24 +26,46 @@
     lockTime.textContent = time.replace(/\./g, '').toUpperCase();
   }
 
-  updateLockClock();
-  const clockInterval = setInterval(updateLockClock, 1000);
-
-  function dismiss() {
-    lockScreen.classList.add('is-dismissed');
-    clearInterval(clockInterval);
-
-    lockScreen.removeEventListener('click', dismiss);
-    lockScreen.removeEventListener('touchstart', dismiss);
-    document.removeEventListener('keydown', dismiss);
-
-    lockScreen.addEventListener('transitionend', function onEnd() {
-      lockScreen.removeEventListener('transitionend', onEnd);
-      lockScreen.remove();
-    });
+  function isVisible() {
+    return !lockScreen.classList.contains('is-dismissed');
   }
 
-  lockScreen.addEventListener('click', dismiss);
-  lockScreen.addEventListener('touchstart', dismiss, { passive: true });
-  document.addEventListener('keydown', dismiss);
+  function show() {
+    lockScreen.classList.remove('is-dismissed');
+  }
+
+  function hide() {
+    lockScreen.classList.add('is-dismissed');
+  }
+
+  function setHint(text) {
+    if (hint) {
+      hint.textContent = text || 'Toca para continuar';
+    }
+  }
+
+  function handleTap(event) {
+    if (!isVisible()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof onTap === 'function') {
+      onTap(event);
+    }
+  }
+
+  lockScreen.addEventListener('click', handleTap);
+  lockScreen.addEventListener('touchstart', handleTap, { passive: false });
+
+  updateLockClock();
+  setInterval(updateLockClock, 1000);
+
+  window.CameraPILockscreen = {
+    show,
+    hide,
+    isVisible,
+    setHint,
+    bindTap(handler) {
+      onTap = typeof handler === 'function' ? handler : null;
+    },
+  };
 })();

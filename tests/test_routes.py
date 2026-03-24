@@ -60,3 +60,21 @@ def test_recognize_tiene_rate_limiting(client):
 
     response = client.post("/api/recognize")
     assert response.status_code == 429
+
+
+def test_kiosk_sleep_requiere_sesion(client):
+    response = client.post("/api/kiosk/sleep")
+    assert response.status_code == 401
+
+
+def test_kiosk_sleep_y_wake_con_sesion(client):
+    home = client.get("/")
+    assert home.status_code == 200
+
+    sleep_response = client.post("/api/kiosk/sleep")
+    assert sleep_response.status_code == 200
+    assert sleep_response.json().get("sleep_mode") is True
+
+    wake_response = client.post("/api/kiosk/wake")
+    assert wake_response.status_code == 200
+    assert wake_response.json().get("sleep_mode") is False

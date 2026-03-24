@@ -102,8 +102,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 28px 56px;
+  justify-content: center;
+  gap: clamp(6px, 1.2vh, 12px);
+  width: min(74vw, 460px);
+  aspect-ratio: 1 / 1;
+  padding: clamp(24px, 4.2vh, 42px);
   border: 2px solid var(--border-glass);
   border-radius: var(--radius-glass);
   background:
@@ -123,10 +126,10 @@
 }
 
 .lockscreen__number {
-  font-size: 4.5rem;
+  font-size: clamp(5.2rem, 11vw, 8.6rem);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1;
+  line-height: 0.92;
   color: var(--text-primary);
 }
 
@@ -140,19 +143,38 @@
 
 .lockscreen__time {
   margin-top: 6px;
-  font-size: 1.6rem;
+  font-size: clamp(2rem, 3.4vw, 3rem);
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--text-primary);
 }
 
 .lockscreen__hint {
-  font-size: 0.82rem;
+  font-size: clamp(1rem, 1.6vw, 1.32rem);
   font-weight: 400;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
   opacity: 0.7;
   animation: lockscreen-pulse 2.4s ease-in-out infinite;
+}
+
+@media (max-width: 1024px) {
+  .lockscreen__content {
+    gap: 36px;
+    padding-top: 6vh;
+  }
+
+  .lockscreen__clock-box {
+    width: min(86vw, 420px);
+  }
+
+  .lockscreen__day {
+    font-size: 1rem;
+  }
+
+  .lockscreen__month {
+    font-size: 1.22rem;
+  }
 }
 
 @keyframes lockscreen-pulse {

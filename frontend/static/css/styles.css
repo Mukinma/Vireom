@@ -62,7 +62,7 @@
   --text-on-primary: #f8fbff;
   --text-on-danger: #fff8f8;
 
-  --blur-glass: 5px;
+  --blur-glass: 10px;
   --radius-glass: 20px;
   --radius-btn: 14px;
   --camera-component-radius: 24px;
