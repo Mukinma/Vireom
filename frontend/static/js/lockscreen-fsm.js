@@ -32,11 +32,11 @@ export const EFFECTS = {
 
 export function createInitialContext() {
   return {
-    state: STATES.ACTIVE_UNLOCKED,
-    sleepReason: null,
+    state: STATES.LOCKSCREEN_VISIBLE,
+    sleepReason: 'boot',
     wakeAttemptId: 0,
     stateEnteredAt: Date.now(),
-    effects: [],
+    effects: [EFFECTS.SCHEDULE_ENTER_SLEEP],
   };
 }
 

@@ -112,6 +112,7 @@ export function createLockscreenController(deps = {}, options = {}) {
       sleepReason: nextCtx.sleepReason,
       durationMs,
       ...(resumeContext !== undefined && { resumeContext }),
+      ...(event?.errorCode != null && { errorCode: event.errorCode }),
     });
     applyEffects(nextCtx, event);
     return nextCtx;
@@ -124,6 +125,11 @@ export function createLockscreenController(deps = {}, options = {}) {
   function destroy() {
     clearEnterSleepTimer();
     clearWakeTimeoutTimer();
+  }
+
+  if (ctx.effects.length > 0) {
+    applyEffects(ctx, null);
+    ctx = { ...ctx, effects: [] };
   }
 
   return {

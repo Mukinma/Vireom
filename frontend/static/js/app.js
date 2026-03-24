@@ -70,6 +70,7 @@ let idleTimeoutId = null;
 let isPollingPaused = false;
 let isScanPaused = false;
 let wakeAbortController = null;
+let sleepPromise = null;
 const IDLE_TIMEOUT_MS = 45000;
 
 function setCameraStageActive(isActive) {
@@ -415,6 +416,7 @@ async function loadStatus() {
       lockscreenController.dispatch({
         type: LOCK_EVENTS.RESUME_FAIL,
         wakeAttemptId: lockSnapshot.wakeAttemptId,
+        errorCode: 'status_poll_error',
       });
     }
   }
@@ -437,6 +439,7 @@ videoFeed?.addEventListener('error', () => {
     lockscreenController.dispatch({
       type: LOCK_EVENTS.RESUME_FAIL,
       wakeAttemptId: lockSnapshot.wakeAttemptId,
+      errorCode: 'video_feed_error',
     });
   }
 });
@@ -497,11 +500,18 @@ function pausePolling() {
   }
   isPollingPaused = true;
   stopStatusPolling();
-  fetch('/api/kiosk/sleep', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+  const p = fetch('/api/kiosk/sleep', { method: 'POST', credentials: 'same-origin' })
+    .then((r) => r.ok)
+    .catch(() => false);
+  sleepPromise = p;
+  p.finally(() => { if (sleepPromise === p) sleepPromise = null; });
   return true;
 }
 
 async function resumePolling(wakeAttemptId) {
+  if (sleepPromise) {
+    await sleepPromise;
+  }
   if (wakeAbortController) {
     wakeAbortController.abort();
   }
@@ -544,6 +554,7 @@ async function resumePolling(wakeAttemptId) {
     lockscreenController?.dispatch({
       type: LOCK_EVENTS.RESUME_FAIL,
       wakeAttemptId,
+      errorCode: error?.message || 'unknown',
     });
     return false;
   } finally {
@@ -579,17 +590,8 @@ const lockscreenController = lockscreenControllerApi?.create(
     pausePolling,
     resumePolling,
     onResetIdleDeadline: resetIdleDeadline,
-    logTransition: ({ fromState, toState, event, wakeAttemptId, sleepReason, durationMs, resumeContext }) => {
-      console.info('[lockscreen-fsm]', {
-        fromState,
-        toState,
-        event,
-        wakeAttemptId,
-        sleepReason,
-        durationMs,
-        ...(resumeContext !== undefined && { resumeContext }),
-        ts: Date.now(),
-      });
+    logTransition: (entry) => {
+      console.info('[lockscreen-fsm]', { ...entry, ts: Date.now() });
     },
     onIgnoredEvent: ({ state, wakeAttemptId, ignoredEvent }) => {
       console.debug('[lockscreen-fsm:ignored-event]', {
@@ -633,4 +635,3 @@ updateClock();
 setInterval(updateClock, 1000);
 startStatusPolling();
 loadStatus();
-resetIdleDeadline();
