@@ -20,6 +20,7 @@ class _DummyService:
     def __init__(self):
         self.camera = _DummyCamera()
         self.running = True
+        self._sleep_mode = False
 
     def analyze_once(self):
         return {"ok": True, "event": "authorized", "result": "AUTORIZADO"}, 200
@@ -62,6 +63,10 @@ class _DummyService:
 
     def simulate_access_attempt(self, is_valid, confidence=None):
         return {"result": "AUTORIZADO" if is_valid else "DENEGADO", "confidence": confidence}
+
+    def set_backend_sleep(self, enabled: bool):
+        self._sleep_mode = bool(enabled)
+        return {"ok": True, "sleep_mode": self._sleep_mode}
 
 
 def _build_app() -> FastAPI:

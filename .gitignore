@@ -59,3 +59,11 @@ deploy/
 # ─── Otros generados ─────────────────────────────────
 *.bak
 *.tmp
+
+# ─── Node.js ─────────────────────────────────────────
+node_modules/
+
+# ─── Archivos de documentación ────────────────────────
+docs/
+docs/images/
+docs/images/

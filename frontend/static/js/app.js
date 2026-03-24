@@ -1,3 +1,6 @@
+import { isWakeReadyStatus } from './wake-readiness.js';
+import { isCurrentWakeAttempt } from './wake-attempt-guard.js';
+
 const shell = document.getElementById('kioskShell');
 const accessToast = document.getElementById('accessToast');
 const accessToastText = document.getElementById('accessToastText');
@@ -28,6 +31,10 @@ const cameraBadgeText = document.getElementById('cameraBadgeText');
 const infoTitle = document.getElementById('infoTitle');
 const infoDesc = document.getElementById('infoDesc');
 const cameraTitle = document.getElementById('cameraTitle');
+const lockscreenApi = window.CameraPILockscreen;
+const lockscreenControllerApi = window.CameraPILockscreenController;
+const LOCK_EVENTS = lockscreenControllerApi?.EVENTS || {};
+const LOCK_STATES = lockscreenControllerApi?.STATES || {};
 
 const AUTO_TRIGGER_COOLDOWN_MS = 4000;
 let lastAutoTriggerMs = 0;
@@ -58,6 +65,12 @@ const analysisEventToToast = {
 
 let faceAction = null;
 const prefersReducedMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+let statusIntervalId = null;
+let idleTimeoutId = null;
+let isPollingPaused = false;
+let isScanPaused = false;
+let wakeAbortController = null;
+const IDLE_TIMEOUT_MS = 45000;
 
 function setCameraStageActive(isActive) {
   if (!cameraRingHost) {
@@ -343,6 +356,10 @@ function classifyState(data) {
 }
 
 async function loadStatus() {
+  if (isPollingPaused) {
+    return;
+  }
+
   try {
     const response = await fetch('/api/status');
     if (!response.ok) {
@@ -366,11 +383,22 @@ async function loadStatus() {
     faceAction?.updateStatus(data);
 
     const guidanceReady = data.face_guidance && data.face_guidance.ready;
-    if (guidanceReady && !data.analysis_busy && faceAction && !faceAction.localBusy && faceAction.isReady(data)) {
+    if (guidanceReady && !isScanPaused && !data.analysis_busy && faceAction && !faceAction.localBusy && faceAction.isReady(data)) {
       const now = Date.now();
       if (now - lastAutoTriggerMs >= AUTO_TRIGGER_COOLDOWN_MS) {
         lastAutoTriggerMs = now;
         faceAction.handleAnalyzeClick();
+      }
+    }
+
+    const lockSnapshot = lockscreenController?.getSnapshot?.();
+    if (lockSnapshot?.state === LOCK_STATES.WAKING) {
+      const wakeReady = isWakeReadyStatus(data, { isPollingPaused, isScanPaused });
+      if (wakeReady) {
+        lockscreenController.dispatch({
+          type: LOCK_EVENTS.WAKE_READY,
+          wakeAttemptId: lockSnapshot.wakeAttemptId,
+        });
       }
     }
   } catch (error) {
@@ -381,6 +409,14 @@ async function loadStatus() {
     updateFaceIndicator('cameraError');
     userOverlay.classList.remove('is-visible');
     userOverlay.classList.add('is-hidden');
+
+    const lockSnapshot = lockscreenController?.getSnapshot?.();
+    if (lockSnapshot?.state === LOCK_STATES.WAKING) {
+      lockscreenController.dispatch({
+        type: LOCK_EVENTS.RESUME_FAIL,
+        wakeAttemptId: lockSnapshot.wakeAttemptId,
+      });
+    }
   }
 }
 
@@ -395,6 +431,14 @@ videoFeed?.addEventListener('error', () => {
   setCameraStageActive(false);
   showToast('cameraError');
   updateFaceIndicator('cameraError');
+
+  const lockSnapshot = lockscreenController?.getSnapshot?.();
+  if (lockSnapshot?.state === LOCK_STATES.WAKING) {
+    lockscreenController.dispatch({
+      type: LOCK_EVENTS.RESUME_FAIL,
+      wakeAttemptId: lockSnapshot.wakeAttemptId,
+    });
+  }
 });
 
 faceAction = window.CameraPIFaceAction?.create({
@@ -406,30 +450,187 @@ faceAction = window.CameraPIFaceAction?.create({
   },
 });
 
+function stopStatusPolling() {
+  if (statusIntervalId !== null) {
+    clearInterval(statusIntervalId);
+    statusIntervalId = null;
+  }
+}
+
+function startStatusPolling() {
+  if (statusIntervalId === null && !isPollingPaused) {
+    statusIntervalId = setInterval(loadStatus, 600);
+  }
+}
+
+function pauseCamera() {
+  if (!videoFeed) return true;
+  if (!videoFeed.dataset.prevSrc) {
+    videoFeed.dataset.prevSrc = videoFeed.getAttribute('src') || '/api/stream';
+  }
+  videoFeed.setAttribute('src', '');
+  setCameraStageActive(false);
+  return true;
+}
+
+function resumeCamera() {
+  if (!videoFeed) return true;
+  const prevSrc = videoFeed.dataset.prevSrc || '/api/stream';
+  videoFeed.setAttribute('src', `${prevSrc}?wake=${Date.now()}`);
+  return true;
+}
+
+function pauseScan() {
+  isScanPaused = true;
+  return true;
+}
+
+function resumeScan() {
+  isScanPaused = false;
+  return true;
+}
+
+function pausePolling() {
+  if (wakeAbortController) {
+    wakeAbortController.abort();
+    wakeAbortController = null;
+  }
+  isPollingPaused = true;
+  stopStatusPolling();
+  fetch('/api/kiosk/sleep', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+  return true;
+}
+
+async function resumePolling(wakeAttemptId) {
+  if (wakeAbortController) {
+    wakeAbortController.abort();
+  }
+  const ac = new AbortController();
+  wakeAbortController = ac;
+
+  try {
+    const response = await fetch('/api/kiosk/wake', {
+      method: 'POST',
+      credentials: 'same-origin',
+      signal: ac.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`wake_http_${response.status}`);
+    }
+    const payload = await response.json().catch(() => ({ ok: true }));
+    if (payload && payload.ok === false) {
+      throw new Error('wake_failed');
+    }
+    const snapshot = lockscreenController?.getSnapshot?.();
+    if (!isCurrentWakeAttempt(snapshot, wakeAttemptId, LOCK_STATES.WAKING)) {
+      return false;
+    }
+    resumeCamera();
+    resumeScan();
+    isPollingPaused = false;
+    startStatusPolling();
+    loadStatus();
+    return true;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return false;
+    }
+    const snapshot = lockscreenController?.getSnapshot?.();
+    if (!isCurrentWakeAttempt(snapshot, wakeAttemptId, LOCK_STATES.WAKING)) {
+      return false;
+    }
+    isPollingPaused = true;
+    stopStatusPolling();
+    lockscreenController?.dispatch({
+      type: LOCK_EVENTS.RESUME_FAIL,
+      wakeAttemptId,
+    });
+    return false;
+  } finally {
+    if (wakeAbortController === ac) {
+      wakeAbortController = null;
+    }
+  }
+}
+
+function resetIdleDeadline() {
+  if (idleTimeoutId !== null) {
+    clearTimeout(idleTimeoutId);
+  }
+  idleTimeoutId = setTimeout(() => {
+    lockscreenController?.dispatch({ type: LOCK_EVENTS.IDLE_TIMEOUT_45S });
+  }, IDLE_TIMEOUT_MS);
+}
+
+const lockscreenController = lockscreenControllerApi?.create(
+  {
+    showLockscreen: () => {
+      lockscreenApi?.setHint('Toca para continuar');
+      lockscreenApi?.show();
+    },
+    hideLockscreen: () => {
+      lockscreenApi?.setHint('Toca para continuar');
+      lockscreenApi?.hide();
+    },
+    pauseCamera,
+    resumeCamera,
+    pauseScan,
+    resumeScan,
+    pausePolling,
+    resumePolling,
+    onResetIdleDeadline: resetIdleDeadline,
+    logTransition: ({ fromState, toState, event, wakeAttemptId, sleepReason, durationMs, resumeContext }) => {
+      console.info('[lockscreen-fsm]', {
+        fromState,
+        toState,
+        event,
+        wakeAttemptId,
+        sleepReason,
+        durationMs,
+        ...(resumeContext !== undefined && { resumeContext }),
+        ts: Date.now(),
+      });
+    },
+    onIgnoredEvent: ({ state, wakeAttemptId, ignoredEvent }) => {
+      console.debug('[lockscreen-fsm:ignored-event]', {
+        state,
+        ignoredEvent,
+        wakeAttemptId,
+        ts: Date.now(),
+      });
+    },
+  },
+  {
+    lockEnterAnimMs: prefersReducedMotionQuery?.matches ? 0 : 260,
+  },
+);
+
+function dispatchUserActivity() {
+  lockscreenController?.dispatch({ type: LOCK_EVENTS.USER_ACTIVITY });
+}
+
+document.addEventListener('pointerdown', () => {
+  dispatchUserActivity();
+}, { passive: true });
+
+document.addEventListener('keydown', (event) => {
+  if (lockscreenControllerApi?.shouldTriggerDebugShortcut?.(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    lockscreenController?.dispatch({ type: LOCK_EVENTS.DEBUG_SHORTCUT });
+    return;
+  }
+  dispatchUserActivity();
+});
+
+lockscreenApi?.bindTap(() => {
+  lockscreenController?.dispatch({ type: LOCK_EVENTS.USER_TAP_OR_CLICK });
+});
+
 window.CameraPITheme?.initTheme();
 window.CameraPITheme?.bindToggleButtons();
 updateClock();
 setInterval(updateClock, 1000);
-setInterval(loadStatus, 600);
+startStatusPolling();
 loadStatus();
-
-(function initAdminShortcut() {
-  const header = document.querySelector('.kiosk-header');
-  if (!header) return;
-
-  let tapCount = 0;
-  let tapTimer = null;
-
-  header.addEventListener('click', () => {
-    tapCount++;
-    if (tapTimer) clearTimeout(tapTimer);
-
-    if (tapCount >= 3) {
-      tapCount = 0;
-      window.location.href = '/admin';
-      return;
-    }
-
-    tapTimer = setTimeout(() => { tapCount = 0; }, 1200);
-  });
-})();
+resetIdleDeadline();

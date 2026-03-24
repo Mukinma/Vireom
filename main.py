@@ -323,6 +323,7 @@ class AccessService:
         self.last_process_ts = 0.0
         self.lock = threading.Lock()
         self.analysis_lock = threading.Lock()
+        self.backend_sleep = False
 
         self.system_status: dict[str, Any] = {
             "camera": "offline",
@@ -344,6 +345,7 @@ class AccessService:
             "analysis_mode": "manual_trigger",
             "analysis_busy": False,
             "analysis_state": "idle",
+            "sleep_mode": False,
             "face_detected": False,
             "face_bbox": None,
             "face_updated_ts": 0,
@@ -412,6 +414,11 @@ class AccessService:
     def _watchdog_loop(self):
         while self.running:
             try:
+                if self.backend_sleep:
+                    with self.lock:
+                        self.system_status["camera"] = "sleep"
+                    time.sleep(2.0)
+                    continue
                 if not self.camera.ensure_running():
                     logger.critical("watchdog_camera_not_running")
                 cam_active = self.camera.is_active()
@@ -440,6 +447,15 @@ class AccessService:
 
             now = time.time()
             self.last_process_ts = now
+            if self.backend_sleep:
+                with self.lock:
+                    self.system_status["camera_fps"] = 0.0
+                    self.system_status["analysis_fps"] = 0.0
+                    self.system_status["fps"] = 0
+                    self.system_status["face_detected"] = False
+                    self.system_status["face_bbox"] = None
+                    self.system_status["analysis_state"] = "sleep"
+                continue
             camera_fps = self.camera.get_capture_fps()
             with self.lock:
                 self.system_status["camera_fps"] = round(camera_fps, 2)
@@ -624,6 +640,19 @@ class AccessService:
         }
 
     def analyze_once(self) -> tuple[dict[str, Any], int]:
+        if self.backend_sleep:
+            ts = int(time.time())
+            payload = self._build_analysis_payload(
+                ok=False,
+                event="sleeping",
+                result="SLEEP_MODE",
+                user_id=None,
+                user_name=None,
+                confidence=None,
+                timestamp=ts,
+            )
+            return payload, 423
+
         if not self.analysis_lock.acquire(blocking=False):
             with self.lock:
                 ts = int(time.time())
@@ -852,8 +881,49 @@ class AccessService:
         with self.lock:
             return dict(self.system_status)
 
+    def set_backend_sleep(self, enabled: bool) -> dict[str, Any]:
+        enabled = bool(enabled)
+        if enabled == self.backend_sleep:
+            with self.lock:
+                self.system_status["sleep_mode"] = enabled
+            return {"ok": True, "sleep_mode": enabled}
+
+        self.backend_sleep = enabled
+        if enabled:
+            self.camera.stop()
+            with self.lock:
+                self.system_status["sleep_mode"] = True
+                self.system_status["camera"] = "sleep"
+                self.system_status["camera_fps"] = 0.0
+                self.system_status["analysis_fps"] = 0.0
+                self.system_status["fps"] = 0
+                self.system_status["analysis_state"] = "sleep"
+                self.system_status["analysis_busy"] = False
+                self.system_status["face_detected"] = False
+                self.system_status["face_bbox"] = None
+            logger.info("backend_sleep_enabled")
+            return {"ok": True, "sleep_mode": True}
+
+        try:
+            self.camera.start()
+            cam_active = self.camera.is_active()
+            with self.lock:
+                self.system_status["sleep_mode"] = False
+                self.system_status["camera"] = "online" if cam_active else "degraded"
+                self.system_status["analysis_state"] = "idle"
+                self.system_status["analysis_busy"] = False
+            logger.info("backend_sleep_disabled camera_active=%s", cam_active)
+            return {"ok": True, "sleep_mode": False}
+        except Exception:
+            with self.lock:
+                self.system_status["sleep_mode"] = False
+                self.system_status["camera"] = "error"
+                self.system_status["analysis_state"] = "error"
+            logger.exception("backend_wake_failed")
+            return {"ok": False, "sleep_mode": False, "error": "camera_start_failed"}
+
     def _health_components(self) -> tuple[bool, bool, bool, bool]:
-        camera_ok = self.camera.is_active()
+        camera_ok = True if self.backend_sleep else self.camera.is_active()
         model_ok = Path(config.model_path).exists() and self.recognizer.loaded
         db_ok = db.health_check()
         gpio_ok = self.relay.is_healthy()
