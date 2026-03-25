@@ -41,9 +41,9 @@ class _FakeEvent:
         self.handlers.append(handler)
         return self
 
-    def fire(self, window):
+    def fire(self, *args):
         for handler in list(self.handlers):
-            handler(window)
+            handler(*args)
 
 
 class _FakeEvents:
@@ -136,7 +136,7 @@ def test_open_desktop_window_difiere_fullscreen_y_despacha_ready(monkeypatch):
 
         def start(self, func=None, args=None, debug=False):
             captured["debug"] = debug
-            fake_window.events.initialized.fire(fake_window)
+            fake_window.events.initialized.fire(fake_window, "gtk")
             func(*args)
             fake_window.events.loaded.fire(fake_window)
 
@@ -177,6 +177,22 @@ def test_open_desktop_window_windowed_reaplica_resize(monkeypatch):
         ("resize", 1440, 900),
     ]
     assert desktop_launcher.DESKTOP_READY_JS in fake_window.js_calls
+
+
+def test_bind_window_event_handlers_tolera_args_extra_de_pywebview():
+    fake_window = _FakeWindow()
+    state = desktop_launcher.DesktopWindowState()
+    config = desktop_launcher.DesktopLauncherConfig()
+
+    desktop_launcher._bind_window_event_handlers(fake_window, state, config)
+
+    fake_window.events.initialized.fire(fake_window, "gtk")
+    fake_window.events.shown.fire(fake_window)
+    fake_window.events.loaded.fire(fake_window, "http://127.0.0.1:8000/")
+
+    assert state.initialized.is_set() is True
+    assert state.shown.is_set() is True
+    assert state.loaded.is_set() is True
 
 
 def test_install_linux_shortcuts_escribe_archivos(tmp_path):

@@ -273,6 +273,18 @@ def _bootstrap_window(window: Any, config: DesktopLauncherConfig) -> None:
         _safe_window_action("resize_bootstrap", window.resize, config.width, config.height)
 
 
+def _bind_window_event_handlers(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
+    window.events.initialized += (
+        lambda *_event_args: _handle_window_initialized(window, state, config)
+    )
+    window.events.shown += (
+        lambda *_event_args: _handle_window_shown(window, state, config)
+    )
+    window.events.loaded += (
+        lambda *_event_args: _handle_window_loaded(window, state, config)
+    )
+
+
 def open_desktop_window(config: DesktopLauncherConfig) -> None:
     webview = load_webview_module()
 
@@ -288,15 +300,7 @@ def open_desktop_window(config: DesktopLauncherConfig) -> None:
             background_color=WINDOW_BACKGROUND_COLOR,
         )
         state = DesktopWindowState()
-        window.events.initialized += (
-            lambda window: _handle_window_initialized(window, state, config)
-        )
-        window.events.shown += (
-            lambda window: _handle_window_shown(window, state, config)
-        )
-        window.events.loaded += (
-            lambda window: _handle_window_loaded(window, state, config)
-        )
+        _bind_window_event_handlers(window, state, config)
         webview.start(_bootstrap_window, args=(window, config), debug=False)
     except Exception as exc:
         linux_hint = ""
