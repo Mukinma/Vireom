@@ -8,7 +8,21 @@
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/kiosk.css" />
   <script>
-    (function(){try{var t=localStorage.getItem('camerapi_theme');document.documentElement.className=t||'theme-dark';}catch(e){document.documentElement.className='theme-dark';}})();
+    (function(){
+      try{
+        var t=localStorage.getItem('camerapi_theme');
+        document.documentElement.className=t||'theme-dark';
+      }catch(e){
+        document.documentElement.className='theme-dark';
+      }
+      try{
+        var desktopPending=new URLSearchParams(window.location.search).get('desktop-launch')==='1';
+        if(desktopPending){
+          document.documentElement.classList.add('desktop-launch-pending');
+          window.__VIREOM_DESKTOP_PENDING__=true;
+        }
+      }catch(e){}
+    })();
   </script>
 </head>
 <body class="kiosk-body">
@@ -68,8 +82,7 @@
 
         <div class="kiosk-camera" id="cameraShell">
           <div class="kiosk-camera__stage" id="cameraStage">
-            <img id="videoFeed" class="kiosk-camera__feed" src="/api/stream" alt="Cámara en vivo" />
-            <div class="kiosk-camera__veil" aria-hidden="true"></div>
+            <img id="videoFeed" class="kiosk-camera__feed" src="" data-stream-src="/api/stream" alt="Cámara en vivo" />
 
             <div id="faceGuide" class="face-guide is-idle" aria-hidden="true">
               <!-- Silhouette contour -->
