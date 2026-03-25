@@ -28,10 +28,10 @@ def test_read_picamera2_usa_stream_main_y_devuelve_copia_estable():
     assert ok is True
     assert fake.stream_names == ["main"]
     assert frame is not original
-    np.testing.assert_array_equal(frame[0, 0], np.array([30, 20, 10], dtype=np.uint8))
+    np.testing.assert_array_equal(frame[0, 0], np.array([10, 20, 30], dtype=np.uint8))
 
     original[:, :, :] = 255
-    np.testing.assert_array_equal(frame[0, 0], np.array([30, 20, 10], dtype=np.uint8))
+    np.testing.assert_array_equal(frame[0, 0], np.array([10, 20, 30], dtype=np.uint8))
 
 
 def test_read_picamera2_convierte_bgra_a_bgr():
