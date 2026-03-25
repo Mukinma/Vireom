@@ -77,7 +77,7 @@ class CameraStream:
                 picam = Picamera2()
                 video_cfg = picam.create_video_configuration(
                     main={
-                        "format": "RGB888",
+                        "format": "BGR888",
                         "size": (config.frame_width, config.frame_height),
                     },
                 )
@@ -124,8 +124,6 @@ class CameraStream:
             if len(frame.shape) == 3:
                 if frame.shape[2] == 4:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-                elif frame.shape[2] == 3:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             return True, frame
         except Exception:
             logger.exception("picamera2_capture_failed")

@@ -387,16 +387,31 @@ html.desktop-launch-pending .kiosk-camera__feed {
 
 .face-guide {
   position: absolute;
-  top: 42%;
+  top: 46%;
   left: 50%;
-  width: min(300px, 58%);
+  width: min(430px, 72%);
+  min-width: 300px;
   aspect-ratio: 10 / 13;
   z-index: 5;
   pointer-events: none;
   will-change: opacity, color, filter;
   transform: translate(-50%, -50%);
   transition: opacity 0.4s ease, color 0.5s ease, filter 0.5s ease;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.face-guide::before {
+  content: "";
+  position: absolute;
+  inset: 8% 10%;
+  z-index: 1;
+  border-radius: 50% 50% 46% 46% / 42% 42% 56% 56%;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 72%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 42px rgba(255, 255, 255, 0.08);
+  opacity: 0.9;
 }
 
 .face-guide__silhouette {
@@ -406,39 +421,40 @@ html.desktop-launch-pending .kiosk-camera__feed {
   height: 100%;
   display: block;
   z-index: 2;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.08));
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.14));
   transition: filter 0.5s ease, color 0.5s ease;
 }
 
 .face-guide__msg {
   position: absolute;
-  bottom: -44px;
+  bottom: -60px;
   left: 50%;
   z-index: 3;
   white-space: nowrap;
-  padding: 6px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  background: rgba(12, 16, 28, 0.5);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: clamp(0.75rem, 1.1vw, 0.85rem);
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  opacity: 0.85;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  background: rgba(10, 14, 24, 0.72);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: clamp(0.9rem, 1.35vw, 1.08rem);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0.96;
   transform: translateX(-50%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: color 0.4s ease, opacity 0.4s ease;
 }
 
 .face-guide.is-idle {
-  opacity: 0.45;
-  color: rgba(255, 255, 255, 0.45);
+  opacity: 0.64;
+  color: rgba(255, 255, 255, 0.62);
   animation: guideBreathing 3.5s ease-in-out infinite;
 }
 
 .face-guide.is-idle .face-guide__msg {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .face-guide.is-searching {
@@ -453,7 +469,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-misaligned .face-guide__silhouette {
-  filter: drop-shadow(0 0 8px rgba(var(--warning-rgb), 0.2));
+  filter: drop-shadow(0 0 14px rgba(var(--warning-rgb), 0.28));
 }
 
 .face-guide.is-misaligned .face-guide__msg {
@@ -466,7 +482,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-aligned .face-guide__silhouette {
-  filter: drop-shadow(0 0 10px rgba(var(--accent-rgb), 0.25));
+  filter: drop-shadow(0 0 16px rgba(var(--accent-rgb), 0.34));
 }
 
 .face-guide.is-aligned .face-guide__msg {
@@ -479,7 +495,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-hold .face-guide__silhouette {
-  filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.3));
+  filter: drop-shadow(0 0 18px rgba(var(--accent-rgb), 0.4));
 }
 
 .face-guide.is-hold .face-guide__msg {
@@ -493,7 +509,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-ready .face-guide__silhouette {
-  filter: drop-shadow(0 0 16px rgba(var(--success-rgb), 0.35));
+  filter: drop-shadow(0 0 24px rgba(var(--success-rgb), 0.48));
 }
 
 .face-guide.is-ready .face-guide__msg {
@@ -506,7 +522,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-capturing .face-guide__silhouette {
-  filter: drop-shadow(0 0 20px rgba(var(--accent-rgb), 0.45));
+  filter: drop-shadow(0 0 28px rgba(var(--accent-rgb), 0.56));
 }
 
 .face-guide.is-lost {
@@ -524,7 +540,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-error .face-guide__silhouette {
-  filter: drop-shadow(0 0 8px rgba(var(--danger-rgb), 0.2));
+  filter: drop-shadow(0 0 14px rgba(var(--danger-rgb), 0.28));
 }
 
 .face-guide.is-error .face-guide__msg {
@@ -537,7 +553,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-granted .face-guide__silhouette {
-  filter: drop-shadow(0 0 18px rgba(var(--success-rgb), 0.4));
+  filter: drop-shadow(0 0 28px rgba(var(--success-rgb), 0.54));
 }
 
 .face-guide.is-denied {
@@ -546,7 +562,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-denied .face-guide__silhouette {
-  filter: drop-shadow(0 0 12px rgba(var(--danger-rgb), 0.3));
+  filter: drop-shadow(0 0 18px rgba(var(--danger-rgb), 0.38));
 }
 
 .face-indicator {
@@ -1000,7 +1016,8 @@ html.theme-light .user-photo {
   }
 
   .face-guide {
-    width: min(240px, 52%);
+    width: min(340px, 62%);
+    min-width: 240px;
   }
 }
 
@@ -1086,11 +1103,12 @@ html.theme-light .user-photo {
   }
 
   .face-guide {
-    width: min(180px, 52%);
+    width: min(230px, 66%);
+    min-width: 0;
   }
 
   .face-guide__msg {
-    bottom: -28px;
-    font-size: 0.72rem;
+    bottom: -36px;
+    font-size: 0.82rem;
   }
 }
