@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/admin.css" />
+  <link rel="stylesheet" href="/static/css/enrollment.css" />
   <script>
     (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
   </script>
@@ -77,13 +78,6 @@
             <p class="resumen-action-hint" id="resumenActionHint">Seleccionando la mejor acción.</p>
 
             <div class="resumen-action-stack" id="resumenActionStack">
-              <button id="resumenActionRegistro" class="resumen-action-btn" type="button" data-quick="registro">
-                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
-                <span class="resumen-action-btn__content">
-                  <strong>Registro facial</strong>
-                  <small>Captura y entrena.</small>
-                </span>
-              </button>
               <button id="resumenActionAccesos" class="resumen-action-btn" type="button" data-quick="accesos">
                 <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#list-filled"></use></svg>
                 <span class="resumen-action-btn__content">
@@ -142,42 +136,9 @@
         </div>
       </section>
 
-      <!-- ═══════════════ VIEW: REGISTRO FACIAL ═══════════════ -->
-      <section class="admin-view" id="view-registro" hidden>
-        <div class="card">
-          <div class="section-head">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
-            <h2>Capturar rostro</h2>
-          </div>
-
-          <label for="captureUserSelect" class="label">Persona</label>
-          <select id="captureUserSelect" class="select-input">
-            <option value="">Seleccionar persona…</option>
-          </select>
-
-          <div class="action-stack mt-4">
-            <button id="captureBtn" class="btn btn-primary large-touch" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#focus-filled"></use></svg>
-              <span>Tomar 30 fotos del rostro</span>
-            </button>
-            <button id="trainBtn" class="btn btn-secondary large-touch" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg>
-              <span>Actualizar reconocimiento</span>
-            </button>
-          </div>
-          <p id="trainResult" class="muted mt-3 text-sm"></p>
-        </div>
-
-        <div class="card card--tips-compact">
-          <h3>Consejos para buenas fotos</h3>
-          <ul class="tips-list tips-list--compact">
-            <li>La persona debe mirar directamente a la cámara</li>
-            <li>Mantener una expresión natural y neutra</li>
-            <li>Buena iluminación, sin sombras fuertes en la cara</li>
-            <li>No usar lentes de sol ni accesorios que cubran el rostro</li>
-            <li>Permanecer quieto durante la captura</li>
-          </ul>
-        </div>
+      <!-- ═══════════════ VIEW: ENROLAMIENTO ═══════════════ -->
+      <section class="admin-view" id="view-enrolamiento" hidden>
+        {% include "partials/enrollment-view.html" %}
       </section>
 
       <!-- ═══════════════ VIEW: ACCESOS ═══════════════ -->
@@ -204,7 +165,7 @@
         <div class="card">
           <div class="section-head-row">
             <h2>Historial reciente</h2>
-            <div class="filter-bar">
+            <div class="filter-bar filter-bar--access">
               <label for="logFilterResult" class="sr-only">Filtrar por resultado</label>
               <select id="logFilterResult" class="select-input select-input--sm">
                 <option value="">Todos</option>
@@ -212,6 +173,36 @@
                 <option value="rechazado">Rechazados</option>
                 <option value="manual">Manuales</option>
               </select>
+              <button id="logAdvancedToggle" class="btn btn-secondary btn--sm" type="button" aria-expanded="false" aria-controls="logAdvancedPanel">
+                Búsqueda avanzada
+              </button>
+            </div>
+          </div>
+          <div id="logAdvancedPanel" class="log-advanced-panel" hidden>
+            <div class="log-advanced-grid">
+              <label class="log-advanced-field">
+                <span>Buscar</span>
+                <input id="logSearch" type="text" class="select-input" placeholder="Persona, ID, motivo" />
+              </label>
+              <label class="log-advanced-field">
+                <span>Desde</span>
+                <input id="logDateFrom" type="date" class="select-input" />
+              </label>
+              <label class="log-advanced-field">
+                <span>Hasta</span>
+                <input id="logDateTo" type="date" class="select-input" />
+              </label>
+              <label class="log-advanced-field">
+                <span>Confianza mín.</span>
+                <input id="logConfidenceMin" type="number" step="0.1" min="0" max="100" class="select-input" placeholder="0" />
+              </label>
+              <label class="log-advanced-field">
+                <span>Confianza máx.</span>
+                <input id="logConfidenceMax" type="number" step="0.1" min="0" max="100" class="select-input" placeholder="100" />
+              </label>
+            </div>
+            <div class="log-advanced-actions">
+              <button id="logAdvancedReset" class="btn btn-ghost btn--sm" type="button">Limpiar filtros</button>
             </div>
           </div>
           <div id="logsList" class="table-wrap table-wrap--tall"></div>
@@ -264,6 +255,11 @@
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock-filled"></use></svg>
             <span>Abrir puerta ahora</span>
           </button>
+          <button id="trainBtn" class="btn btn-secondary large-touch w-full mt-3" type="button">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg>
+            <span>Reentrenar modelo</span>
+          </button>
+          <p id="trainResult" class="muted mt-2 text-sm"></p>
         </div>
 
         <div class="card card--danger-zone">
@@ -292,6 +288,8 @@
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/logo-navigation.js"></script>
   <script src="/static/js/admin-layout.js"></script>
+  <script src="/static/js/enrollment-fsm.js"></script>
+  <script src="/static/js/enrollment-controller.js"></script>
   <script src="/static/js/admin.js"></script>
 </body>
 </html>

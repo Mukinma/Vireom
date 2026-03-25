@@ -88,7 +88,35 @@ class Database:
                         flags=re.IGNORECASE,
                     )
 
+                muestras_cols_before = {
+                    row["name"]
+                    for row in conn.execute("PRAGMA table_info(muestras);").fetchall()
+                }
+                has_pose_type_before = "pose_type" in muestras_cols_before
+                if not has_pose_type_before:
+                    sql_to_execute = re.sub(
+                        r"CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_muestras_pose\s+ON\s+muestras\s*\(\s*pose_type\s*\)\s*;",
+                        "",
+                        sql_to_execute,
+                        flags=re.IGNORECASE,
+                    )
+
                 conn.executescript(sql_to_execute)
+
+                # ── Migration: add pose_type column to muestras ──
+                muestras_cols = {
+                    row["name"]
+                    for row in conn.execute("PRAGMA table_info(muestras);").fetchall()
+                }
+                if "pose_type" not in muestras_cols:
+                    conn.execute(
+                        "ALTER TABLE muestras ADD COLUMN pose_type TEXT DEFAULT 'frontal';"
+                    )
+                    logger.info("migration_applied added_column=pose_type table=muestras")
+
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_muestras_pose ON muestras(pose_type);"
+                )
         except Exception:
             logger.exception("db_init_failed schema_path=%s", schema_file)
             raise
@@ -205,6 +233,19 @@ class Database:
             raise ValueError("imagen_ref contiene caracteres no permitidos")
 
         return ref
+
+    def insert_sample_with_pose(self, user_id: int, imagen_ref: str, pose_type: str) -> int:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        imagen_ref_norm = self._normalize_imagen_ref(imagen_ref)
+        valid_poses = {"frontal", "tilt_left", "tilt_right", "look_up", "look_down", "turn_left", "turn_right", "center"}
+        pose = pose_type.strip().lower() if pose_type else "frontal"
+        if pose not in valid_poses:
+            pose = "frontal"
+        return self.execute(
+            "INSERT INTO muestras (usuario_id, imagen_ref, pose_type) VALUES (?, ?, ?)",
+            (int(user_id), imagen_ref_norm, pose),
+        )
 
     def insert_sample(self, user_id: int, imagen_ref: str) -> int:
         if int(user_id) <= 0:

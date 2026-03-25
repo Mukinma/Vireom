@@ -86,6 +86,10 @@ function setCameraStageActive(isActive) {
 }
 
 function showToast(type) {
+  if (!accessToast || !accessToastText || !accessToastSub) {
+    return;
+  }
+
   const config = toastMap[type] || toastMap.processing;
 
   accessToastText.textContent = config.text;
@@ -254,6 +258,10 @@ function updateFaceGuidance(guidance, uiStateKey) {
 }
 
 function showUserOverlay(data) {
+  if (!userOverlay || !recognizedName || !recognizedId || !recognizedArea || !confidence || !userPhoto) {
+    return;
+  }
+
   const userName = data.last_user || '-';
   const hasKnownUser = userName !== '-' && userName.toLowerCase() !== 'desconocido';
 
@@ -408,8 +416,10 @@ async function loadStatus() {
     setCameraStageActive(false);
     showToast('cameraError');
     updateFaceIndicator('cameraError');
-    userOverlay.classList.remove('is-visible');
-    userOverlay.classList.add('is-hidden');
+    if (userOverlay) {
+      userOverlay.classList.remove('is-visible');
+      userOverlay.classList.add('is-hidden');
+    }
 
     const lockSnapshot = lockscreenController?.getSnapshot?.();
     if (lockSnapshot?.state === LOCK_STATES.WAKING) {

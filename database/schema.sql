@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS muestras (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     usuario_id INTEGER NOT NULL,
     imagen_ref TEXT NOT NULL,
+    pose_type TEXT NOT NULL DEFAULT 'frontal',
     fecha_captura DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
@@ -77,6 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_activo ON administradores(activo);
 CREATE INDEX IF NOT EXISTS idx_accesos_fecha ON accesos(fecha);
 CREATE INDEX IF NOT EXISTS idx_accesos_usuario ON accesos(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_muestras_usuario ON muestras(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_muestras_pose ON muestras(pose_type);
 
 -- =========================
 -- 7. Vista de auditoría administrativa

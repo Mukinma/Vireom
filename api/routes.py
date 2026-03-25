@@ -42,6 +42,10 @@ class ConfigUpdate(BaseModel):
     max_intentos: int = Field(ge=1, le=20)
 
 
+class EnrollmentStart(BaseModel):
+    user_id: int = Field(gt=0)
+
+
 class UserCreate(BaseModel):
     nombre: str = Field(min_length=2, max_length=80)
 
@@ -272,6 +276,42 @@ def restart(request: Request):
 
     threading.Thread(target=_restart_proc, daemon=True).start()
     return JSONResponse({"ok": True, "message": "Reinicio solicitado"})
+
+
+# ── Enrollment endpoints ───────────────────────────────────────────
+
+
+@router.post("/api/enrollment/start")
+def enrollment_start(payload: EnrollmentStart, request: Request):
+    _admin_required(request)
+    user = db.get_user(payload.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    result = request.app.state.service.start_enrollment(payload.user_id)
+    status_code = 200 if result.get("ok") else 409
+    return JSONResponse(result, status_code=status_code)
+
+
+@router.get("/api/enrollment/status")
+def enrollment_status(request: Request):
+    _admin_required(request)
+    return request.app.state.service.get_enrollment_status()
+
+
+@router.post("/api/enrollment/abort")
+def enrollment_abort(request: Request):
+    _admin_required(request)
+    result = request.app.state.service.abort_enrollment()
+    status_code = 200 if result.get("ok") else 404
+    return JSONResponse(result, status_code=status_code)
+
+
+@router.post("/api/enrollment/retry-step")
+def enrollment_retry_step(request: Request):
+    _admin_required(request)
+    result = request.app.state.service.retry_enrollment_step()
+    status_code = 200 if result.get("ok") else 404
+    return JSONResponse(result, status_code=status_code)
 
 
 @router.post("/api/test/simulate-access")
