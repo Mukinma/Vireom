@@ -24,6 +24,8 @@ from hardware.gpio_control import RelayController
 from rate_limit import limiter
 from vision.camera import CameraStream
 from vision.detector import HaarFaceDetector
+from vision.enrollment import EnrollmentSession
+from vision.pose_heuristic import PoseHeuristic
 from vision.recognizer import LBPHRecognizer
 from vision.trainer import FaceTrainer
 
@@ -316,6 +318,9 @@ class AccessService:
         self.trainer = FaceTrainer(self.recognizer)
         self.relay = RelayController(pin=18, active_high=True)
         self.guidance = FaceGuidanceEngine()
+        self.pose_heuristic = PoseHeuristic()
+        self.enrollment_session: Optional[EnrollmentSession] = None
+        self.enrollment_lock = threading.Lock()
 
         self.running = False
         self.thread: Optional[threading.Thread] = None
@@ -560,6 +565,13 @@ class AccessService:
             camera_ok=camera_ok,
             model_loaded=model_loaded,
         )
+
+        # ── Enrollment session update ──
+        if self.enrollment_session is not None:
+            try:
+                self.enrollment_session.update(frame, gray, face, faces_count)
+            except Exception:
+                logger.exception("enrollment_update_failed")
 
         with self.lock:
             self.system_status["face_detected"] = detected
@@ -868,6 +880,65 @@ class AccessService:
         full_path = user_dir / f"sample_{sample_index:03d}.jpg"
         cv2.imwrite(str(full_path), roi)
         return relative_path
+
+    # ── Enrollment management ─────────────────────────────────────
+
+    def start_enrollment(self, user_id: int) -> dict[str, Any]:
+        with self.enrollment_lock:
+            if self.enrollment_session is not None:
+                return {"ok": False, "error": "enrollment_already_active"}
+            self.enrollment_session = EnrollmentSession(
+                user_id=user_id,
+                pose=self.pose_heuristic,
+            )
+            logger.info("enrollment_started user_id=%s", user_id)
+            return {"ok": True, "user_id": user_id}
+
+    def get_enrollment_status(self) -> dict[str, Any]:
+        session = self.enrollment_session
+        if session is None:
+            return {"state": "idle", "message": "No hay sesion activa"}
+        status = session.get_status()
+        # If completed, persist samples to DB and clean up
+        if status["state"] == "completed":
+            self._finalize_enrollment(session)
+        return status
+
+    def abort_enrollment(self) -> dict[str, Any]:
+        with self.enrollment_lock:
+            session = self.enrollment_session
+            if session is None:
+                return {"ok": False, "error": "no_active_session"}
+            session.abort()
+            self.enrollment_session = None
+            self.pose_heuristic.clear_baseline()
+            logger.info("enrollment_aborted user_id=%s", session.user_id)
+            return {"ok": True}
+
+    def retry_enrollment_step(self) -> dict[str, Any]:
+        session = self.enrollment_session
+        if session is None:
+            return {"ok": False, "error": "no_active_session"}
+        session.retry_step()
+        return {"ok": True}
+
+    def _finalize_enrollment(self, session: EnrollmentSession) -> None:
+        """Persist all captured samples to the database and tear down session."""
+        with self.enrollment_lock:
+            if self.enrollment_session is not session:
+                return
+            for path, pose_type in session.all_sample_paths:
+                try:
+                    db.insert_sample_with_pose(session.user_id, path, pose_type)
+                except Exception:
+                    logger.exception("enrollment_db_insert_failed path=%s", path)
+            self.enrollment_session = None
+            self.pose_heuristic.clear_baseline()
+            logger.info(
+                "enrollment_finalized user_id=%s samples=%s",
+                session.user_id,
+                session.total_captured,
+            )
 
     def manual_open(self):
         conf = db.get_config()

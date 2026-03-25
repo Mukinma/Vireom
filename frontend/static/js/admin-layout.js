@@ -26,8 +26,8 @@
     personas: {
       title: 'Personas',
     },
-    registro: {
-      title: 'Registro facial',
+    enrolamiento: {
+      title: 'Enrolamiento',
     },
     accesos: {
       title: 'Accesos',
@@ -129,9 +129,11 @@
       const id = section.id.replace('view-', '');
       if (id === currentView) {
         section.hidden = false;
+        section.classList.add('is-active');
         section.removeAttribute('aria-hidden');
       } else {
         section.hidden = true;
+        section.classList.remove('is-active');
         section.setAttribute('aria-hidden', 'true');
       }
     });
@@ -203,6 +205,7 @@
     const isMobile = mobileMedia.matches;
 
     shell.classList.toggle('is-drawer-mode', drawerMode);
+    shell.classList.remove('is-bottom-nav-mode');
     shell.classList.toggle('is-mobile', isMobile);
 
     if (drawerMode) {

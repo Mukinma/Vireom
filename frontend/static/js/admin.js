@@ -5,8 +5,6 @@ const logsList = document.getElementById('logsList');
 const createUserBtn = document.getElementById('createUserBtn');
 const newUserName = document.getElementById('newUserName');
 const createResult = document.getElementById('createResult');
-const captureUserSelect = document.getElementById('captureUserSelect');
-const captureBtn = document.getElementById('captureBtn');
 const trainBtn = document.getElementById('trainBtn');
 const trainResult = document.getElementById('trainResult');
 const cfgThreshold = document.getElementById('cfgThreshold');
@@ -43,13 +41,20 @@ const resumenTimelineList = document.getElementById('resumenTimelineList');
 const resumenTimelineMeta = document.getElementById('resumenTimelineMeta');
 
 const resumenActionButtons = {
-  registro: document.getElementById('resumenActionRegistro'),
   accesos: document.getElementById('resumenActionAccesos'),
   personas: document.getElementById('resumenActionPersonas'),
 };
 
 const userSearch = document.getElementById('userSearch');
 const logFilterResult = document.getElementById('logFilterResult');
+const logAdvancedToggle = document.getElementById('logAdvancedToggle');
+const logAdvancedPanel = document.getElementById('logAdvancedPanel');
+const logAdvancedReset = document.getElementById('logAdvancedReset');
+const logSearch = document.getElementById('logSearch');
+const logDateFrom = document.getElementById('logDateFrom');
+const logDateTo = document.getElementById('logDateTo');
+const logConfidenceMin = document.getElementById('logConfidenceMin');
+const logConfidenceMax = document.getElementById('logConfidenceMax');
 
 let adminToastTimer = null;
 let cachedUsers = [];
@@ -268,21 +273,48 @@ function upperFirst(value) {
 
 function renderUsers(users) {
   if (!usersList) return;
-  const rows = users.map((user) => `
+  const rows = users.map((user) => {
+    const escapedName = escapeHtml(user.nombre).replace(/'/g, "\\'");
+    return `
     <tr>
       <td>${user.id}</td>
       <td>${escapeHtml(user.nombre)}</td>
       <td><span class="badge ${user.activo ? 'badge--active' : 'badge--inactive'}">${user.activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td>
-        <button class="btn btn--sm btn-secondary" onclick="toggleUser(${user.id}, ${user.activo ? 'false' : 'true'})">
-          ${user.activo ? 'Desactivar' : 'Activar'}
+      <td class="table-actions">
+        <button
+          class="user-action-btn user-action-btn--primary"
+          type="button"
+          onclick="startEnrollForUser(${user.id}, '${escapedName}')"
+          title="Enrolar ${escapeHtml(user.nombre)}"
+          aria-label="Enrolar ${escapeHtml(user.nombre)}"
+          ${user.activo ? '' : ' disabled'}
+        >
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+          <span>Enrolar</span>
         </button>
-        <button class="btn-delete-user" onclick="deleteUser(${u.id}, '${u.nombre.replace(/'/g, "\\'")}')" title="Eliminar usuario" aria-label="Eliminar ${u.nombre}">
+        <button
+          class="user-action-btn user-action-btn--neutral"
+          type="button"
+          onclick="toggleUser(${user.id}, ${user.activo ? 'false' : 'true'})"
+          title="${user.activo ? 'Desactivar' : 'Activar'} ${escapeHtml(user.nombre)}"
+          aria-label="${user.activo ? 'Desactivar' : 'Activar'} ${escapeHtml(user.nombre)}"
+        >
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${user.activo ? 'lock' : 'unlock'}"></use></svg>
+          <span>${user.activo ? 'Desactivar' : 'Activar'}</span>
+        </button>
+        <button
+          class="user-action-btn user-action-btn--danger"
+          type="button"
+          onclick="deleteUser(${user.id}, '${escapedName}')"
+          title="Eliminar usuario"
+          aria-label="Eliminar ${escapeHtml(user.nombre)}"
+        >
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
+          <span>Eliminar</span>
         </button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   usersList.innerHTML = `
     <table>
@@ -315,29 +347,18 @@ function renderLogs(logs) {
   `;
 }
 
-/* ── Populate person selector (Registro facial) ── */
-
-function populateUserSelect(users) {
-  if (!captureUserSelect) return;
-  const options = users
-    .filter((user) => user.activo)
-    .map((user) => `<option value="${user.id}">${escapeHtml(user.nombre)} (ID ${user.id})</option>`)
-    .join('');
-  captureUserSelect.innerHTML = `<option value="">Seleccionar persona...</option>${options}`;
-}
-
 /* ── Stats & Summary ── */
 
 function computeLogStats(logs) {
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const utcTodayStr = new Date().toISOString().slice(0, 10);
   let today = 0;
   let granted = 0;
   let denied = 0;
   let manual = 0;
 
   logs.forEach((log) => {
-    const isToday = log.fecha && String(log.fecha).startsWith(todayStr);
+    const rawDate = String(log.fecha || '').trim();
+    const isToday = rawDate.slice(0, 10) === utcTodayStr;
     if (!isToday) return;
 
     const resultMeta = getAccessResultMeta(log.resultado);
@@ -361,31 +382,31 @@ function buildActionPlan(model) {
   if (model.isOnboarding) {
     return {
       primary: 'personas',
-      secondary: ['registro', 'accesos'],
+      secondary: ['accesos'],
       hint: 'Crea la primera identidad activa.',
     };
   }
 
   if (!model.modelReady) {
     return {
-      primary: 'registro',
-      secondary: ['personas', 'accesos'],
-      hint: 'Completa muestras y actualiza el modelo.',
+      primary: 'personas',
+      secondary: ['accesos'],
+      hint: 'Agrega identidad y valida actividad reciente.',
     };
   }
 
   if (model.alertState === 'critical' || model.alertState === 'warning') {
     return {
       primary: 'accesos',
-      secondary: ['registro', 'personas'],
+      secondary: ['personas'],
       hint: 'Revisa lo ultimo antes de seguir.',
     };
   }
 
   return {
-    primary: 'registro',
-    secondary: ['accesos', 'personas'],
-    hint: 'Refuerza el reconocimiento o valida el dia.',
+    primary: 'accesos',
+    secondary: ['personas'],
+    hint: 'Valida actividad y mantén actualizado el padrón.',
   };
 }
 
@@ -617,26 +638,80 @@ function applyUserSearch() {
 
 function applyLogFilter() {
   const filter = (logFilterResult?.value || '').toLowerCase();
-  if (!filter) {
-    renderLogs(cachedLogs);
-    return;
-  }
+  const searchText = (logSearch?.value || '').trim().toLowerCase();
+  const dateFrom = (logDateFrom?.value || '').trim();
+  const dateTo = (logDateTo?.value || '').trim();
+  const confidenceMinRaw = (logConfidenceMin?.value || '').trim();
+  const confidenceMaxRaw = (logConfidenceMax?.value || '').trim();
+  const confidenceMin = confidenceMinRaw === '' ? null : Number(confidenceMinRaw);
+  const confidenceMax = confidenceMaxRaw === '' ? null : Number(confidenceMaxRaw);
 
-  renderLogs(cachedLogs.filter((log) => {
+  const filtered = cachedLogs.filter((log) => {
     const resultMeta = getAccessResultMeta(log.resultado);
-    return resultMeta.filterKey === filter;
-  }));
+    if (filter && resultMeta.filterKey !== filter) return false;
+
+    const datePart = String(log.fecha || '').slice(0, 10);
+    if (dateFrom && (!datePart || datePart < dateFrom)) return false;
+    if (dateTo && (!datePart || datePart > dateTo)) return false;
+
+    if (searchText) {
+      const haystack = [
+        log.nombre,
+        log.usuario_id,
+        log.id,
+        log.resultado,
+        log.motivo,
+      ].map((value) => String(value || '').toLowerCase()).join(' ');
+      if (!haystack.includes(searchText)) return false;
+    }
+
+    if (confidenceMin != null && !Number.isNaN(confidenceMin)) {
+      const currentConfidence = Number(log.confianza);
+      if (Number.isNaN(currentConfidence) || currentConfidence < confidenceMin) return false;
+    }
+
+    if (confidenceMax != null && !Number.isNaN(confidenceMax)) {
+      const currentConfidence = Number(log.confianza);
+      if (Number.isNaN(currentConfidence) || currentConfidence > confidenceMax) return false;
+    }
+
+    return true;
+  });
+
+  renderLogs(filtered);
 }
 
 userSearch?.addEventListener('input', applyUserSearch);
 logFilterResult?.addEventListener('change', applyLogFilter);
+logSearch?.addEventListener('input', applyLogFilter);
+logDateFrom?.addEventListener('change', applyLogFilter);
+logDateTo?.addEventListener('change', applyLogFilter);
+logConfidenceMin?.addEventListener('input', applyLogFilter);
+logConfidenceMax?.addEventListener('input', applyLogFilter);
+
+logAdvancedToggle?.addEventListener('click', () => {
+  const willOpen = logAdvancedPanel?.hasAttribute('hidden');
+  if (!logAdvancedPanel) return;
+  if (willOpen) logAdvancedPanel.removeAttribute('hidden');
+  else logAdvancedPanel.setAttribute('hidden', '');
+  logAdvancedToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+});
+
+logAdvancedReset?.addEventListener('click', () => {
+  if (logSearch) logSearch.value = '';
+  if (logDateFrom) logDateFrom.value = '';
+  if (logDateTo) logDateTo.value = '';
+  if (logConfidenceMin) logConfidenceMin.value = '';
+  if (logConfidenceMax) logConfidenceMax.value = '';
+  if (logFilterResult) logFilterResult.value = '';
+  applyLogFilter();
+});
 
 /* ── Data loaders ── */
 
 async function loadUsers() {
   cachedUsers = await api('/api/users');
   renderUsers(cachedUsers);
-  populateUserSelect(cachedUsers);
   if (dashboardReady) renderDashboardFromCache();
   return cachedUsers;
 }
@@ -718,7 +793,7 @@ createUserBtn?.addEventListener('click', async () => {
     if (createResult) {
       const uid = user?.id ?? '';
       createResult.hidden = false;
-      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} registrado${uid ? ` (ID ${uid})` : ''}. <a href="#registro" class="link">Ir a registro facial -></a>`;
+      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} registrado${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">Enrolar ahora &rarr;</button>`;
       setTimeout(() => { createResult.hidden = true; }, 10000);
     }
 
@@ -729,28 +804,7 @@ createUserBtn?.addEventListener('click', async () => {
   }
 });
 
-/* ── Actions: Capture & Train ── */
-
-captureBtn?.addEventListener('click', async () => {
-  const userId = Number(captureUserSelect?.value);
-  if (!userId) {
-    showAdminToast({ text: 'Selecciona una persona', sub: 'Elige a quien quieres capturar', cls: 'warning', timeout: 2400 });
-    return;
-  }
-  captureBtn.disabled = true;
-  captureBtn.innerHTML = '<svg class="icon spin" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#loader"></use></svg> <span>Capturando...</span>';
-  showAdminToast({ text: 'Capturando muestras...', sub: 'Mira la camara', cls: 'processing', timeout: 15000 });
-  try {
-    const result = await api(`/api/users/${userId}/capture?count=30`, { method: 'POST' });
-    showAdminToast({ text: 'Captura finalizada', sub: `Muestras: ${result.saved}/${result.requested}`, cls: 'success', timeout: 3200 });
-  } catch (error) {
-    console.error(error);
-    showAdminToast({ text: 'Error en captura', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
-  } finally {
-    captureBtn.disabled = false;
-    captureBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#focus-filled"></use></svg> <span>Tomar 30 fotos del rostro</span>';
-  }
-});
+/* ── Actions: Train model (Sistema) ── */
 
 trainBtn?.addEventListener('click', async () => {
   if (!confirm('¿Deseas reentrenar el modelo? Esto reemplazara el modelo actual.')) return;
@@ -768,7 +822,7 @@ trainBtn?.addEventListener('click', async () => {
     showAdminToast({ text: 'Error de entrenamiento', sub: getErrorMessage(error), cls: 'error', timeout: 3400 });
   } finally {
     trainBtn.disabled = false;
-    trainBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg> <span>Actualizar reconocimiento</span>';
+    trainBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg> <span>Reentrenar modelo</span>';
   }
 });
 
@@ -814,6 +868,32 @@ manualOpenAdminBtn?.addEventListener('click', async () => {
     showAdminToast({ text: 'No se pudo abrir', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
   }
 });
+
+/* ── Personas / Enrolamiento navigation ── */
+
+function navigateToAdminView(viewId) {
+  if (window.CameraPIAdminLayout?.navigateToView) {
+    window.CameraPIAdminLayout.navigateToView(viewId);
+    return;
+  }
+  window.location.hash = viewId;
+}
+
+window.showPersonasListMode = function showPersonasListMode() {
+  if (window.CameraPIEnrollment) window.CameraPIEnrollment.reset();
+  navigateToAdminView('personas');
+};
+
+window.startEnrollForUser = function (userId, userName) {
+  navigateToAdminView('enrolamiento');
+  window.requestAnimationFrame(() => {
+    const enrollSelect = document.getElementById('enrollUserSelect');
+    if (enrollSelect) enrollSelect.value = String(userId);
+    window.dispatchEvent(new Event('resize'));
+  });
+};
+
+window.showAdminToast = showAdminToast;
 
 /* ── Init ── */
 
