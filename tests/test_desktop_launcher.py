@@ -59,10 +59,6 @@ class _FakeWindow:
         self.actions = []
         self.js_calls = []
 
-    def show(self):
-        self.actions.append("show")
-        self.events.shown.fire(self)
-
     def resize(self, width, height):
         self.actions.append(("resize", width, height))
 
@@ -137,7 +133,7 @@ def test_open_desktop_window_difiere_fullscreen_y_despacha_ready(monkeypatch):
         def start(self, func=None, args=None, debug=False):
             captured["debug"] = debug
             fake_window.events.initialized.fire(fake_window, "gtk")
-            func(*args)
+            fake_window.events.shown.fire(fake_window)
             fake_window.events.loaded.fire(fake_window)
 
     monkeypatch.setattr(desktop_launcher, "load_webview_module", lambda: _FakeWebview())
@@ -145,10 +141,10 @@ def test_open_desktop_window_difiere_fullscreen_y_despacha_ready(monkeypatch):
 
     desktop_launcher.open_desktop_window(desktop_launcher.DesktopLauncherConfig(fullscreen=True))
 
-    assert captured["kwargs"]["hidden"] is True
+    assert captured["kwargs"]["hidden"] is False
     assert captured["kwargs"]["fullscreen"] is False
     assert captured["kwargs"]["background_color"] == desktop_launcher.WINDOW_BACKGROUND_COLOR
-    assert fake_window.actions[:3] == ["show", "maximize", "toggle_fullscreen"]
+    assert fake_window.actions[:2] == ["maximize", "toggle_fullscreen"]
     assert desktop_launcher.DESKTOP_READY_JS in fake_window.js_calls
 
 
@@ -161,7 +157,7 @@ def test_open_desktop_window_windowed_reaplica_resize(monkeypatch):
 
         def start(self, func=None, args=None, debug=False):
             fake_window.events.initialized.fire(fake_window)
-            func(*args)
+            fake_window.events.shown.fire(fake_window)
             fake_window.events.loaded.fire(fake_window)
 
     monkeypatch.setattr(desktop_launcher, "load_webview_module", lambda: _FakeWebview())
@@ -171,8 +167,6 @@ def test_open_desktop_window_windowed_reaplica_resize(monkeypatch):
     desktop_launcher.open_desktop_window(config)
 
     assert fake_window.actions == [
-        "show",
-        ("resize", 1440, 900),
         ("resize", 1440, 900),
         ("resize", 1440, 900),
     ]
