@@ -18,6 +18,15 @@ router = APIRouter()
 auth_logger = logging.getLogger("camerapi.auth")
 
 
+def _template_context(request: Request, **extra: object) -> dict[str, object]:
+    context: dict[str, object] = {
+        "request": request,
+        "asset_version": getattr(request.app.state, "asset_version", "dev"),
+    }
+    context.update(extra)
+    return context
+
+
 def _is_admin(request: Request) -> bool:
     return bool(request.session.get("admin_authenticated"))
 
@@ -62,7 +71,7 @@ class SimulateAccessPayload(BaseModel):
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
     request.session.setdefault("kiosk", True)
-    return request.app.state.templates.TemplateResponse("index.html", {"request": request})
+    return request.app.state.templates.TemplateResponse("index.html", _template_context(request))
 
 
 @router.get("/admin", response_class=HTMLResponse)
@@ -71,9 +80,9 @@ def admin(request: Request):
         has_error = request.query_params.get("error") == "1"
         return request.app.state.templates.TemplateResponse(
             "login.html",
-            {"request": request, "login_error": has_error},
+            _template_context(request, login_error=has_error),
         )
-    return request.app.state.templates.TemplateResponse("admin.html", {"request": request})
+    return request.app.state.templates.TemplateResponse("admin.html", _template_context(request))
 
 
 @router.post("/auth/login")

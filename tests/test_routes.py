@@ -19,6 +19,10 @@ def test_kiosk_home_setea_sesion(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "session" in response.headers.get("set-cookie", "").lower() or response.cookies
+    html = response.text
+    assert "tipsCarouselCamera" not in html
+    assert 'id="cameraBadge"' not in html
+    assert "?v=" in html
 
 
 def test_health_publico_es_minimo(client):
