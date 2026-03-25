@@ -381,14 +381,8 @@ html.theme-dark .kiosk-camera.camera-active.camera-pulse::after {
   background: #050911;
 }
 
-.kiosk-camera__veil {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(4, 8, 18, 0.48) 0%, rgba(4, 8, 18, 0.1) 18%, rgba(4, 8, 18, 0.04) 45%, rgba(4, 8, 18, 0.06) 65%, rgba(4, 8, 18, 0.1) 82%, rgba(4, 8, 18, 0.42) 100%),
-    radial-gradient(ellipse at center, transparent 22%, rgba(4, 8, 18, 0.38) 100%);
+html.desktop-launch-pending .kiosk-camera__feed {
+  opacity: 0;
 }
 
 .face-guide {

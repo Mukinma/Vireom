@@ -1,5 +1,6 @@
 import { isWakeReadyStatus } from './wake-readiness.js';
 import { isCurrentWakeAttempt } from './wake-attempt-guard.js';
+import { bindDesktopReady, isDesktopLaunchPending } from './desktop-ready.js';
 
 const shell = document.getElementById('kioskShell');
 const accessToast = document.getElementById('accessToast');
@@ -35,6 +36,8 @@ const lockscreenApi = window.CameraPILockscreen;
 const lockscreenControllerApi = window.CameraPILockscreenController;
 const LOCK_EVENTS = lockscreenControllerApi?.EVENTS || {};
 const LOCK_STATES = lockscreenControllerApi?.STATES || {};
+const desktopLaunchPending = isDesktopLaunchPending(window);
+let desktopReadyReleased = !desktopLaunchPending;
 
 const AUTO_TRIGGER_COOLDOWN_MS = 4000;
 let lastAutoTriggerMs = 0;
@@ -72,6 +75,28 @@ let isScanPaused = false;
 let wakeAbortController = null;
 let sleepPromise = null;
 const IDLE_TIMEOUT_MS = 45000;
+
+function getDefaultStreamSrc() {
+  return videoFeed?.dataset.streamSrc || '/api/stream';
+}
+
+function initializeVideoFeed() {
+  if (!videoFeed) {
+    return;
+  }
+
+  const defaultSrc = getDefaultStreamSrc();
+  videoFeed.dataset.prevSrc = defaultSrc;
+
+  if (desktopLaunchPending) {
+    videoFeed.setAttribute('src', '');
+    return;
+  }
+
+  if (!videoFeed.getAttribute('src')) {
+    videoFeed.setAttribute('src', defaultSrc);
+  }
+}
 
 function setCameraStageActive(isActive) {
   if (!cameraRingHost) {
@@ -479,17 +504,18 @@ function startStatusPolling() {
 function pauseCamera() {
   if (!videoFeed) return true;
   if (!videoFeed.dataset.prevSrc) {
-    videoFeed.dataset.prevSrc = videoFeed.getAttribute('src') || '/api/stream';
+    videoFeed.dataset.prevSrc = videoFeed.getAttribute('src') || getDefaultStreamSrc();
   }
   videoFeed.setAttribute('src', '');
   setCameraStageActive(false);
   return true;
 }
 
-function resumeCamera() {
+function resumeCamera(cacheKey = 'wake') {
   if (!videoFeed) return true;
-  const prevSrc = videoFeed.dataset.prevSrc || '/api/stream';
-  videoFeed.setAttribute('src', `${prevSrc}?wake=${Date.now()}`);
+  const prevSrc = videoFeed.dataset.prevSrc || getDefaultStreamSrc();
+  const separator = prevSrc.includes('?') ? '&' : '?';
+  videoFeed.setAttribute('src', `${prevSrc}${separator}${cacheKey}=${Date.now()}`);
   return true;
 }
 
@@ -620,6 +646,24 @@ const lockscreenController = lockscreenControllerApi?.create(
 function dispatchUserActivity() {
   lockscreenController?.dispatch({ type: LOCK_EVENTS.USER_ACTIVITY });
 }
+
+function releaseDesktopReady() {
+  if (desktopReadyReleased) {
+    return;
+  }
+
+  desktopReadyReleased = true;
+  window.__VIREOM_DESKTOP_PENDING__ = false;
+  document.documentElement.classList.remove('desktop-launch-pending');
+  resumeCamera('desktop_ready');
+}
+
+initializeVideoFeed();
+bindDesktopReady({
+  windowObject: window,
+  enabled: desktopLaunchPending,
+  onReady: releaseDesktopReady,
+});
 
 document.addEventListener('pointerdown', () => {
   dispatchUserActivity();

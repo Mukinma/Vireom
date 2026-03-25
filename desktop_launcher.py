@@ -17,13 +17,26 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import uvicorn
 
 
 logger = logging.getLogger("camerapi.desktop")
+
+DESKTOP_READY_EVENT = "vireom:desktop-ready"
+DESKTOP_LAUNCH_QUERY = "desktop-launch=1"
+DESKTOP_WINDOW_SETTLE_S = 0.35
+WINDOWED_RESIZE_SETTLE_S = 0.12
+WINDOW_BACKGROUND_COLOR = "#050911"
+DESKTOP_READY_JS = f"""
+(() => {{
+  window.__VIREOM_DESKTOP_PENDING__ = false;
+  window.dispatchEvent(new CustomEvent('{DESKTOP_READY_EVENT}'));
+  window.dispatchEvent(new Event('resize'));
+}})();
+""".strip()
 
 
 @dataclass(frozen=True)
@@ -46,6 +59,11 @@ class DesktopLauncherConfig:
     def start_url(self) -> str:
         return f"{self.base_url}{self.start_path}"
 
+    @property
+    def window_url(self) -> str:
+        separator = "&" if "?" in self.start_path else "?"
+        return f"{self.base_url}{self.start_path}{separator}{DESKTOP_LAUNCH_QUERY}"
+
 
 @dataclass
 class DesktopServerHandle:
@@ -59,6 +77,15 @@ class DesktopServerHandle:
         if self.thread.is_alive():
             self.server.force_exit = True
             self.thread.join(timeout=2.0)
+
+
+@dataclass
+class DesktopWindowState:
+    initialized: threading.Event = field(default_factory=threading.Event)
+    shown: threading.Event = field(default_factory=threading.Event)
+    loaded: threading.Event = field(default_factory=threading.Event)
+    released: bool = False
+    lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -175,19 +202,102 @@ def load_webview_module() -> Any:
         ) from exc
 
 
+def _safe_window_action(action_name: str, action, *args) -> None:
+    try:
+        action(*args)
+    except Exception:
+        logger.exception("desktop_window_action_failed action=%s", action_name)
+
+
+def _dispatch_desktop_ready(window: Any) -> None:
+    _safe_window_action("dispatch_desktop_ready", window.evaluate_js, DESKTOP_READY_JS)
+
+
+def _stabilize_window(window: Any, config: DesktopLauncherConfig) -> None:
+    logger.info("desktop_window_stabilize_start fullscreen=%s", config.fullscreen)
+    if config.fullscreen:
+        _safe_window_action("maximize", window.maximize)
+        time.sleep(DESKTOP_WINDOW_SETTLE_S)
+        _safe_window_action("toggle_fullscreen", window.toggle_fullscreen)
+        time.sleep(DESKTOP_WINDOW_SETTLE_S)
+    else:
+        _safe_window_action("resize_initial", window.resize, config.width, config.height)
+        time.sleep(WINDOWED_RESIZE_SETTLE_S)
+        _safe_window_action("resize_final", window.resize, config.width, config.height)
+        time.sleep(WINDOWED_RESIZE_SETTLE_S)
+
+    _dispatch_desktop_ready(window)
+    logger.info("desktop_window_stabilize_done fullscreen=%s", config.fullscreen)
+
+
+def _maybe_release_desktop_ready(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
+    if not (state.initialized.is_set() and state.shown.is_set() and state.loaded.is_set()):
+        return
+
+    with state.lock:
+        if state.released:
+            return
+        state.released = True
+
+    worker = threading.Thread(
+        target=_stabilize_window,
+        args=(window, config),
+        name="vireom-desktop-ui-stabilizer",
+        daemon=True,
+    )
+    worker.start()
+
+
+def _handle_window_initialized(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
+    state.initialized.set()
+    logger.info("desktop_window_initialized")
+    _maybe_release_desktop_ready(window, state, config)
+
+
+def _handle_window_shown(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
+    state.shown.set()
+    logger.info("desktop_window_shown")
+    _maybe_release_desktop_ready(window, state, config)
+
+
+def _handle_window_loaded(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
+    state.loaded.set()
+    logger.info("desktop_window_loaded")
+    _maybe_release_desktop_ready(window, state, config)
+
+
+def _bootstrap_window(window: Any, config: DesktopLauncherConfig) -> None:
+    _safe_window_action("show", window.show)
+    if not config.fullscreen:
+        time.sleep(WINDOWED_RESIZE_SETTLE_S)
+        _safe_window_action("resize_bootstrap", window.resize, config.width, config.height)
+
+
 def open_desktop_window(config: DesktopLauncherConfig) -> None:
     webview = load_webview_module()
 
     try:
-        webview.create_window(
+        window = webview.create_window(
             config.title,
-            config.start_url,
+            config.window_url,
             width=config.width,
             height=config.height,
             resizable=True,
-            fullscreen=config.fullscreen,
+            fullscreen=False,
+            hidden=True,
+            background_color=WINDOW_BACKGROUND_COLOR,
         )
-        webview.start(debug=False)
+        state = DesktopWindowState()
+        window.events.initialized += (
+            lambda window: _handle_window_initialized(window, state, config)
+        )
+        window.events.shown += (
+            lambda window: _handle_window_shown(window, state, config)
+        )
+        window.events.loaded += (
+            lambda window: _handle_window_loaded(window, state, config)
+        )
+        webview.start(_bootstrap_window, args=(window, config), debug=False)
     except Exception as exc:
         linux_hint = ""
         if platform.system().lower() == "linux":
@@ -211,7 +321,7 @@ def _configure_launcher_logging() -> None:
 
 def run_launcher(config: DesktopLauncherConfig) -> int:
     _configure_launcher_logging()
-    logger.info("desktop_launcher_start url=%s", config.start_url)
+    logger.info("desktop_launcher_start url=%s", config.window_url)
 
     handle: DesktopServerHandle | None = None
     try:

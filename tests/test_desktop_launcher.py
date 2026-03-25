@@ -33,6 +33,49 @@ class _FakeResponse:
         return False
 
 
+class _FakeEvent:
+    def __init__(self):
+        self.handlers = []
+
+    def __iadd__(self, handler):
+        self.handlers.append(handler)
+        return self
+
+    def fire(self, window):
+        for handler in list(self.handlers):
+            handler(window)
+
+
+class _FakeEvents:
+    def __init__(self):
+        self.initialized = _FakeEvent()
+        self.shown = _FakeEvent()
+        self.loaded = _FakeEvent()
+
+
+class _FakeWindow:
+    def __init__(self):
+        self.events = _FakeEvents()
+        self.actions = []
+        self.js_calls = []
+
+    def show(self):
+        self.actions.append("show")
+        self.events.shown.fire(self)
+
+    def resize(self, width, height):
+        self.actions.append(("resize", width, height))
+
+    def maximize(self):
+        self.actions.append("maximize")
+
+    def toggle_fullscreen(self):
+        self.actions.append("toggle_fullscreen")
+
+    def evaluate_js(self, script):
+        self.js_calls.append(script)
+
+
 def test_assert_port_available_rechaza_puerto_ocupado(monkeypatch):
     monkeypatch.setattr(
         desktop_launcher.socket,
@@ -74,6 +117,66 @@ def test_load_webview_module_falla_con_mensaje_claro(monkeypatch):
 
     with pytest.raises(RuntimeError, match="pywebview"):
         desktop_launcher.load_webview_module()
+
+
+def test_window_url_agrega_flag_desktop():
+    config = desktop_launcher.DesktopLauncherConfig(start_path="/")
+
+    assert config.window_url == "http://127.0.0.1:8000/?desktop-launch=1"
+
+
+def test_open_desktop_window_difiere_fullscreen_y_despacha_ready(monkeypatch):
+    fake_window = _FakeWindow()
+    captured = {}
+
+    class _FakeWebview:
+        def create_window(self, *args, **kwargs):
+            captured["kwargs"] = kwargs
+            return fake_window
+
+        def start(self, func=None, args=None, debug=False):
+            captured["debug"] = debug
+            fake_window.events.initialized.fire(fake_window)
+            func(*args)
+            fake_window.events.loaded.fire(fake_window)
+
+    monkeypatch.setattr(desktop_launcher, "load_webview_module", lambda: _FakeWebview())
+    monkeypatch.setattr(desktop_launcher.time, "sleep", lambda _seconds: None)
+
+    desktop_launcher.open_desktop_window(desktop_launcher.DesktopLauncherConfig(fullscreen=True))
+
+    assert captured["kwargs"]["hidden"] is True
+    assert captured["kwargs"]["fullscreen"] is False
+    assert captured["kwargs"]["background_color"] == desktop_launcher.WINDOW_BACKGROUND_COLOR
+    assert fake_window.actions[:3] == ["show", "maximize", "toggle_fullscreen"]
+    assert desktop_launcher.DESKTOP_READY_JS in fake_window.js_calls
+
+
+def test_open_desktop_window_windowed_reaplica_resize(monkeypatch):
+    fake_window = _FakeWindow()
+
+    class _FakeWebview:
+        def create_window(self, *args, **kwargs):
+            return fake_window
+
+        def start(self, func=None, args=None, debug=False):
+            fake_window.events.initialized.fire(fake_window)
+            func(*args)
+            fake_window.events.loaded.fire(fake_window)
+
+    monkeypatch.setattr(desktop_launcher, "load_webview_module", lambda: _FakeWebview())
+    monkeypatch.setattr(desktop_launcher.time, "sleep", lambda _seconds: None)
+
+    config = desktop_launcher.DesktopLauncherConfig(fullscreen=False, width=1440, height=900)
+    desktop_launcher.open_desktop_window(config)
+
+    assert fake_window.actions == [
+        "show",
+        ("resize", 1440, 900),
+        ("resize", 1440, 900),
+        ("resize", 1440, 900),
+    ]
+    assert desktop_launcher.DESKTOP_READY_JS in fake_window.js_calls
 
 
 def test_install_linux_shortcuts_escribe_archivos(tmp_path):
