@@ -1,42 +1,106 @@
-/* ── Enrollment Module — Glassmorphism Styles ────────────────────── */
+/* Enrollment Module */
+
+#view-enrolamiento {
+  height: 100%;
+  padding: 8px;
+  overflow: hidden;
+}
 
 .enrollment-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: minmax(0, 1fr) 352px;
   gap: 16px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 4px;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  align-items: stretch;
 }
 
-@media (max-width: 900px) {
-  .enrollment-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ── Camera card ─────────────────────────────────────────────────── */
-
-.enrollment-camera-card {
+.enrollment-camera-card,
+.enrollment-panel-card {
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
+  border-radius: 24px;
   backdrop-filter: blur(var(--blur-glass));
   -webkit-backdrop-filter: blur(var(--blur-glass));
   box-shadow:
     0 8px 24px var(--glass-shadow-high),
     inset 0 1px 0 var(--glass-highlight);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
-/* ── Viewport ────────────────────────────────────────────────────── */
+.enrollment-camera-card {
+  min-height: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.enrollment-camera-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.enrollment-camera-status__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.enrollment-camera-status__meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.enrollment-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.12);
+  border: 1px solid rgba(var(--primary-rgb), 0.22);
+}
+
+.enrollment-status-pill--muted {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.enrollment-status-pill--success {
+  color: var(--success);
+  background: rgba(var(--success-rgb), 0.16);
+  border-color: rgba(var(--success-rgb), 0.24);
+}
+
+.enrollment-status-pill--warning {
+  color: var(--warning);
+  background: rgba(var(--warning-rgb), 0.16);
+  border-color: rgba(var(--warning-rgb), 0.26);
+}
+
+.enrollment-status-pill--danger {
+  color: rgba(var(--danger-rgb), 0.96);
+  background: rgba(var(--danger-rgb), 0.14);
+  border-color: rgba(var(--danger-rgb), 0.24);
+}
 
 .enrollment-viewport {
   position: relative;
-  aspect-ratio: 4 / 3;
-  border-radius: 16px;
+  min-height: 0;
+  height: 100%;
+  border-radius: 18px;
   overflow: hidden;
   background: var(--camera-fallback);
 }
@@ -58,23 +122,26 @@
   border-radius: inherit;
 }
 
-/* ── HUD (glassmorphism bar at bottom of viewport) ───────────────── */
-
 .enrollment-hud {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
   padding: 12px 18px 14px;
   background: var(--surface-glass);
+  border-top: 1px solid var(--glass-border);
   backdrop-filter: blur(var(--blur-glass));
   -webkit-backdrop-filter: blur(var(--blur-glass));
-  border-top: 1px solid var(--glass-border);
+}
+
+.enrollment-hud__topline {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  z-index: 4;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .enrollment-step-badge {
@@ -82,19 +149,26 @@
   align-items: center;
   padding: 3px 12px;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--primary);
   background: rgba(var(--primary-rgb), 0.12);
   border: 1px solid rgba(var(--primary-rgb), 0.2);
-  border-radius: 20px;
+  border-radius: 999px;
+}
+
+.enrollment-hud__counter {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .enrollment-instruction {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.08rem;
+  font-weight: 650;
   color: var(--text-primary);
   text-align: center;
 }
@@ -102,31 +176,30 @@
 .enrollment-message {
   margin: 0;
   font-size: 0.82rem;
+  line-height: 1.45;
   color: var(--text-muted);
   text-align: center;
-  min-height: 1.2em;
+  min-height: 1.25em;
 }
-
-/* ── Warnings ────────────────────────────────────────────────────── */
 
 .enrollment-warning {
   position: absolute;
-  top: 12px;
   left: 12px;
   right: 12px;
+  top: 12px;
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--warning);
-  background: rgba(var(--warning-rgb), 0.14);
-  border: 1px solid rgba(var(--warning-rgb), 0.28);
   border-radius: var(--radius-btn);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--warning);
+  background: rgba(var(--warning-rgb), 0.16);
+  border: 1px solid rgba(var(--warning-rgb), 0.28);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  z-index: 6;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
@@ -138,10 +211,14 @@
 
 .enrollment-warning--light {
   top: auto;
-  bottom: 80px;
+  bottom: 94px;
 }
 
-/* ── Capture flash ───────────────────────────────────────────────── */
+.enrollment-warning--multi {
+  color: rgba(var(--danger-rgb), 0.98);
+  background: rgba(var(--danger-rgb), 0.16);
+  border-color: rgba(var(--danger-rgb), 0.3);
+}
 
 .enrollment-flash {
   position: absolute;
@@ -151,7 +228,6 @@
   opacity: 0;
   pointer-events: none;
   z-index: 5;
-  transition: none;
 }
 
 .enrollment-flash.is-active {
@@ -163,21 +239,20 @@
   100% { opacity: 0; }
 }
 
-/* ── Completion overlay ──────────────────────────────────────────── */
-
 .enrollment-completion {
   position: absolute;
   inset: 0;
+  z-index: 8;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  padding: 28px 24px;
   background: var(--surface-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: inherit;
-  z-index: 8;
   opacity: 1;
   transition: opacity 0.4s ease;
 }
@@ -194,7 +269,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(var(--success-rgb), 0.15);
+  background: rgba(var(--success-rgb), 0.16);
   border: 2px solid var(--success);
   color: var(--success);
   animation: enrollment-check-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -207,15 +282,25 @@
 
 .enrollment-completion__title {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.16rem;
+  font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
 }
 
 .enrollment-completion__sub {
   margin: 0;
   font-size: 0.85rem;
+  line-height: 1.45;
   color: var(--text-muted);
+  text-align: center;
+}
+
+.enrollment-completion__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 @keyframes enrollment-check-pop {
@@ -223,8 +308,6 @@
   60% { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1); }
 }
-
-/* ── Progress dots ───────────────────────────────────────────────── */
 
 .enrollment-dots {
   display: flex;
@@ -241,8 +324,8 @@
   border: 2px solid var(--border-soft);
   background: transparent;
   flex-shrink: 0;
-  transition: all 0.35s ease;
   position: relative;
+  transition: all 0.35s ease;
 }
 
 .enrollment-dot-line {
@@ -259,7 +342,8 @@
   box-shadow: 0 0 8px rgba(var(--success-rgb), 0.3);
 }
 
-.enrollment-dot.is-complete + .enrollment-dot-line {
+.enrollment-dot.is-complete + .enrollment-dot-line,
+.enrollment-dot-line.is-complete {
   background: var(--success);
 }
 
@@ -270,7 +354,7 @@
 }
 
 .enrollment-dot.is-active::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 2px;
   border-radius: 50%;
@@ -282,54 +366,38 @@
   50% { box-shadow: 0 0 0 7px rgba(var(--primary-rgb), 0.1); }
 }
 
-/* ── Controls ────────────────────────────────────────────────────── */
-
 .enrollment-controls {
   display: flex;
   gap: 10px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .enrollment-controls .btn {
-  min-width: 130px;
-  font-size: 0.88rem;
-  font-weight: 500;
-  border-radius: var(--radius-btn);
-  transition: all 0.2s ease;
+  min-width: 150px;
 }
-
-.enrollment-controls .btn-secondary {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.enrollment-panel-card .btn-ghost {
-  font-size: 0.84rem;
-  border-color: rgba(var(--primary-rgb), 0.12);
-  background: rgba(var(--primary-rgb), 0.06);
-  transition: all 0.2s ease;
-}
-
-.enrollment-panel-card .btn-ghost:hover {
-  background: rgba(var(--primary-rgb), 0.14);
-  border-color: rgba(var(--primary-rgb), 0.22);
-}
-
-/* ── Side panel card ─────────────────────────────────────────────── */
 
 .enrollment-panel-card {
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  box-shadow:
-    0 8px 24px var(--glass-shadow-high),
-    inset 0 1px 0 var(--glass-highlight);
-  padding: 22px 20px;
+  min-height: 0;
+  padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  align-self: start;
+  gap: 12px;
+  overflow: hidden;
+}
+
+#enrollInstructionsPanel,
+#enrollStepsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+}
+
+#enrollInstructionsPanel[hidden],
+#enrollStepsPanel[hidden] {
+  display: none !important;
 }
 
 .enrollment-panel-header {
@@ -348,30 +416,28 @@
 .enrollment-panel-title {
   margin: 0;
   font-size: 1.08rem;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--text-primary);
 }
 
 .enrollment-panel-desc {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.4;
 }
-
-/* ── Requirements ────────────────────────────────────────────────── */
 
 .enrollment-requirements {
   background: rgba(var(--primary-rgb), 0.06);
   border: 1px solid rgba(var(--primary-rgb), 0.12);
   border-radius: var(--radius-btn);
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 
 .enrollment-requirements__title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
@@ -390,7 +456,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-primary);
 }
 
@@ -401,25 +467,217 @@
   flex-shrink: 0;
 }
 
-/* ── Form group ──────────────────────────────────────────────────── */
+.enrollment-readiness {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.enrollment-readiness__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.enrollment-readiness__meta {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.enrollment-readiness__list {
+  display: grid;
+  gap: 6px;
+}
+
+.enrollment-readiness__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.enrollment-readiness__item.is-ready {
+  border-color: rgba(var(--success-rgb), 0.24);
+}
+
+.enrollment-readiness__item.is-warning {
+  border-color: rgba(var(--warning-rgb), 0.24);
+}
+
+.enrollment-readiness__item.is-danger {
+  border-color: rgba(var(--danger-rgb), 0.24);
+}
+
+.enrollment-readiness__label {
+  margin: 0 0 2px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.enrollment-readiness__value {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.enrollment-readiness__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(var(--success-rgb), 0.16);
+  color: var(--success);
+  border: 1px solid rgba(var(--success-rgb), 0.22);
+}
+
+.enrollment-readiness__badge--warning {
+  background: rgba(var(--warning-rgb), 0.16);
+  color: var(--warning);
+  border-color: rgba(var(--warning-rgb), 0.26);
+}
+
+.enrollment-readiness__badge--danger {
+  background: rgba(var(--danger-rgb), 0.14);
+  color: rgba(var(--danger-rgb), 0.96);
+  border-color: rgba(var(--danger-rgb), 0.22);
+}
+
+.enrollment-readiness__badge--info {
+  background: rgba(var(--primary-rgb), 0.12);
+  color: var(--primary);
+  border-color: rgba(var(--primary-rgb), 0.2);
+}
 
 .enrollment-form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+}
+
+.enrollment-start-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.enrollment-start-note.is-danger {
+  color: rgba(var(--danger-rgb), 0.96);
 }
 
 .enrollment-start-btn {
   width: 100%;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 48px;
   font-size: 0.95rem;
 }
 
-/* ── Steps list ──────────────────────────────────────────────────── */
+.enrollment-session-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(var(--primary-rgb), 0.06);
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+}
+
+.enrollment-session-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.enrollment-session-summary__row strong {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.enrollment-step-focus {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.enrollment-step-focus__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.enrollment-step-focus__title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.enrollment-step-focus__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.enrollment-step-focus__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.enrollment-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(var(--danger-rgb), 0.12);
+  border: 1px solid rgba(var(--danger-rgb), 0.2);
+  color: rgba(var(--danger-rgb), 0.96);
+}
+
+.enrollment-error-banner.is-hidden {
+  display: none;
+}
+
+.enrollment-error-banner strong,
+.enrollment-error-banner p {
+  margin: 0;
+}
+
+.enrollment-error-banner p {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
 
 .enrollment-steps-list {
   list-style: none;
@@ -428,6 +686,10 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .enrollment-step-item {
@@ -444,7 +706,7 @@
 }
 
 .enrollment-step-item.is-complete {
-  opacity: 0.7;
+  opacity: 0.78;
 }
 
 .enrollment-step-item__indicator {
@@ -488,15 +750,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Total progress bar ──────────────────────────────────────────── */
-
 .enrollment-total-progress {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--border-soft);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .enrollment-total-bar {
@@ -517,13 +777,11 @@
 
 .enrollment-total-label {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-
-/* ── Icon size helpers ───────────────────────────────────────────── */
 
 .icon--sm {
   width: 16px;
@@ -533,4 +791,127 @@
 .icon--xs {
   width: 14px;
   height: 14px;
+}
+
+html.theme-light .enrollment-status-pill--muted {
+  background: rgba(15, 30, 60, 0.05);
+  border-color: rgba(160, 190, 235, 0.25);
+}
+
+html.theme-light .enrollment-readiness,
+html.theme-light .enrollment-step-focus {
+  background: rgba(248, 251, 255, 0.78);
+  border-color: rgba(160, 190, 235, 0.24);
+}
+
+html.theme-light .enrollment-readiness__item {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(160, 190, 235, 0.2);
+}
+
+html.theme-light .enrollment-session-summary {
+  background: rgba(var(--primary-rgb), 0.08);
+  border-color: rgba(var(--primary-rgb), 0.16);
+}
+
+@media (max-width: 900px) {
+  #view-enrolamiento {
+    padding: 0;
+  }
+
+  .enrollment-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    height: 100%;
+    gap: 12px;
+  }
+
+  .enrollment-camera-card,
+  .enrollment-panel-card {
+    padding: 18px 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .enrollment-layout {
+    grid-template-rows: minmax(260px, 0.86fr) minmax(0, 1.14fr);
+  }
+
+  .enrollment-camera-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .enrollment-panel-card {
+    padding: 14px 14px 12px;
+    gap: 12px;
+  }
+
+  .enrollment-hud {
+    padding: 10px 14px 12px;
+  }
+
+  .enrollment-instruction {
+    font-size: 0.98rem;
+  }
+
+  .enrollment-message {
+    font-size: 0.78rem;
+  }
+
+  .enrollment-warning,
+  .enrollment-warning--light,
+  .enrollment-warning--multi {
+    left: 10px;
+    right: 10px;
+  }
+
+  .enrollment-warning--light {
+    bottom: 90px;
+  }
+
+  .enrollment-controls,
+  .enrollment-completion__actions {
+    flex-wrap: wrap;
+  }
+
+  .enrollment-controls .btn,
+  .enrollment-completion__actions .btn {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .enrollment-step-item {
+    padding-inline: 8px;
+  }
+
+  .enrollment-session-summary__row,
+  .enrollment-step-focus__stats {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .enrollment-layout {
+    grid-template-rows: minmax(240px, 0.82fr) minmax(0, 1.18fr);
+  }
+
+  .enrollment-panel-card {
+    padding: 12px;
+  }
+
+  .enrollment-camera-status {
+    align-items: flex-start;
+  }
+
+  .enrollment-camera-status__meta {
+    width: 100%;
+  }
+
+  .enrollment-hud__topline,
+  .enrollment-readiness__head,
+  .enrollment-step-focus__stats {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

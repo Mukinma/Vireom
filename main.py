@@ -24,7 +24,7 @@ from hardware.gpio_control import RelayController
 from rate_limit import limiter
 from vision.camera import CameraStream
 from vision.detector import HaarFaceDetector
-from vision.enrollment import EnrollmentSession
+from vision.enrollment import ENROLLMENT_STEPS, EnrollmentSession
 from vision.pose_heuristic import PoseHeuristic
 from vision.recognizer import LBPHRecognizer
 from vision.trainer import FaceTrainer
@@ -320,7 +320,7 @@ class AccessService:
         self.guidance = FaceGuidanceEngine()
         self.pose_heuristic = PoseHeuristic()
         self.enrollment_session: Optional[EnrollmentSession] = None
-        self.enrollment_lock = threading.Lock()
+        self.enrollment_lock = threading.RLock()
 
         self.running = False
         self.thread: Optional[threading.Thread] = None
@@ -572,6 +572,7 @@ class AccessService:
                 self.enrollment_session.update(frame, gray, face, faces_count)
             except Exception:
                 logger.exception("enrollment_update_failed")
+                self.enrollment_session.fail("Se interrumpio la sesion de captura")
 
         with self.lock:
             self.system_status["face_detected"] = detected
@@ -886,59 +887,166 @@ class AccessService:
     def start_enrollment(self, user_id: int) -> dict[str, Any]:
         with self.enrollment_lock:
             if self.enrollment_session is not None:
-                return {"ok": False, "error": "enrollment_already_active"}
+                return {
+                    **self.enrollment_session.get_status(),
+                    "ok": False,
+                    "error": "enrollment_already_active",
+                }
+            user = db.get_user(user_id)
+            user_name = str(user["nombre"]) if user else f"Usuario {user_id}"
             self.enrollment_session = EnrollmentSession(
                 user_id=user_id,
                 pose=self.pose_heuristic,
+                user_name=user_name,
             )
             logger.info("enrollment_started user_id=%s", user_id)
-            return {"ok": True, "user_id": user_id}
+            return {
+                **self.enrollment_session.get_status(),
+                "ok": True,
+            }
 
     def get_enrollment_status(self) -> dict[str, Any]:
         session = self.enrollment_session
         if session is None:
-            return {"state": "idle", "message": "No hay sesion activa"}
+            return self._build_idle_enrollment_status()
         status = session.get_status()
-        # If completed, persist samples to DB and clean up
-        if status["state"] == "completed":
-            self._finalize_enrollment(session)
+        if status["state"] == "completed" and not session.samples_persisted:
+            self._persist_completed_enrollment(session)
+            status = session.get_status()
         return status
 
     def abort_enrollment(self) -> dict[str, Any]:
         with self.enrollment_lock:
             session = self.enrollment_session
             if session is None:
-                return {"ok": False, "error": "no_active_session"}
-            session.abort()
+                return {
+                    **self._build_idle_enrollment_status(),
+                    "ok": False,
+                    "error": "no_active_session",
+                }
+            should_cleanup_files = session.state != "completed" and not session.samples_persisted
+            if should_cleanup_files:
+                session.abort()
+                session.clear_all_files()
             self.enrollment_session = None
             self.pose_heuristic.clear_baseline()
             logger.info("enrollment_aborted user_id=%s", session.user_id)
-            return {"ok": True}
+            return {
+                **self._build_idle_enrollment_status(),
+                "ok": True,
+            }
 
     def retry_enrollment_step(self) -> dict[str, Any]:
         session = self.enrollment_session
         if session is None:
-            return {"ok": False, "error": "no_active_session"}
+            return {
+                **self._build_idle_enrollment_status(),
+                "ok": False,
+                "error": "no_active_session",
+            }
+        if session.is_terminal:
+            return {
+                **session.get_status(),
+                "ok": False,
+                "error": "enrollment_not_retryable",
+            }
         session.retry_step()
-        return {"ok": True}
+        return {
+            **session.get_status(),
+            "ok": True,
+        }
 
-    def _finalize_enrollment(self, session: EnrollmentSession) -> None:
-        """Persist all captured samples to the database and tear down session."""
+    def finish_enrollment(self) -> dict[str, Any]:
         with self.enrollment_lock:
-            if self.enrollment_session is not session:
+            session = self.enrollment_session
+            if session is None:
+                return {
+                    **self._build_idle_enrollment_status(),
+                    "ok": False,
+                    "error": "no_active_session",
+                }
+            if session.state not in ("completed", "error"):
+                return {
+                    **session.get_status(),
+                    "ok": False,
+                    "error": "enrollment_not_finishable",
+                }
+            if session.state == "completed" and not session.samples_persisted:
+                self._persist_completed_enrollment(session)
+            self.enrollment_session = None
+            self.pose_heuristic.clear_baseline()
+            logger.info("enrollment_finished user_id=%s state=%s", session.user_id, session.state)
+            return {
+                **self._build_idle_enrollment_status(),
+                "ok": True,
+                "finished": True,
+            }
+
+    def _persist_completed_enrollment(self, session: EnrollmentSession) -> None:
+        """Persist completed samples without destroying the session snapshot."""
+        with self.enrollment_lock:
+            if self.enrollment_session is not session or session.samples_persisted:
                 return
             for path, pose_type in session.all_sample_paths:
                 try:
                     db.insert_sample_with_pose(session.user_id, path, pose_type)
                 except Exception:
                     logger.exception("enrollment_db_insert_failed path=%s", path)
-            self.enrollment_session = None
+            session.mark_persisted()
             self.pose_heuristic.clear_baseline()
             logger.info(
                 "enrollment_finalized user_id=%s samples=%s",
                 session.user_id,
                 session.total_captured,
             )
+
+    def _build_idle_enrollment_status(self) -> dict[str, Any]:
+        steps_summary = [
+            {
+                "name": step["name"],
+                "label": step["label"],
+                "icon": step["icon"],
+                "status": "pending",
+                "samples": 0,
+                "needed": config.enrollment_samples_per_step,
+            }
+            for step in ENROLLMENT_STEPS
+        ]
+
+        return {
+            "phase": "preflight",
+            "state": "idle",
+            "user_id": None,
+            "user_name": None,
+            "current_step": None,
+            "total_steps": len(ENROLLMENT_STEPS),
+            "step_name": None,
+            "step_label": None,
+            "step_icon": None,
+            "samples_this_step": 0,
+            "samples_needed": config.enrollment_samples_per_step,
+            "total_captured": 0,
+            "total_needed": config.enrollment_samples_per_step * len(ENROLLMENT_STEPS),
+            "steps_summary": steps_summary,
+            "guidance": {
+                "instruction": "Selecciona una persona para iniciar",
+                "hint": "Prepara la iluminacion y centra el rostro antes de comenzar.",
+                "arrow": None,
+                "hold_progress": 0.0,
+                "pose_matched": False,
+                "face_detected": False,
+                "brightness_ok": True,
+                "multiple_faces": False,
+            },
+            "actions": {
+                "can_retry": False,
+                "can_abort": False,
+                "can_finish": False,
+                "can_train": False,
+            },
+            "started_at": None,
+            "updated_at": int(time.time() * 1000),
+        }
 
     def manual_open(self):
         conf = db.get_config()
@@ -1147,12 +1255,22 @@ def create_app() -> FastAPI:
     return app
 
 
-app = create_app()
+_app_instance: Optional[FastAPI] = None
+
+
+def get_app() -> FastAPI:
+    global _app_instance
+    if _app_instance is None:
+        _app_instance = create_app()
+    return _app_instance
+
+
+app = get_app()
 
 
 if __name__ == "__main__":
     try:
-        uvicorn.run("main:app", host=config.host, port=config.port, reload=False)
+        uvicorn.run(app, host=config.host, port=config.port, reload=False)
     except KeyboardInterrupt:
         logger.info("keyboard_interrupt_received shutting_down=true")
     except Exception:

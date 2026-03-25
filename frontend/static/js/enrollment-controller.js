@@ -1,53 +1,147 @@
 /**
- * enrollment-controller.js — UI controller for guided facial enrollment.
+ * enrollment-controller.js
  *
- * Manages polling, canvas overlay drawing, step progression UI, and
- * all visual feedback (flash, warnings, completion).
+ * Backend-driven enrollment UI. The server is the only source of truth for
+ * session state; the frontend only rehydrates, renders and performs actions.
  */
 
 (function () {
-  /* ── FSM reference ─────────────────────────────────────────────── */
-  const FSM = window.CameraPIEnrollmentFSM;
-  if (!FSM) return;
+  const STEP_PREVIEW = [
+    { name: 'center', label: 'Mira de frente', icon: 'circle-dot' },
+    { name: 'tilt_left', label: 'Inclina hacia la izquierda', icon: 'arrow-left' },
+    { name: 'tilt_right', label: 'Inclina hacia la derecha', icon: 'arrow-right' },
+    { name: 'look_up', label: 'Mira hacia arriba', icon: 'arrow-up' },
+    { name: 'look_down', label: 'Mira hacia abajo', icon: 'arrow-down' },
+    { name: 'turn_left', label: 'Gira a la izquierda', icon: 'rotate-ccw' },
+    { name: 'turn_right', label: 'Gira a la derecha', icon: 'rotate-cw' },
+  ];
 
-  const { STATES, EVENTS, EFFECTS, createInitialContext, transition } = FSM;
+  const POLL_MS = 350;
 
-  /* ── DOM refs ──────────────────────────────────────────────────── */
   const viewport = document.getElementById('enrollViewport');
   const stream = document.getElementById('enrollStream');
   const overlay = document.getElementById('enrollOverlay');
   const hud = document.getElementById('enrollHud');
   const stepBadge = document.getElementById('enrollStepBadge');
+  const stepCounter = document.getElementById('enrollStepCounter');
   const instruction = document.getElementById('enrollInstruction');
   const message = document.getElementById('enrollMessage');
+  const phasePill = document.getElementById('enrollPhasePill');
+  const currentSamplesPill = document.getElementById('enrollCurrentSamples');
+  const userMeta = document.getElementById('enrollUserMeta');
   const dotsContainer = document.getElementById('enrollDots');
   const faceWarning = document.getElementById('enrollFaceWarning');
+  const faceWarningText = document.getElementById('enrollFaceWarningText');
   const lightWarning = document.getElementById('enrollLightWarning');
+  const multiFaceWarning = document.getElementById('enrollMultiFaceWarning');
   const flash = document.getElementById('enrollFlash');
   const completion = document.getElementById('enrollCompletion');
   const completionSub = document.getElementById('enrollCompletionSub');
   const abortBtn = document.getElementById('enrollAbortBtn');
   const retryBtn = document.getElementById('enrollRetryBtn');
   const startBtn = document.getElementById('enrollStartBtn');
+  const trainBtn = document.getElementById('enrollTrainBtn');
+  const finishBtn = document.getElementById('enrollFinishBtn');
   const userSelect = document.getElementById('enrollUserSelect');
   const instructionsPanel = document.getElementById('enrollInstructionsPanel');
   const stepsPanel = document.getElementById('enrollStepsPanel');
   const stepsList = document.getElementById('enrollStepsList');
   const totalFill = document.getElementById('enrollTotalFill');
   const totalLabel = document.getElementById('enrollTotalLabel');
+  const totalProgress = document.getElementById('enrollTotalProgress');
+  const backBtn = document.getElementById('enrollBackBtn');
+  const startNote = document.getElementById('enrollStartNote');
+  const summaryUser = document.getElementById('enrollSummaryUser');
+  const summaryPhase = document.getElementById('enrollSummaryPhase');
+  const summaryTotal = document.getElementById('enrollSummaryTotal');
+  const activeStepLabel = document.getElementById('enrollActiveStepLabel');
+  const activeStepHint = document.getElementById('enrollActiveStepHint');
+  const activeStepSamples = document.getElementById('enrollActiveStepSamples');
+  const activeTotalSamples = document.getElementById('enrollActiveTotalSamples');
+  const stepFocus = document.getElementById('enrollStepFocus');
+  const errorBanner = document.getElementById('enrollErrorBanner');
+  const errorTitle = document.getElementById('enrollErrorTitle');
+  const errorText = document.getElementById('enrollErrorText');
+  const readinessMeta = document.getElementById('enrollReadinessMeta');
+  const cameraReadyItem = document.getElementById('enrollCameraReadyItem');
+  const cameraReadyText = document.getElementById('enrollCameraReadyText');
+  const cameraReadyBadge = document.getElementById('enrollCameraReadyBadge');
+  const modelReadyItem = document.getElementById('enrollModelReadyItem');
+  const modelReadyText = document.getElementById('enrollModelReadyText');
+  const modelReadyBadge = document.getElementById('enrollModelReadyBadge');
 
-  if (!viewport || !overlay) return;
+  if (!viewport || !overlay || !userSelect) return;
 
-  /* ── State ─────────────────────────────────────────────────────── */
-  let ctx = createInitialContext();
-  let pollIntervalId = null;
-  let userId = null;
+  const doc = viewport.ownerDocument || document;
+  const canvasCtx = typeof overlay.getContext === 'function' ? overlay.getContext('2d') : null;
+
+  let enrollmentStatus = buildFallbackIdleStatus();
+  let systemStatus = null;
+  let pollTimerId = null;
+  let pollInFlight = false;
+  let isViewActive = false;
+  let isStarting = false;
+  let isTraining = false;
+  let pendingUserId = null;
   let animFrame = null;
 
-  const POLL_MS = 200;
+  function buildFallbackIdleStatus() {
+    return {
+      phase: 'preflight',
+      state: 'idle',
+      user_id: null,
+      user_name: null,
+      current_step: null,
+      total_steps: STEP_PREVIEW.length,
+      step_name: null,
+      step_label: null,
+      step_icon: null,
+      samples_this_step: 0,
+      samples_needed: 5,
+      total_captured: 0,
+      total_needed: STEP_PREVIEW.length * 5,
+      steps_summary: STEP_PREVIEW.map((step) => ({
+        ...step,
+        status: 'pending',
+        samples: 0,
+        needed: 5,
+      })),
+      guidance: {
+        instruction: 'Selecciona una persona para iniciar',
+        hint: 'Prepara la iluminacion y centra el rostro antes de comenzar.',
+        arrow: null,
+        hold_progress: 0,
+        pose_matched: false,
+        face_detected: false,
+        brightness_ok: true,
+        multiple_faces: false,
+      },
+      actions: {
+        can_retry: false,
+        can_abort: false,
+        can_finish: false,
+        can_train: false,
+      },
+      started_at: null,
+      updated_at: null,
+    };
+  }
 
-  /* ── Canvas setup ──────────────────────────────────────────────── */
-  const canvasCtx = overlay.getContext('2d');
+  function isActivePhase(status = enrollmentStatus) {
+    return status?.phase === 'active';
+  }
+
+  function isCompletedPhase(status = enrollmentStatus) {
+    return status?.phase === 'completed_review';
+  }
+
+  function isRecoverableError(status = enrollmentStatus) {
+    return status?.phase === 'recoverable_error';
+  }
+
+  function getCurrentSelectedUserId() {
+    return String(userSelect?.value || pendingUserId || '').trim();
+  }
 
   function resizeCanvas() {
     const rect = viewport.getBoundingClientRect();
@@ -55,343 +149,127 @@
     overlay.height = rect.height;
   }
 
-  /* ── API helpers ───────────────────────────────────────────────── */
+  async function requestJson(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      ...options,
+    });
+    const data = await response.json().catch(() => ({}));
+    return { ok: response.ok, status: response.status, data };
+  }
 
   async function api(url, options = {}) {
-    const res = await fetch(url, { credentials: 'same-origin', ...options });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+    const result = await requestJson(url, options);
+    if (!result.ok) {
+      throw new Error(result.data?.detail || result.data?.error || `HTTP ${result.status}`);
     }
-    return res.json();
+    return result.data;
   }
 
   async function loadUsers() {
     try {
       const users = await api('/api/users');
-      if (!userSelect) return;
-      const current = userSelect.value;
+      const current = getCurrentSelectedUserId();
       userSelect.innerHTML = '<option value="">Seleccionar persona...</option>';
-      users.forEach((u) => {
-        const opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = `${u.nombre} (ID: ${u.id})`;
-        userSelect.appendChild(opt);
+      users.forEach((user) => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.nombre} (ID: ${user.id})`;
+        userSelect.appendChild(option);
       });
       if (current) userSelect.value = current;
-    } catch (_) {}
+      pendingUserId = userSelect.value || pendingUserId;
+    } catch (error) {
+      showAdminToastSafe({
+        text: 'No se pudieron cargar las personas',
+        sub: error.message,
+        cls: 'error',
+      });
+    }
   }
 
-  /* ── Polling ───────────────────────────────────────────────────── */
+  async function loadSystemStatus() {
+    try {
+      systemStatus = await api('/api/status');
+      renderSystemReadiness();
+      return systemStatus;
+    } catch (error) {
+      systemStatus = null;
+      renderSystemReadiness();
+      showAdminToastSafe({
+        text: 'No se pudo verificar el sistema',
+        sub: error.message,
+        cls: 'warning',
+      });
+      return null;
+    }
+  }
 
-  function startPolling() {
-    stopPolling();
-    pollIntervalId = setInterval(poll, POLL_MS);
+  async function fetchEnrollmentStatus() {
+    const status = await api('/api/enrollment/status');
+    applySnapshot(status);
+    return status;
   }
 
   function stopPolling() {
-    if (pollIntervalId) {
-      clearInterval(pollIntervalId);
-      pollIntervalId = null;
+    if (pollTimerId) {
+      clearTimeout(pollTimerId);
+      pollTimerId = null;
     }
   }
 
-  async function poll() {
+  function scheduleNextPoll(delay = POLL_MS) {
+    if (!isViewActive || !isActivePhase()) {
+      stopPolling();
+      return;
+    }
+
+    stopPolling();
+    pollTimerId = window.setTimeout(runPoll, delay);
+  }
+
+  async function runPoll() {
+    if (!isViewActive || !isActivePhase() || pollInFlight) return;
+    pollInFlight = true;
+
     try {
-      const status = await api('/api/enrollment/status');
-      dispatch({ type: EVENTS.BACKEND_STATUS, status });
-    } catch (err) {
-      dispatch({ type: EVENTS.ERROR, error: err });
-    }
-  }
-
-  /* ── FSM dispatch ──────────────────────────────────────────────── */
-
-  function dispatch(event) {
-    const next = transition(ctx, event);
-    ctx = next;
-    executeEffects(next.effects, next);
-  }
-
-  /* ── Effect executor ───────────────────────────────────────────── */
-
-  function executeEffects(effects, state) {
-    for (const effect of effects) {
-      switch (effect) {
-        case EFFECTS.START_POLLING:
-          startPolling();
-          break;
-        case EFFECTS.STOP_POLLING:
-          stopPolling();
-          break;
-        case EFFECTS.SHOW_INSTRUCTIONS:
-          showInstructions();
-          break;
-        case EFFECTS.HIDE_INSTRUCTIONS:
-          hideInstructions();
-          break;
-        case EFFECTS.UPDATE_OVERLAY:
-          scheduleOverlayDraw();
-          break;
-        case EFFECTS.UPDATE_PROGRESS:
-          updateProgress();
-          break;
-        case EFFECTS.UPDATE_MESSAGE:
-          updateMessage();
-          break;
-        case EFFECTS.SHOW_STEP_GUIDE:
-          updateStepGuide();
-          break;
-        case EFFECTS.SHOW_HOLD_FEEDBACK:
-          updateMessage();
-          scheduleOverlayDraw();
-          break;
-        case EFFECTS.SHOW_CAPTURE_FLASH:
-          triggerFlash();
-          break;
-        case EFFECTS.SHOW_STEP_SUCCESS:
-          updateProgress();
-          break;
-        case EFFECTS.SHOW_COMPLETION:
-          showCompletion();
-          break;
-        case EFFECTS.SHOW_FACE_WARNING:
-          faceWarning?.classList.remove('is-hidden');
-          break;
-        case EFFECTS.HIDE_FACE_WARNING:
-          faceWarning?.classList.add('is-hidden');
-          break;
-        case EFFECTS.SHOW_LIGHT_WARNING:
-          lightWarning?.classList.remove('is-hidden');
-          break;
-        case EFFECTS.HIDE_LIGHT_WARNING:
-          lightWarning?.classList.add('is-hidden');
-          break;
+      const status = await fetchEnrollmentStatus();
+      if (isActivePhase(status)) {
+        scheduleNextPoll(POLL_MS);
+      } else {
+        stopPolling();
       }
-    }
-  }
-
-  /* ── UI actions ────────────────────────────────────────────────── */
-
-  function showInstructions() {
-    if (instructionsPanel) instructionsPanel.hidden = false;
-    if (stepsPanel) stepsPanel.hidden = true;
-    if (completion) completion.classList.add('is-hidden');
-    if (hud) hud.hidden = true;
-    clearCanvas();
-  }
-
-  function hideInstructions() {
-    if (instructionsPanel) instructionsPanel.hidden = true;
-    if (stepsPanel) stepsPanel.hidden = false;
-    if (hud) hud.hidden = false;
-  }
-
-  function updateStepGuide() {
-    const bs = ctx.backendState;
-    if (!bs) return;
-    if (stepBadge) stepBadge.textContent = `Paso ${bs.current_step + 1} de ${bs.total_steps}`;
-    if (instruction) instruction.textContent = bs.step_label;
-    updateMessage();
-  }
-
-  function updateMessage() {
-    const bs = ctx.backendState;
-    if (!bs) return;
-    if (message) message.textContent = bs.message || '';
-    if (retryBtn) retryBtn.hidden = ctx.state !== STATES.STEP_ACTIVE;
-  }
-
-  function updateProgress() {
-    const bs = ctx.backendState;
-    if (!bs) return;
-
-    // Dots
-    renderDots(bs.steps_summary);
-
-    // Steps list
-    renderStepsList(bs.steps_summary);
-
-    // Total progress bar
-    const pct = bs.total_needed > 0
-      ? Math.round((bs.total_captured / bs.total_needed) * 100)
-      : 0;
-    if (totalFill) totalFill.style.width = `${pct}%`;
-    if (totalLabel) totalLabel.textContent = `${bs.total_captured} / ${bs.total_needed}`;
-  }
-
-  function renderDots(steps) {
-    if (!dotsContainer) return;
-    dotsContainer.innerHTML = '';
-    steps.forEach((s, i) => {
-      if (i > 0) {
-        const line = document.createElement('span');
-        line.className = 'enrollment-dot-line';
-        if (s.status === 'complete' || steps[i - 1]?.status === 'complete') {
-          line.style.background = 'var(--success)';
-        }
-        dotsContainer.appendChild(line);
-      }
-      const dot = document.createElement('span');
-      dot.className = 'enrollment-dot';
-      if (s.status === 'complete') dot.classList.add('is-complete');
-      if (s.status === 'active') dot.classList.add('is-active');
-      dotsContainer.appendChild(dot);
-    });
-  }
-
-  function renderStepsList(steps) {
-    if (!stepsList) return;
-    stepsList.innerHTML = '';
-    steps.forEach((s, i) => {
-      const li = document.createElement('li');
-      li.className = 'enrollment-step-item';
-      if (s.status === 'active') li.classList.add('is-active');
-      if (s.status === 'complete') li.classList.add('is-complete');
-
-      const indicator = document.createElement('span');
-      indicator.className = 'enrollment-step-item__indicator';
-      indicator.textContent = s.status === 'complete' ? '\u2713' : String(i + 1);
-
-      const label = document.createElement('span');
-      label.className = 'enrollment-step-item__label';
-      label.textContent = s.label;
-
-      const samples = document.createElement('span');
-      samples.className = 'enrollment-step-item__samples';
-      samples.textContent = `${s.samples}/5`;
-
-      li.appendChild(indicator);
-      li.appendChild(label);
-      li.appendChild(samples);
-      stepsList.appendChild(li);
-    });
-  }
-
-  function triggerFlash() {
-    if (!flash) return;
-    flash.classList.remove('is-active');
-    void flash.offsetWidth; // force reflow
-    flash.classList.add('is-active');
-    setTimeout(() => flash.classList.remove('is-active'), 250);
-  }
-
-  function showCompletion() {
-    const bs = ctx.backendState;
-    if (completion) {
-      completion.classList.remove('is-hidden');
-      if (completionSub && bs) {
-        completionSub.textContent = `${bs.total_captured} muestras capturadas`;
-      }
-    }
-    if (hud) hud.hidden = true;
-    clearCanvas();
-    triggerAutoTrain();
-  }
-
-  async function triggerAutoTrain() {
-    try {
-      const result = await api('/api/train', { method: 'POST' });
+    } catch (error) {
+      stopPolling();
       showAdminToastSafe({
-        text: 'Modelo actualizado',
-        sub: `${result.samples_used} muestras de ${result.unique_users} personas`,
-        cls: 'success',
+        text: 'Se perdio la sesion de enrolamiento',
+        sub: error.message,
+        cls: 'error',
+        timeout: 3400,
       });
-    } catch (_) {
-      showAdminToastSafe({
-        text: 'Entrena manualmente desde Sistema',
-        cls: 'warning',
-      });
+    } finally {
+      pollInFlight = false;
     }
   }
 
-  /* ── Canvas overlay drawing ────────────────────────────────────── */
+  function clearCanvas() {
+    if (!canvasCtx) return;
+    resizeCanvas();
+    canvasCtx.clearRect(0, 0, overlay.width, overlay.height);
+  }
 
   function scheduleOverlayDraw() {
     if (animFrame) cancelAnimationFrame(animFrame);
     animFrame = requestAnimationFrame(drawOverlay);
   }
 
-  function clearCanvas() {
-    resizeCanvas();
-    canvasCtx.clearRect(0, 0, overlay.width, overlay.height);
-  }
-
-  function drawOverlay() {
-    resizeCanvas();
-    const w = overlay.width;
-    const h = overlay.height;
-    const c = canvasCtx;
-
-    c.clearRect(0, 0, w, h);
-
-    const bs = ctx.backendState;
-    if (!bs || ctx.state === STATES.COMPLETED || ctx.state === STATES.IDLE) return;
-
-    const cx = w * 0.5;
-    const cy = h * 0.42;
-    const rx = w * 0.17;
-    const ry = h * 0.24;
-
-    // ── Guide ellipse ──
-    c.save();
-    c.beginPath();
-    c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-
-    if (bs.pose_matched) {
-      if (ctx.state === STATES.HOLDING || ctx.state === STATES.CAPTURING) {
-        c.strokeStyle = 'rgba(34, 197, 94, 0.8)';   // green
-        c.lineWidth = 3;
-        c.shadowColor = 'rgba(34, 197, 94, 0.4)';
-        c.shadowBlur = 16;
-      } else {
-        c.strokeStyle = 'rgba(var(--primary-rgb), 0.7)';
-        c.strokeStyle = 'rgba(91, 140, 255, 0.7)';   // accent blue
-        c.lineWidth = 2.5;
-        c.shadowColor = 'rgba(91, 140, 255, 0.3)';
-        c.shadowBlur = 12;
-      }
-    } else if (!bs.face_detected) {
-      c.strokeStyle = 'rgba(148, 163, 184, 0.4)';    // gray
-      c.lineWidth = 2;
-      c.setLineDash([8, 6]);
-      c.shadowBlur = 0;
-    } else {
-      c.strokeStyle = 'rgba(245, 158, 11, 0.7)';     // amber
-      c.lineWidth = 2.5;
-      c.shadowColor = 'rgba(245, 158, 11, 0.25)';
-      c.shadowBlur = 10;
-    }
-
-    c.stroke();
-    c.restore();
-
-    // ── Hold progress arc ──
-    if (ctx.state === STATES.HOLDING && bs.hold_progress > 0) {
-      c.save();
-      const angle = bs.hold_progress * Math.PI * 2;
-      c.beginPath();
-      c.ellipse(cx, cy, rx + 6, ry + 6, 0, -Math.PI / 2, -Math.PI / 2 + angle);
-      c.strokeStyle = 'rgba(34, 197, 94, 0.9)';
-      c.lineWidth = 4;
-      c.lineCap = 'round';
-      c.shadowColor = 'rgba(34, 197, 94, 0.5)';
-      c.shadowBlur = 10;
-      c.stroke();
-      c.restore();
-    }
-
-    // ── Direction arrow ──
-    if (bs.guidance_arrow && !bs.pose_matched) {
-      drawArrow(c, cx, cy, rx, ry, bs.guidance_arrow);
-    }
-  }
-
-  function drawArrow(c, cx, cy, rx, ry, direction) {
+  function drawArrow(ctx, cx, cy, rx, ry, direction) {
     const time = Date.now();
     const bounce = Math.sin(time / 200) * 6;
     const arrowSize = 18;
-    let ax, ay, angle;
+    let ax;
+    let ay;
+    let angle;
 
     switch (direction) {
       case 'left':
@@ -418,118 +296,705 @@
         return;
     }
 
-    c.save();
-    c.translate(ax, ay);
-    c.rotate(angle);
-    c.beginPath();
-    c.moveTo(arrowSize, 0);
-    c.lineTo(-arrowSize * 0.4, -arrowSize * 0.6);
-    c.lineTo(-arrowSize * 0.4, arrowSize * 0.6);
-    c.closePath();
-    c.fillStyle = 'rgba(245, 158, 11, 0.8)';
-    c.shadowColor = 'rgba(245, 158, 11, 0.4)';
-    c.shadowBlur = 8;
-    c.fill();
-    c.restore();
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(arrowSize, 0);
+    ctx.lineTo(-arrowSize * 0.4, -arrowSize * 0.6);
+    ctx.lineTo(-arrowSize * 0.4, arrowSize * 0.6);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.82)';
+    ctx.shadowColor = 'rgba(245, 158, 11, 0.42)';
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.restore();
   }
 
-  /* ── Event handlers ────────────────────────────────────────────── */
+  function drawOverlay() {
+    if (!canvasCtx) return;
+    resizeCanvas();
+    const width = overlay.width;
+    const height = overlay.height;
+    const guidance = enrollmentStatus.guidance || {};
+    const ctx = canvasCtx;
 
-  startBtn?.addEventListener('click', async () => {
-    const uid = userSelect?.value;
-    if (!uid) {
+    ctx.clearRect(0, 0, width, height);
+
+    if (!isActivePhase() || !guidance) return;
+
+    const cx = width * 0.5;
+    const cy = height * 0.42;
+    const rx = width * 0.17;
+    const ry = height * 0.24;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+
+    if (guidance.multiple_faces) {
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.78)';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = 'rgba(239, 68, 68, 0.36)';
+      ctx.shadowBlur = 14;
+    } else if (!guidance.face_detected) {
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 6]);
+    } else if (!guidance.brightness_ok) {
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.78)';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(245, 158, 11, 0.32)';
+      ctx.shadowBlur = 10;
+    } else if (guidance.pose_matched) {
+      if (enrollmentStatus.state === 'holding' || enrollmentStatus.state === 'capturing') {
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.82)';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = 'rgba(34, 197, 94, 0.4)';
+        ctx.shadowBlur = 16;
+      } else {
+        ctx.strokeStyle = 'rgba(91, 140, 255, 0.72)';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = 'rgba(91, 140, 255, 0.3)';
+        ctx.shadowBlur = 12;
+      }
+    } else {
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.72)';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(245, 158, 11, 0.22)';
+      ctx.shadowBlur = 10;
+    }
+
+    ctx.stroke();
+    ctx.restore();
+
+    if (enrollmentStatus.state === 'holding' && guidance.hold_progress > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx + 6, ry + 6, 0, -Math.PI / 2, -Math.PI / 2 + (guidance.hold_progress * Math.PI * 2));
+      ctx.strokeStyle = 'rgba(34, 197, 94, 0.92)';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(34, 197, 94, 0.5)';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (guidance.arrow && !guidance.pose_matched && guidance.face_detected && !guidance.multiple_faces) {
+      drawArrow(ctx, cx, cy, rx, ry, guidance.arrow);
+    }
+  }
+
+  function triggerFlash() {
+    if (!flash) return;
+    flash.classList.remove('is-active');
+    void flash.offsetWidth;
+    flash.classList.add('is-active');
+    setTimeout(() => flash.classList.remove('is-active'), 250);
+  }
+
+  function showAdminToastSafe(options) {
+    if (typeof window.showAdminToast === 'function') {
+      window.showAdminToast(options);
+    }
+  }
+
+  async function confirmAction(options) {
+    if (window.CameraPIConfirm?.open) {
+      return window.CameraPIConfirm.open(options);
+    }
+
+    const fallbackText = typeof options === 'string'
+      ? options
+      : options?.text || options?.title || 'Esta accion requiere confirmacion.';
+    return window.confirm(fallbackText);
+  }
+
+  function setPillTone(element, tone) {
+    if (!element) return;
+    element.classList.remove(
+      'enrollment-status-pill--muted',
+      'enrollment-status-pill--success',
+      'enrollment-status-pill--warning',
+      'enrollment-status-pill--danger',
+    );
+    if (tone) element.classList.add(tone);
+  }
+
+  function phaseLabel(status = enrollmentStatus) {
+    switch (status.phase) {
+      case 'completed_review':
+        return 'Revision final';
+      case 'recoverable_error':
+        return 'Atencion';
+      case 'active':
+        if (status.state === 'holding') return 'Estable';
+        if (status.state === 'capturing') return 'Capturando';
+        return 'Guiado';
+      default:
+        return 'Preparacion';
+    }
+  }
+
+  function phaseTone(status = enrollmentStatus) {
+    if (status.phase === 'completed_review') return 'enrollment-status-pill--success';
+    if (status.phase === 'recoverable_error') return 'enrollment-status-pill--danger';
+    if (status.state === 'holding' || status.state === 'capturing') return 'enrollment-status-pill--success';
+    if (status.state === 'low_light' || status.state === 'face_lost') return 'enrollment-status-pill--warning';
+    return '';
+  }
+
+  function stepBadgeText(status = enrollmentStatus) {
+    if (status.phase === 'completed_review') return 'Revision final';
+    if (status.phase === 'recoverable_error') return 'Sesion detenida';
+    if (status.current_step == null) return 'Preparacion';
+    return `Paso ${status.current_step + 1} de ${status.total_steps}`;
+  }
+
+  function currentSamplesText(status = enrollmentStatus) {
+    return `${status.samples_this_step || 0} / ${status.samples_needed || 5}`;
+  }
+
+  function renderDots(steps) {
+    if (!dotsContainer) return;
+    dotsContainer.innerHTML = '';
+
+    steps.forEach((step, index) => {
+      if (index > 0) {
+        const line = doc.createElement('span');
+        line.className = 'enrollment-dot-line';
+        const prev = steps[index - 1];
+        if (step.status === 'complete' || prev?.status === 'complete') {
+          line.classList.add('is-complete');
+        }
+        dotsContainer.appendChild(line);
+      }
+
+      const dot = doc.createElement('span');
+      dot.className = 'enrollment-dot';
+      if (step.status === 'complete') dot.classList.add('is-complete');
+      if (step.status === 'active') dot.classList.add('is-active');
+      dotsContainer.appendChild(dot);
+    });
+  }
+
+  function renderStepsList(steps) {
+    if (!stepsList) return;
+    stepsList.innerHTML = '';
+
+    steps.forEach((step, index) => {
+      const item = doc.createElement('li');
+      item.className = 'enrollment-step-item';
+      if (step.status === 'active') item.classList.add('is-active');
+      if (step.status === 'complete') item.classList.add('is-complete');
+
+      const indicator = doc.createElement('span');
+      indicator.className = 'enrollment-step-item__indicator';
+      indicator.textContent = step.status === 'complete' ? '\u2713' : String(index + 1);
+
+      const label = doc.createElement('span');
+      label.className = 'enrollment-step-item__label';
+      label.textContent = step.label;
+
+      const samples = doc.createElement('span');
+      samples.className = 'enrollment-step-item__samples';
+      samples.textContent = `${step.samples}/${step.needed || 5}`;
+
+      item.appendChild(indicator);
+      item.appendChild(label);
+      item.appendChild(samples);
+      stepsList.appendChild(item);
+    });
+  }
+
+  function setReadinessState(item, valueEl, badgeEl, options) {
+    if (!item || !valueEl || !badgeEl) return;
+    item.classList.remove('is-ready', 'is-warning', 'is-danger');
+    if (options.itemClass) item.classList.add(options.itemClass);
+    valueEl.textContent = options.value;
+    badgeEl.textContent = options.badge;
+    badgeEl.className = 'enrollment-readiness__badge';
+    if (options.badgeClass) badgeEl.classList.add(options.badgeClass);
+  }
+
+  function getCameraReadiness() {
+    if (!systemStatus) {
+      return {
+        ready: false,
+        note: 'No se pudo verificar el estado de la camara.',
+      };
+    }
+
+    const cameraState = String(systemStatus.camera || '').toLowerCase();
+    const ready = cameraState === 'online' || cameraState === 'degraded';
+
+    if (ready) {
+      return {
+        ready: true,
+        note: cameraState === 'degraded'
+          ? 'La camara esta disponible, aunque con estado degradado.'
+          : 'La camara esta lista para iniciar la captura.',
+      };
+    }
+
+    if (cameraState === 'sleep') {
+      return {
+        ready: false,
+        note: 'La camara esta en reposo. Reactiva el sistema antes de iniciar.',
+      };
+    }
+
+    return {
+      ready: false,
+      note: 'La camara no esta lista. Revisa la conexion antes de iniciar.',
+    };
+  }
+
+  function renderSystemReadiness() {
+    const cameraState = String(systemStatus?.camera || 'desconocido').toLowerCase();
+    const modelState = String(systemStatus?.model || 'desconocido').toLowerCase();
+    const readiness = getCameraReadiness();
+
+    setReadinessState(cameraReadyItem, cameraReadyText, cameraReadyBadge, {
+      itemClass: readiness.ready ? 'is-ready' : 'is-danger',
+      value:
+        cameraState === 'online' ? 'En linea'
+          : cameraState === 'degraded' ? 'Disponible con alerta'
+            : cameraState === 'sleep' ? 'En reposo'
+              : cameraState === 'offline' ? 'Fuera de linea'
+                : cameraState === 'error' ? 'Con error'
+                  : 'Sin verificar',
+      badge: readiness.ready ? 'Lista' : 'Bloquea inicio',
+      badgeClass: readiness.ready ? '' : 'enrollment-readiness__badge--danger',
+    });
+
+    const modelValue =
+      modelState === 'loaded' ? 'Cargado'
+        : modelState === 'not_loaded' ? 'No cargado'
+          : modelState === 'error' ? 'Con error'
+            : 'Sin verificar';
+    const modelTone =
+      modelState === 'loaded' ? ''
+        : modelState === 'error' ? 'enrollment-readiness__badge--warning'
+          : 'enrollment-readiness__badge--info';
+
+    setReadinessState(modelReadyItem, modelReadyText, modelReadyBadge, {
+      itemClass: modelState === 'error' ? 'is-warning' : '',
+      value: modelValue,
+      badge: modelState === 'loaded' ? 'Disponible' : 'Informativo',
+      badgeClass: modelTone,
+    });
+
+    if (readinessMeta) {
+      readinessMeta.textContent = readiness.ready
+        ? 'Sistema listo para capturar'
+        : 'Hace falta revisar la camara';
+    }
+
+    updateStartState();
+  }
+
+  function updateStartState() {
+    if (!startBtn || !startNote) return;
+
+    const selectedUserId = getCurrentSelectedUserId();
+    const readiness = getCameraReadiness();
+
+    let note = 'Selecciona una persona para comenzar.';
+    let disableStart = isStarting;
+    let dangerNote = false;
+
+    if (isStarting) {
+      note = 'Preparando la sesion de enrolamiento...';
+    } else if (!selectedUserId) {
+      disableStart = true;
+      note = 'Selecciona una persona para habilitar el inicio.';
+    } else if (!readiness.ready) {
+      disableStart = true;
+      note = readiness.note;
+      dangerNote = true;
+    }
+
+    startBtn.disabled = disableStart;
+    startNote.textContent = note;
+    startNote.classList.toggle('is-danger', dangerNote);
+  }
+
+  function applySnapshot(nextStatus) {
+    const previousTotalCaptured = enrollmentStatus?.total_captured || 0;
+
+    enrollmentStatus = nextStatus && typeof nextStatus === 'object'
+      ? nextStatus
+      : buildFallbackIdleStatus();
+
+    if (enrollmentStatus.user_id) {
+      pendingUserId = String(enrollmentStatus.user_id);
+      userSelect.value = pendingUserId;
+    }
+
+    if (phasePill) {
+      phasePill.textContent = phaseLabel(enrollmentStatus);
+      setPillTone(phasePill, phaseTone(enrollmentStatus));
+    }
+
+    if (currentSamplesPill) {
+      currentSamplesPill.textContent = currentSamplesText(enrollmentStatus);
+      setPillTone(currentSamplesPill, 'enrollment-status-pill--muted');
+    }
+
+    if (userMeta) {
+      userMeta.textContent = enrollmentStatus.user_name
+        ? `${enrollmentStatus.user_name} · ${enrollmentStatus.total_captured}/${enrollmentStatus.total_needed}`
+        : 'Sin sesion activa';
+    }
+
+    if (stepBadge) stepBadge.textContent = stepBadgeText(enrollmentStatus);
+    if (stepCounter) stepCounter.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
+    if (instruction) instruction.textContent = enrollmentStatus.guidance?.instruction || 'Selecciona una persona para iniciar';
+    if (message) message.textContent = enrollmentStatus.guidance?.hint || '';
+
+    const steps = enrollmentStatus.steps_summary || buildFallbackIdleStatus().steps_summary;
+    renderDots(steps);
+    renderStepsList(steps);
+
+    const progressPercent = enrollmentStatus.total_needed > 0
+      ? Math.round((enrollmentStatus.total_captured / enrollmentStatus.total_needed) * 100)
+      : 0;
+    if (totalFill) totalFill.style.width = `${progressPercent}%`;
+    if (totalLabel) totalLabel.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
+    if (summaryUser) summaryUser.textContent = enrollmentStatus.user_name || 'Sin seleccionar';
+    if (summaryPhase) summaryPhase.textContent = phaseLabel(enrollmentStatus);
+    if (summaryTotal) summaryTotal.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
+    if (activeStepLabel) activeStepLabel.textContent = enrollmentStatus.guidance?.instruction || 'Preparacion';
+    if (activeStepHint) activeStepHint.textContent = enrollmentStatus.guidance?.hint || '';
+    if (activeStepSamples) activeStepSamples.textContent = `${enrollmentStatus.samples_this_step} / ${enrollmentStatus.samples_needed} muestras`;
+    if (activeTotalSamples) activeTotalSamples.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed} total`;
+
+    if (errorBanner) errorBanner.classList.toggle('is-hidden', !isRecoverableError(enrollmentStatus));
+    if (errorTitle) errorTitle.textContent = 'Se detuvo el enrolamiento';
+    if (errorText) errorText.textContent = enrollmentStatus.guidance?.hint || 'Revisa la sesion y vuelve a intentarlo.';
+
+    if (instructionsPanel) instructionsPanel.hidden = enrollmentStatus.phase !== 'preflight';
+    if (stepsPanel) stepsPanel.hidden = enrollmentStatus.phase === 'preflight';
+    if (stepFocus) stepFocus.hidden = isRecoverableError(enrollmentStatus);
+    if (totalProgress) totalProgress.hidden = enrollmentStatus.phase === 'preflight';
+    if (hud) hud.hidden = false;
+
+    const shouldShowCompletion = isCompletedPhase(enrollmentStatus);
+    if (completion) completion.classList.toggle('is-hidden', !shouldShowCompletion);
+    if (completionSub) {
+      completionSub.textContent = shouldShowCompletion
+        ? `${enrollmentStatus.total_captured} muestras listas para entrenar`
+        : `${enrollmentStatus.total_captured} muestras capturadas`;
+    }
+
+    if (abortBtn) abortBtn.hidden = !enrollmentStatus.actions?.can_abort || isCompletedPhase(enrollmentStatus);
+    if (retryBtn) retryBtn.hidden = !enrollmentStatus.actions?.can_retry;
+    if (trainBtn) trainBtn.disabled = isTraining;
+    if (finishBtn) finishBtn.disabled = isTraining;
+
+    if (enrollmentStatus.total_captured > previousTotalCaptured) {
+      triggerFlash();
+    }
+
+    renderWarnings();
+    updateStartState();
+    scheduleOverlayDraw();
+  }
+
+  function renderWarnings() {
+    const guidance = enrollmentStatus.guidance || {};
+    const showMulti = isActivePhase() && guidance.multiple_faces;
+    const showLight = isActivePhase() && !showMulti && guidance.brightness_ok === false;
+    const showFace = isActivePhase() && !showMulti && !showLight && guidance.face_detected === false;
+
+    if (faceWarningText) {
+      faceWarningText.textContent = enrollmentStatus.state === 'face_lost'
+        ? 'Centra tu rostro en la guia'
+        : 'Mantente dentro de la guia para continuar';
+    }
+
+    faceWarning?.classList.toggle('is-hidden', !showFace);
+    lightWarning?.classList.toggle('is-hidden', !showLight);
+    multiFaceWarning?.classList.toggle('is-hidden', !showMulti);
+  }
+
+  async function enterEnrollmentView() {
+    isViewActive = true;
+    resizeCanvas();
+
+    await Promise.all([loadUsers(), loadSystemStatus()]);
+
+    try {
+      const status = await fetchEnrollmentStatus();
+      if (isActivePhase(status)) {
+        scheduleNextPoll(0);
+      } else {
+        stopPolling();
+      }
+    } catch (error) {
+      applySnapshot(buildFallbackIdleStatus());
+      showAdminToastSafe({
+        text: 'No se pudo recuperar la sesion',
+        sub: error.message,
+        cls: 'warning',
+      });
+    }
+  }
+
+  function leaveEnrollmentView() {
+    isViewActive = false;
+    stopPolling();
+  }
+
+  function resetUI() {
+    stopPolling();
+    enrollmentStatus = buildFallbackIdleStatus();
+    pendingUserId = userSelect.value || pendingUserId;
+    applySnapshot(enrollmentStatus);
+    clearCanvas();
+    faceWarning?.classList.add('is-hidden');
+    lightWarning?.classList.add('is-hidden');
+    multiFaceWarning?.classList.add('is-hidden');
+  }
+
+  async function startEnrollment() {
+    const selectedUserId = getCurrentSelectedUserId();
+    if (!selectedUserId) {
       showAdminToastSafe({ text: 'Selecciona una persona', cls: 'warning' });
+      updateStartState();
+      return;
+    }
+
+    await loadSystemStatus();
+    if (!getCameraReadiness().ready) {
+      showAdminToastSafe({ text: 'La camara no esta lista', sub: getCameraReadiness().note, cls: 'warning' });
+      updateStartState();
+      return;
+    }
+
+    isStarting = true;
+    updateStartState();
+
+    try {
+      const result = await requestJson('/api/enrollment/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: Number.parseInt(selectedUserId, 10) }),
+      });
+
+      if (!result.ok) {
+        if (result.data?.phase) applySnapshot(result.data);
+        showAdminToastSafe({
+          text: 'No se pudo iniciar',
+          sub: result.data?.error || 'Sesión no disponible',
+          cls: 'warning',
+        });
+        if (isActivePhase(result.data)) scheduleNextPoll(0);
+        return;
+      }
+
+      applySnapshot(result.data);
+      scheduleNextPoll(0);
+    } catch (error) {
+      showAdminToastSafe({
+        text: 'Error al iniciar',
+        sub: error.message,
+        cls: 'error',
+      });
+    } finally {
+      isStarting = false;
+      updateStartState();
+    }
+  }
+
+  async function retryCurrentStep() {
+    try {
+      const result = await requestJson('/api/enrollment/retry-step', { method: 'POST' });
+      if (!result.ok) {
+        if (result.data?.phase) applySnapshot(result.data);
+        showAdminToastSafe({
+          text: 'No se pudo reiniciar el paso',
+          sub: result.data?.error || 'Intenta de nuevo',
+          cls: 'warning',
+        });
+        return;
+      }
+
+      applySnapshot(result.data);
+      if (isActivePhase(result.data)) scheduleNextPoll(0);
+    } catch (error) {
+      showAdminToastSafe({
+        text: 'Error al repetir el paso',
+        sub: error.message,
+        cls: 'error',
+      });
+    }
+  }
+
+  async function abortEnrollment() {
+    const hasProgress = enrollmentStatus.total_captured > 0;
+    if (hasProgress && !(await confirmAction({
+      eyebrow: 'Cancelar captura',
+      title: 'Cancelar enrolamiento',
+      text: 'Se perdera el progreso capturado en esta sesion y tendras que comenzar de nuevo.',
+      confirmLabel: 'Cancelar sesion',
+      tone: 'danger',
+    }))) {
       return;
     }
 
     try {
-      await api('/api/enrollment/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: parseInt(uid, 10) }),
-      });
-      userId = parseInt(uid, 10);
-      dispatch({ type: EVENTS.START });
-      dispatch({ type: EVENTS.DISMISS_INSTRUCTIONS });
-    } catch (err) {
-      showAdminToastSafe({ text: 'Error al iniciar', sub: err.message, cls: 'error' });
+      await requestJson('/api/enrollment/abort', { method: 'POST' });
+    } catch (_) {
+      // Best effort. We still reset local UI and return to personas.
     }
-  });
 
-  abortBtn?.addEventListener('click', async () => {
-    try {
-      await api('/api/enrollment/abort', { method: 'POST' });
-    } catch (_) {}
-    dispatch({ type: EVENTS.ABORT });
     resetUI();
-    if (typeof window.showPersonasListMode === 'function') window.showPersonasListMode();
-  });
-
-  retryBtn?.addEventListener('click', async () => {
-    try {
-      await api('/api/enrollment/retry-step', { method: 'POST' });
-    } catch (_) {}
-    dispatch({ type: EVENTS.RETRY });
-  });
-
-  /* Back buttons — return to personas list */
-  const enrollBackBtn = document.getElementById('enrollBackBtn');
-  const enrollBackToListBtn = document.getElementById('enrollBackToListBtn');
-
-  enrollBackBtn?.addEventListener('click', () => {
-    if (pollIntervalId) {
-      api('/api/enrollment/abort', { method: 'POST' }).catch(() => {});
-      dispatch({ type: EVENTS.ABORT });
-    }
-    resetUI();
-    if (typeof window.showPersonasListMode === 'function') window.showPersonasListMode();
-  });
-
-  enrollBackToListBtn?.addEventListener('click', () => {
-    resetUI();
-    if (typeof window.showPersonasListMode === 'function') window.showPersonasListMode();
-  });
-
-  function resetUI() {
-    ctx = createInitialContext();
-    userId = null;
-    showInstructions();
-    clearCanvas();
-    faceWarning?.classList.add('is-hidden');
-    lightWarning?.classList.add('is-hidden');
-    if (dotsContainer) dotsContainer.innerHTML = '';
-    if (stepsList) stepsList.innerHTML = '';
-    if (totalFill) totalFill.style.width = '0%';
-    if (totalLabel) totalLabel.textContent = '0 / 35';
-    if (retryBtn) retryBtn.hidden = true;
-  }
-
-  function showAdminToastSafe(opts) {
-    if (typeof window.showAdminToast === 'function') {
-      window.showAdminToast(opts);
+    if (typeof window.showPersonasListMode === 'function') {
+      window.showPersonasListMode();
     }
   }
 
-  /* ── View lifecycle ────────────────────────────────────────────── */
+  async function goBackFromPreflight() {
+    if (enrollmentStatus.total_captured > 0 && !(await confirmAction({
+      eyebrow: 'Sesion en curso',
+      title: 'Salir del enrolamiento',
+      text: 'La sesion seguira disponible para retomarla despues, pero la captura se pausara al volver a Personas.',
+      confirmLabel: 'Volver a Personas',
+      tone: 'warning',
+    }))) {
+      return;
+    }
 
-  function onViewChange(e) {
-    if (e.detail?.viewId === 'enrolamiento') {
-      loadUsers();
-      resizeCanvas();
-    } else {
-      // If we navigate away, stop polling but don't abort
-      if (pollIntervalId && ctx.state !== STATES.COMPLETED) {
-        stopPolling();
+    resetUI();
+    if (typeof window.showPersonasListMode === 'function') {
+      window.showPersonasListMode();
+    }
+  }
+
+  async function finishSession(options = {}) {
+    const { trainFirst = false } = options;
+
+    if (trainFirst && !(await confirmAction({
+      eyebrow: 'Entrenamiento final',
+      title: 'Reentrenar modelo facial',
+      text: 'Se usaran las muestras nuevas para generar un modelo actualizado y reemplazar el modelo activo.',
+      confirmLabel: 'Entrenar ahora',
+      tone: 'primary',
+    }))) {
+      return;
+    }
+
+    isTraining = Boolean(trainFirst);
+    if (trainBtn) trainBtn.disabled = true;
+    if (finishBtn) finishBtn.disabled = true;
+
+    try {
+      if (trainFirst) {
+        const trainResult = await requestJson('/api/train', { method: 'POST' });
+        if (trainResult.ok) {
+          showAdminToastSafe({
+            text: 'Modelo actualizado',
+            sub: `${trainResult.data.samples_used} muestras de ${trainResult.data.unique_users} personas`,
+            cls: 'success',
+          });
+        } else {
+          showAdminToastSafe({
+            text: 'No se pudo entrenar ahora',
+            sub: 'Las muestras quedaron guardadas para entrenar despues desde Sistema.',
+            cls: 'warning',
+            timeout: 3400,
+          });
+        }
       }
+
+      const finishResult = await requestJson('/api/enrollment/finish', { method: 'POST' });
+      if (!finishResult.ok) {
+        if (finishResult.data?.phase) applySnapshot(finishResult.data);
+        showAdminToastSafe({
+          text: 'No se pudo cerrar la sesion',
+          sub: finishResult.data?.error || 'Intenta nuevamente',
+          cls: 'error',
+        });
+        return;
+      }
+
+      resetUI();
+      if (typeof window.showPersonasListMode === 'function') {
+        window.showPersonasListMode();
+      }
+    } catch (error) {
+      showAdminToastSafe({
+        text: trainFirst ? 'No se pudo completar el entrenamiento' : 'No se pudo cerrar la sesion',
+        sub: error.message,
+        cls: 'error',
+      });
+    } finally {
+      isTraining = false;
+      if (trainBtn) trainBtn.disabled = false;
+      if (finishBtn) finishBtn.disabled = false;
     }
   }
+
+  function prefillUser(userId) {
+    pendingUserId = userId == null ? null : String(userId);
+    if (userSelect && pendingUserId != null) userSelect.value = pendingUserId;
+    updateStartState();
+  }
+
+  function onViewChange(event) {
+    const nextView = event.detail?.viewId;
+    if (nextView === 'enrolamiento') {
+      void enterEnrollmentView();
+      return;
+    }
+    leaveEnrollmentView();
+  }
+
+  startBtn?.addEventListener('click', () => {
+    void startEnrollment();
+  });
+
+  retryBtn?.addEventListener('click', () => {
+    void retryCurrentStep();
+  });
+
+  abortBtn?.addEventListener('click', () => {
+    void abortEnrollment();
+  });
+
+  backBtn?.addEventListener('click', () => {
+    void goBackFromPreflight();
+  });
+
+  trainBtn?.addEventListener('click', () => {
+    void finishSession({ trainFirst: true });
+  });
+
+  finishBtn?.addEventListener('click', () => {
+    void finishSession({ trainFirst: false });
+  });
+
+  userSelect?.addEventListener('change', () => {
+    pendingUserId = userSelect.value || null;
+    updateStartState();
+  });
 
   window.addEventListener('admin:viewchange', onViewChange);
   window.addEventListener('resize', resizeCanvas);
 
-  /* ── Public API ────────────────────────────────────────────────── */
-
   window.CameraPIEnrollment = {
     reset: resetUI,
+    prefillUser,
+    refresh: enterEnrollmentView,
   };
+
+  const initialView = window.CameraPIAdminLayout?.getCurrentView?.() || ((window.location.hash || '').replace('#', '').split('?')[0]);
+  if (initialView === 'enrolamiento') {
+    void enterEnrollmentView();
+  } else {
+    applySnapshot(buildFallbackIdleStatus());
+  }
 })();

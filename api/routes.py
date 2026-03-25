@@ -310,7 +310,15 @@ def enrollment_abort(request: Request):
 def enrollment_retry_step(request: Request):
     _admin_required(request)
     result = request.app.state.service.retry_enrollment_step()
-    status_code = 200 if result.get("ok") else 404
+    status_code = 200 if result.get("ok") else 409 if result.get("error") == "enrollment_not_retryable" else 404
+    return JSONResponse(result, status_code=status_code)
+
+
+@router.post("/api/enrollment/finish")
+def enrollment_finish(request: Request):
+    _admin_required(request)
+    result = request.app.state.service.finish_enrollment()
+    status_code = 200 if result.get("ok") else 409 if result.get("error") == "enrollment_not_finishable" else 404
     return JSONResponse(result, status_code=status_code)
 
 
