@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/kiosk.css" />
   <script>
-    (function(){try{var t=localStorage.getItem('camerapi_theme');if(t)document.documentElement.className=t;else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.className='theme-dark';else document.documentElement.className='theme-light';}catch(e){document.documentElement.className='theme-dark';}})();
+    (function(){try{var t=localStorage.getItem('camerapi_theme');document.documentElement.className=t||'theme-dark';}catch(e){document.documentElement.className='theme-dark';}})();
   </script>
 </head>
 <body class="kiosk-body">
