@@ -239,13 +239,7 @@ def _maybe_release_desktop_ready(window: Any, state: DesktopWindowState, config:
             return
         state.released = True
 
-    worker = threading.Thread(
-        target=_stabilize_window,
-        args=(window, config),
-        name="vireom-desktop-ui-stabilizer",
-        daemon=True,
-    )
-    worker.start()
+    _stabilize_window(window, config)
 
 
 def _handle_window_initialized(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
@@ -264,13 +258,6 @@ def _handle_window_loaded(window: Any, state: DesktopWindowState, config: Deskto
     state.loaded.set()
     logger.info("desktop_window_loaded")
     _maybe_release_desktop_ready(window, state, config)
-
-
-def _bootstrap_window(window: Any, config: DesktopLauncherConfig) -> None:
-    _safe_window_action("show", window.show)
-    if not config.fullscreen:
-        time.sleep(WINDOWED_RESIZE_SETTLE_S)
-        _safe_window_action("resize_bootstrap", window.resize, config.width, config.height)
 
 
 def _bind_window_event_handlers(window: Any, state: DesktopWindowState, config: DesktopLauncherConfig) -> None:
@@ -296,12 +283,12 @@ def open_desktop_window(config: DesktopLauncherConfig) -> None:
             height=config.height,
             resizable=True,
             fullscreen=False,
-            hidden=True,
+            hidden=False,
             background_color=WINDOW_BACKGROUND_COLOR,
         )
         state = DesktopWindowState()
         _bind_window_event_handlers(window, state, config)
-        webview.start(_bootstrap_window, args=(window, config), debug=False)
+        webview.start(debug=False)
     except Exception as exc:
         linux_hint = ""
         if platform.system().lower() == "linux":
