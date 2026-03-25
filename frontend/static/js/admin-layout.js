@@ -5,8 +5,10 @@
   const sidebar = document.getElementById('adminSidebar');
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebarBackdrop = document.getElementById('adminSidebarBackdrop');
+  const sidebarHeader = sidebar?.querySelector('.admin-sidebar__header');
   const sidebarNav = sidebar?.querySelector('.admin-sidebar-nav');
   const sidebarUtilityDock = sidebar?.querySelector('.admin-utility-dock');
+  const logoutButtons = Array.from(shell.querySelectorAll('[data-logout-action]'));
   const logoutFallbackForm = document.getElementById('logoutFallbackForm');
 
   const viewTitle = document.getElementById('viewTitle');
@@ -50,7 +52,11 @@
   let lastClockSignature = '';
 
   function isDrawerMode() {
-    return drawerMedia.matches;
+    return drawerMedia.matches && !isBottomNavMode();
+  }
+
+  function isBottomNavMode() {
+    return mobileMedia.matches;
   }
 
   function getHashView() {
@@ -138,33 +144,51 @@
       }
     });
 
-    viewButtons.forEach((btn) => {
-      const isActive = btn.getAttribute('data-view') === currentView;
-      btn.classList.toggle('is-active', isActive);
-      if (isActive) btn.setAttribute('aria-current', 'page');
-      else btn.removeAttribute('aria-current');
-    });
+    syncActiveViewButtons();
 
     renderChrome();
     window.dispatchEvent(new CustomEvent('admin:viewchange', { detail: { viewId: currentView } }));
   }
 
+  function getActiveNavView(viewId = currentView) {
+    if (shell.classList.contains('is-bottom-nav-mode') && viewId === 'enrolamiento') return 'personas';
+    return viewId;
+  }
+
+  function syncActiveViewButtons() {
+    const activeNavView = getActiveNavView();
+
+    viewButtons.forEach((btn) => {
+      const isActive = btn.getAttribute('data-view') === activeNavView;
+      btn.classList.toggle('is-active', isActive);
+      if (isActive) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
+    });
+  }
+
+  function setRegionState(region, hidden) {
+    if (!region) return;
+    region.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+    if ('inert' in region) region.inert = hidden;
+  }
+
   function setSidebarInteractiveState() {
     if (!sidebar) return;
     const hiddenForDrawer = isDrawerMode() && !shell.classList.contains('admin-drawer-open');
+    const bottomNavMode = shell.classList.contains('is-bottom-nav-mode');
     sidebar.setAttribute('aria-hidden', 'false');
     if ('inert' in sidebar) sidebar.inert = false;
 
-    [sidebarNav, sidebarUtilityDock].forEach((region) => {
-      if (!region) return;
-      region.setAttribute('aria-hidden', hiddenForDrawer ? 'true' : 'false');
-      if ('inert' in region) region.inert = hiddenForDrawer;
-    });
+    setRegionState(sidebarHeader, bottomNavMode);
+    setRegionState(sidebarNav, hiddenForDrawer);
+    setRegionState(sidebarUtilityDock, hiddenForDrawer || bottomNavMode);
   }
 
   function updateToggleState() {
     if (!sidebarToggle) return;
-    const expanded = isDrawerMode()
+    const expanded = isBottomNavMode()
+      ? false
+      : isDrawerMode()
       ? shell.classList.contains('admin-drawer-open')
       : desktopExpanded;
     sidebarToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
@@ -201,14 +225,17 @@
   }
 
   function applyResponsiveLayout() {
+    const bottomNavMode = isBottomNavMode();
     const drawerMode = isDrawerMode();
-    const isMobile = mobileMedia.matches;
 
     shell.classList.toggle('is-drawer-mode', drawerMode);
-    shell.classList.remove('is-bottom-nav-mode');
-    shell.classList.toggle('is-mobile', isMobile);
+    shell.classList.toggle('is-bottom-nav-mode', bottomNavMode);
+    shell.classList.toggle('is-mobile', bottomNavMode);
 
-    if (drawerMode) {
+    if (bottomNavMode) {
+      closeDrawer();
+      setCollapsed(false);
+    } else if (drawerMode) {
       setCollapsed(true);
       closeDrawer();
     } else {
@@ -217,10 +244,13 @@
     }
 
     setSidebarInteractiveState();
+    syncActiveViewButtons();
     updateToggleState();
   }
 
   function toggleSidebar() {
+    if (isBottomNavMode()) return;
+
     if (isDrawerMode()) {
       if (shell.classList.contains('admin-drawer-open')) closeDrawer();
       else openDrawer();
@@ -286,6 +316,10 @@
     btn.addEventListener('click', () => {
       navigateToView(btn.getAttribute('data-quick'));
     });
+  });
+
+  logoutButtons.forEach((btn) => {
+    btn.addEventListener('click', logout);
   });
 
   sidebarToggle?.addEventListener('click', toggleSidebar);

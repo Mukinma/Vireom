@@ -21,6 +21,88 @@ class _DummyService:
         self.camera = _DummyCamera()
         self.running = True
         self._sleep_mode = False
+        self._enrollment_status = None
+
+    def _idle_enrollment_status(self):
+        return {
+            "phase": "preflight",
+            "state": "idle",
+            "user_id": None,
+            "user_name": None,
+            "current_step": None,
+            "total_steps": 7,
+            "step_name": None,
+            "step_label": None,
+            "step_icon": None,
+            "samples_this_step": 0,
+            "samples_needed": 5,
+            "total_captured": 0,
+            "total_needed": 35,
+            "steps_summary": [],
+            "guidance": {
+                "instruction": "Selecciona una persona para iniciar",
+                "hint": "Prepara la iluminacion y centra el rostro antes de comenzar.",
+                "arrow": None,
+                "hold_progress": 0.0,
+                "pose_matched": False,
+                "face_detected": False,
+                "brightness_ok": True,
+                "multiple_faces": False,
+            },
+            "actions": {
+                "can_retry": False,
+                "can_abort": False,
+                "can_finish": False,
+                "can_train": False,
+            },
+            "started_at": None,
+            "updated_at": 1,
+        }
+
+    def _active_enrollment_status(self, user_id: int):
+        return {
+            "phase": "active",
+            "state": "step_active",
+            "user_id": user_id,
+            "user_name": f"Usuario {user_id}",
+            "current_step": 0,
+            "total_steps": 7,
+            "step_name": "center",
+            "step_label": "Mira de frente",
+            "step_icon": "circle-dot",
+            "samples_this_step": 0,
+            "samples_needed": 5,
+            "total_captured": 0,
+            "total_needed": 35,
+            "steps_summary": [
+                {
+                    "name": "center",
+                    "label": "Mira de frente",
+                    "icon": "circle-dot",
+                    "status": "active",
+                    "samples": 0,
+                    "needed": 5,
+                }
+            ],
+            "guidance": {
+                "instruction": "Mira de frente",
+                "hint": "Sigue la guia en pantalla",
+                "arrow": None,
+                "hold_progress": 0.0,
+                "pose_matched": False,
+                "face_detected": False,
+                "brightness_ok": True,
+                "multiple_faces": False,
+            },
+            "actions": {
+                "can_retry": False,
+                "can_abort": True,
+                "can_finish": False,
+                "can_train": False,
+            },
+            "started_at": 10,
+            "updated_at": 10,
+        }
 
     def analyze_once(self):
         return {"ok": True, "event": "authorized", "result": "AUTORIZADO"}, 200
@@ -67,6 +149,34 @@ class _DummyService:
     def set_backend_sleep(self, enabled: bool):
         self._sleep_mode = bool(enabled)
         return {"ok": True, "sleep_mode": self._sleep_mode}
+
+    def start_enrollment(self, user_id: int):
+        if self._enrollment_status and self._enrollment_status.get("state") != "idle":
+            return {**self._enrollment_status, "ok": False, "error": "enrollment_already_active"}
+        self._enrollment_status = self._active_enrollment_status(user_id)
+        return {**self._enrollment_status, "ok": True}
+
+    def get_enrollment_status(self):
+        return self._enrollment_status or self._idle_enrollment_status()
+
+    def abort_enrollment(self):
+        if not self._enrollment_status:
+            return {**self._idle_enrollment_status(), "ok": False, "error": "no_active_session"}
+        self._enrollment_status = None
+        return {**self._idle_enrollment_status(), "ok": True}
+
+    def retry_enrollment_step(self):
+        if not self._enrollment_status:
+            return {**self._idle_enrollment_status(), "ok": False, "error": "no_active_session"}
+        return {**self._enrollment_status, "ok": True}
+
+    def finish_enrollment(self):
+        if not self._enrollment_status:
+            return {**self._idle_enrollment_status(), "ok": False, "error": "no_active_session"}
+        if self._enrollment_status.get("phase") != "completed_review":
+            return {**self._enrollment_status, "ok": False, "error": "enrollment_not_finishable"}
+        self._enrollment_status = None
+        return {**self._idle_enrollment_status(), "ok": True, "finished": True}
 
 
 def _build_app() -> FastAPI:

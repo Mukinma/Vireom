@@ -123,6 +123,53 @@ La interfaz estará disponible en:
 | Operación (kiosco) | `http://<IP>:8000/` |
 | Administración | `http://<IP>:8000/admin` |
 
+## Modo escritorio sin navegador
+
+Vireom también puede abrirse como **ventana nativa** en Windows, macOS y Linux sin escribir `localhost` en el navegador.
+
+### Lanzamiento rápido
+
+```bash
+python desktop_launcher.py
+```
+
+Wrappers incluidos:
+
+- Linux / Raspberry OS: `./run_desktop.sh`
+- macOS: `./run_desktop.command`
+- Windows: `run_desktop.bat`
+
+La ventana abre por defecto el kiosco en `/` y, al cerrarla, también se detiene el servidor local.
+
+### Requisitos de escritorio
+
+Instala primero las dependencias Python:
+
+```bash
+pip install -r requirements.txt
+```
+
+En Linux / Raspberry OS, `pywebview` requiere además un backend gráfico compatible. Según tu entorno, instala GTK/WebKit2GTK o Qt. En Raspberry OS se recomienda verificar especialmente estos paquetes del sistema si el launcher no logra abrir la ventana.
+
+### Acceso directo y autoarranque opcional en Raspberry OS / Linux
+
+Puedes instalar el acceso directo de escritorio:
+
+```bash
+python install_linux_desktop_entry.py
+```
+
+Y si quieres habilitar autoarranque al iniciar sesión gráfica:
+
+```bash
+python install_linux_desktop_entry.py --autostart
+```
+
+Esto crea:
+
+- acceso directo en `~/.local/share/applications/`
+- autoarranque opcional en `~/.config/autostart/`
+
 ## Uso básico
 
 1. Accede al panel de administración e inicia sesión.

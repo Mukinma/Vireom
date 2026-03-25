@@ -16,6 +16,14 @@ const manualOpenAdminBtn = document.getElementById('manualOpenAdminBtn');
 const adminToast = document.getElementById('adminToast');
 const adminToastText = document.getElementById('adminToastText');
 const adminToastSub = document.getElementById('adminToastSub');
+const adminDialog = document.getElementById('adminDialog');
+const adminDialogBackdrop = document.getElementById('adminDialogBackdrop');
+const adminDialogPanel = document.getElementById('adminDialogPanel');
+const adminDialogEyebrow = document.getElementById('adminDialogEyebrow');
+const adminDialogTitle = document.getElementById('adminDialogTitle');
+const adminDialogText = document.getElementById('adminDialogText');
+const adminDialogCancel = document.getElementById('adminDialogCancel');
+const adminDialogConfirm = document.getElementById('adminDialogConfirm');
 
 const statToday = document.getElementById('statToday');
 const statGranted = document.getElementById('statGranted');
@@ -61,6 +69,8 @@ let cachedUsers = [];
 let cachedLogs = [];
 let cachedStatus = {};
 let dashboardReady = false;
+let adminDialogResolver = null;
+let adminDialogRestoreFocus = null;
 
 /* ── Toast ── */
 
@@ -90,6 +100,95 @@ function getErrorMessage(error, fallback = 'No se pudo completar la operacion') 
   if (!raw || raw.startsWith('<')) return fallback;
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
+
+function setAdminDialogTone(tone = 'warning') {
+  if (!adminDialogPanel || !adminDialogConfirm) return;
+
+  adminDialogPanel.classList.remove(
+    'admin-dialog__panel--warning',
+    'admin-dialog__panel--danger',
+    'admin-dialog__panel--primary',
+  );
+  adminDialogPanel.classList.add(`admin-dialog__panel--${tone}`);
+
+  adminDialogConfirm.classList.remove('btn-primary', 'btn-secondary', 'btn-danger');
+  if (tone === 'danger') {
+    adminDialogConfirm.classList.add('btn-danger');
+    return;
+  }
+  if (tone === 'primary') {
+    adminDialogConfirm.classList.add('btn-primary');
+    return;
+  }
+  adminDialogConfirm.classList.add('btn-secondary');
+}
+
+function closeAdminDialog(confirmed) {
+  if (!adminDialog || !adminDialogResolver) return;
+
+  const resolve = adminDialogResolver;
+  adminDialogResolver = null;
+
+  adminDialog.classList.add('is-hidden');
+  adminDialog.setAttribute('aria-hidden', 'true');
+
+  if (adminDialogRestoreFocus?.focus) {
+    adminDialogRestoreFocus.focus({ preventScroll: true });
+  }
+  adminDialogRestoreFocus = null;
+  resolve(Boolean(confirmed));
+}
+
+function openAdminConfirm(options = {}) {
+  const {
+    eyebrow = 'Confirmar accion',
+    title = 'Deseas continuar?',
+    text = 'Esta accion requiere confirmacion.',
+    confirmLabel = 'Continuar',
+    cancelLabel = 'Cancelar',
+    tone = 'warning',
+  } = options;
+
+  if (!adminDialog || !adminDialogPanel || !adminDialogConfirm || !adminDialogCancel) {
+    return Promise.resolve(window.confirm(text || title));
+  }
+
+  if (adminDialogResolver) closeAdminDialog(false);
+
+  adminDialogRestoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  adminDialogEyebrow.textContent = eyebrow;
+  adminDialogTitle.textContent = title;
+  adminDialogText.textContent = text;
+  adminDialogCancel.textContent = cancelLabel;
+  adminDialogConfirm.textContent = confirmLabel;
+  setAdminDialogTone(tone);
+
+  adminDialog.classList.remove('is-hidden');
+  adminDialog.setAttribute('aria-hidden', 'false');
+
+  return new Promise((resolve) => {
+    adminDialogResolver = resolve;
+    window.requestAnimationFrame(() => {
+      adminDialogPanel.focus({ preventScroll: true });
+    });
+  });
+}
+
+function handleAdminDialogKeydown(event) {
+  if (!adminDialogResolver) return;
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  closeAdminDialog(false);
+}
+
+adminDialogBackdrop?.addEventListener('click', () => closeAdminDialog(false));
+adminDialogCancel?.addEventListener('click', () => closeAdminDialog(false));
+adminDialogConfirm?.addEventListener('click', () => closeAdminDialog(true));
+window.addEventListener('keydown', handleAdminDialogKeydown);
+
+window.CameraPIConfirm = {
+  open: openAdminConfirm,
+};
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -740,7 +839,14 @@ async function loadConfig() {
 
 window.toggleUser = async function (userId, active) {
   const action = active ? 'activar' : 'desactivar';
-  if (!confirm(`¿Estas seguro de que deseas ${action} al usuario ID ${userId}?`)) return;
+  const confirmed = await openAdminConfirm({
+    eyebrow: 'Estado de persona',
+    title: `${active ? 'Activar' : 'Desactivar'} usuario`,
+    text: `Se actualizara el estado operativo de la persona con ID ${userId}.`,
+    confirmLabel: active ? 'Activar' : 'Desactivar',
+    tone: 'primary',
+  });
+  if (!confirmed) return;
   try {
     await api(`/api/users/${userId}`, {
       method: 'PATCH',
@@ -759,7 +865,14 @@ window.toggleUser = async function (userId, active) {
 };
 
 window.deleteUser = async function(userId, nombre) {
-  if (!confirm(`¿Eliminar al usuario "${nombre}" (ID ${userId})? Se borrarán sus muestras y se desvinculará de los accesos. Esta acción no se puede deshacer.`)) return;
+  const confirmed = await openAdminConfirm({
+    eyebrow: 'Accion irreversible',
+    title: 'Eliminar usuario',
+    text: `${nombre} (ID ${userId}) sera eliminado junto con sus muestras y su relacion con los accesos. Esta accion no se puede deshacer.`,
+    confirmLabel: 'Eliminar',
+    tone: 'danger',
+  });
+  if (!confirmed) return;
   try {
     await api(`/api/users/${userId}`, { method: 'DELETE' });
     await loadUsers();
@@ -807,7 +920,14 @@ createUserBtn?.addEventListener('click', async () => {
 /* ── Actions: Train model (Sistema) ── */
 
 trainBtn?.addEventListener('click', async () => {
-  if (!confirm('¿Deseas reentrenar el modelo? Esto reemplazara el modelo actual.')) return;
+  const confirmed = await openAdminConfirm({
+    eyebrow: 'Reentrenamiento',
+    title: 'Actualizar modelo facial',
+    text: 'Se generara un nuevo modelo con las muestras actuales y reemplazara al modelo en uso.',
+    confirmLabel: 'Reentrenar',
+    tone: 'primary',
+  });
+  if (!confirmed) return;
   trainBtn.disabled = true;
   trainBtn.innerHTML = '<svg class="icon spin" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#loader"></use></svg> <span>Procesando...</span>';
   showAdminToast({ text: 'Entrenando modelo...', sub: 'Esto puede tardar unos segundos', cls: 'processing', timeout: 15000 });
@@ -848,7 +968,14 @@ saveConfigBtn?.addEventListener('click', async () => {
 /* ── Actions: Maintenance ── */
 
 restartBtn?.addEventListener('click', async () => {
-  if (!confirm('¿Estas seguro? Se interrumpira brevemente el servicio.')) return;
+  const confirmed = await openAdminConfirm({
+    eyebrow: 'Mantenimiento',
+    title: 'Reiniciar sistema',
+    text: 'El servicio se interrumpira brevemente mientras el sistema se reinicia.',
+    confirmLabel: 'Reiniciar',
+    tone: 'warning',
+  });
+  if (!confirmed) return;
   try {
     await api('/api/restart', { method: 'POST' });
     showAdminToast({ text: 'Reinicio solicitado', sub: 'El sistema se reiniciara', cls: 'warning', timeout: 3400 });
@@ -887,8 +1014,12 @@ window.showPersonasListMode = function showPersonasListMode() {
 window.startEnrollForUser = function (userId, userName) {
   navigateToAdminView('enrolamiento');
   window.requestAnimationFrame(() => {
-    const enrollSelect = document.getElementById('enrollUserSelect');
-    if (enrollSelect) enrollSelect.value = String(userId);
+    if (window.CameraPIEnrollment?.prefillUser) {
+      window.CameraPIEnrollment.prefillUser(userId);
+    } else {
+      const enrollSelect = document.getElementById('enrollUserSelect');
+      if (enrollSelect) enrollSelect.value = String(userId);
+    }
     window.dispatchEvent(new Event('resize'));
   });
 };
@@ -927,4 +1058,3 @@ init().catch((err) => {
     timeout: 3600,
   });
 });
-
