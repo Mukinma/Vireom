@@ -33,6 +33,7 @@ class DesktopLauncherConfig:
     start_path: str = "/"
     width: int = 1280
     height: int = 820
+    fullscreen: bool = True
     health_timeout_s: float = 25.0
     health_interval_s: float = 0.25
     title: str = "Vireom"
@@ -67,6 +68,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--width", default=1280, type=int, help="Initial window width.")
     parser.add_argument("--height", default=820, type=int, help="Initial window height.")
     parser.add_argument("--start-path", default="/", help="Initial route to open inside the app.")
+    parser.add_argument(
+        "--windowed",
+        action="store_true",
+        help="Open in a normal window instead of fullscreen.",
+    )
     return parser
 
 
@@ -76,6 +82,7 @@ def build_launcher_config(args: argparse.Namespace) -> DesktopLauncherConfig:
         port=int(args.port or 8000),
         width=max(960, int(args.width or 1280)),
         height=max(640, int(args.height or 820)),
+        fullscreen=not bool(args.windowed),
         start_path=_normalize_start_path(str(args.start_path or "/")),
     )
 
@@ -178,6 +185,7 @@ def open_desktop_window(config: DesktopLauncherConfig) -> None:
             width=config.width,
             height=config.height,
             resizable=True,
+            fullscreen=config.fullscreen,
         )
         webview.start(debug=False)
     except Exception as exc:

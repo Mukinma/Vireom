@@ -7,8 +7,7 @@
   }
 
   function getPreferredTheme() {
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return prefersDark ? 'theme-dark' : 'theme-light';
+    return 'theme-dark';
   }
 
   function getCurrentTheme() {

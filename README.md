@@ -139,7 +139,7 @@ Wrappers incluidos:
 - macOS: `./run_desktop.command`
 - Windows: `run_desktop.bat`
 
-La ventana abre por defecto el kiosco en `/` y, al cerrarla, también se detiene el servidor local.
+La ventana abre por defecto el kiosco en `/`, inicia en **fullscreen** y, al cerrarla, también se detiene el servidor local.
 
 ### Requisitos de escritorio
 
