@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Osvium · Terminal de acceso biométrico</title>
-  <link rel="icon" type="image/svg+xml" href="/static/images/logo-white.svg" />
-  <link rel="stylesheet" href="/static/css/styles.css" />
-  <link rel="stylesheet" href="/static/css/kiosk.css" />
+  <link rel="icon" type="image/svg+xml" href="/static/images/logo-white.svg?v={{ asset_version }}" />
+  <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
+  <link rel="stylesheet" href="/static/css/kiosk.css?v={{ asset_version }}" />
   <script>
     (function(){
       try{
@@ -100,22 +100,7 @@
               <div class="face-guide__msg" id="guidanceMessage">Coloca tu rostro dentro de la guía</div>
             </div>
 
-            <div id="cameraBadge" class="camera-badge is-idle">
-              <span id="cameraBadgeText">Sin modelo</span>
-            </div>
-
             <div id="faceIndicator" class="face-indicator idle" aria-hidden="true" hidden></div>
-          </div>
-
-          <div class="kiosk-camera__instructions">
-            <div class="kiosk-camera__gradient"></div>
-            <div class="kiosk-camera__overlay-content">
-              <h2 class="kiosk-camera__title" id="cameraTitle">Validando identidad</h2>
-              <div class="tips-carousel tips-carousel--camera" id="tipsCarouselCamera">
-                <p class="tips-carousel__text"></p>
-                <div class="tips-carousel__indicators"></div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -142,13 +127,12 @@
     </main>
   </div>
 
-  <script src="/static/js/theme.js"></script>
-  <script src="/static/js/lockscreen.js"></script>
-  <script src="/static/js/face-action.js"></script>
-  <script src="/static/js/tips-carousel.js"></script>
-  <script src="/static/js/logo-navigation.js"></script>
-  <script type="module" src="/static/js/lockscreen-fsm.js"></script>
-  <script type="module" src="/static/js/lockscreen-controller.js"></script>
-  <script type="module" src="/static/js/app.js"></script>
+  <script src="/static/js/theme.js?v={{ asset_version }}"></script>
+  <script src="/static/js/lockscreen.js?v={{ asset_version }}"></script>
+  <script src="/static/js/face-action.js?v={{ asset_version }}"></script>
+  <script src="/static/js/logo-navigation.js?v={{ asset_version }}"></script>
+  <script type="module" src="/static/js/lockscreen-fsm.js?v={{ asset_version }}"></script>
+  <script type="module" src="/static/js/lockscreen-controller.js?v={{ asset_version }}"></script>
+  <script type="module" src="/static/js/app.js?v={{ asset_version }}"></script>
 </body>
 </html>

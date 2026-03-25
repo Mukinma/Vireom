@@ -1249,6 +1249,7 @@ def create_app() -> FastAPI:
 
     app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
     app.state.templates = Jinja2Templates(directory="frontend/templates")
+    app.state.asset_version = str(int(time.time()))
     app.state.service = AccessService()
 
     app.include_router(router)
