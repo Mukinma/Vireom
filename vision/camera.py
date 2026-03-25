@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 import cv2
+import numpy as np
 
 from config import config
 
@@ -76,7 +77,7 @@ class CameraStream:
                 picam = Picamera2()
                 video_cfg = picam.create_video_configuration(
                     main={
-                        "format": "BGR888",
+                        "format": "RGB888",
                         "size": (config.frame_width, config.frame_height),
                     },
                 )
@@ -114,14 +115,16 @@ class CameraStream:
         if self._picam is None:
             return False, None
         try:
-            frame = self._picam.capture_array()
+            frame = self._picam.capture_array("main")
             if frame is None or frame.size == 0:
                 return False, None
+            # Picamera2 puede reutilizar el buffer del request; trabajamos sobre una
+            # copia contigua para evitar artefactos visuales durante el encode/render.
+            frame = np.ascontiguousarray(frame.copy())
             if len(frame.shape) == 3:
                 if frame.shape[2] == 4:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
                 elif frame.shape[2] == 3:
-                    # Picamera2 puede entregar RGB aunque se configure BGR888 en algunos drivers.
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             return True, frame
         except Exception:
@@ -271,7 +274,7 @@ class CameraStream:
                     if encoded_ok:
                         jpeg = encoded.tobytes()
                 with self.frame_cond:
-                    self.frame = raw
+                    self.frame = raw.copy()
                     self.jpeg_frame = jpeg if encode_jpeg else None
                     self.frame_seq += 1
                     self.last_frame_time = time.time()
