@@ -915,3 +915,107 @@ html.theme-light .enrollment-session-summary {
     align-items: flex-start;
   }
 }
+
+@media (max-aspect-ratio: 4/5) and (max-width: 900px) {
+  #view-enrolamiento {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .enrollment-layout {
+    grid-template-rows: minmax(260px, 0.96fr) minmax(0, 1.04fr);
+    gap: 14px;
+  }
+
+  .enrollment-camera-card,
+  .enrollment-panel-card {
+    padding: 18px 16px;
+  }
+
+  .enrollment-camera-status__meta {
+    font-size: 0.94rem;
+  }
+
+  .enrollment-status-pill,
+  .enrollment-step-badge,
+  .enrollment-readiness__badge {
+    min-height: 32px;
+    font-size: 0.84rem;
+  }
+
+  .enrollment-hud__counter {
+    font-size: 0.88rem;
+  }
+
+  .enrollment-instruction {
+    font-size: 1.24rem;
+  }
+
+  .enrollment-message {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .enrollment-warning {
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .enrollment-panel-title {
+    font-size: 1.2rem;
+  }
+
+  .enrollment-panel-desc,
+  .enrollment-step-focus__hint,
+  .enrollment-session-summary__row,
+  .enrollment-error-banner p {
+    font-size: 0.92rem;
+  }
+
+  .enrollment-readiness__meta,
+  .enrollment-total-label {
+    font-size: 0.86rem;
+  }
+
+  .enrollment-readiness__label,
+  .enrollment-step-focus__eyebrow,
+  .enrollment-step-item__samples {
+    font-size: 0.8rem;
+  }
+
+  .enrollment-readiness__value,
+  .enrollment-step-focus__title,
+  .enrollment-step-item__label {
+    font-size: 0.98rem;
+  }
+
+  #enrollInstructionsPanel,
+  #enrollStepsPanel {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+  }
+}
+
+@media (max-aspect-ratio: 4/5) and (max-width: 600px) {
+  .enrollment-layout {
+    grid-template-rows: minmax(230px, 0.94fr) minmax(0, 1.06fr);
+  }
+
+  .enrollment-camera-card {
+    gap: 14px;
+  }
+
+  .enrollment-instruction {
+    font-size: 1.14rem;
+  }
+
+  .enrollment-message {
+    font-size: 0.94rem;
+  }
+
+  .enrollment-controls .btn,
+  .enrollment-completion__actions .btn {
+    flex: 1 1 100%;
+  }
+}

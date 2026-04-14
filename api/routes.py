@@ -16,6 +16,7 @@ from rate_limit import limiter
 
 router = APIRouter()
 auth_logger = logging.getLogger("camerapi.auth")
+logger = logging.getLogger("camerapi.routes")
 
 
 def _template_context(request: Request, **extra: object) -> dict[str, object]:
@@ -247,9 +248,43 @@ def capture_samples(user_id: int, request: Request, count: int = 30):
 def train(request: Request):
     _admin_required(request)
     service = request.app.state.service
-    result = service.trainer.train_from_dataset()
+
+    with service.analysis_lock:
+        result = service.trainer.train_from_dataset()
+
+        try:
+            reloaded = service.recognizer.load_model(config.model_path)
+        except Exception as exc:
+            service.system_status["model"] = "error"
+            logger.exception("train_reload_failed_exception path=%s", config.model_path)
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Modelo entrenado y guardado en disco, pero la recarga en "
+                    "memoria falló con una excepción. Reinicia el servicio para "
+                    f"aplicar el nuevo modelo. ({exc})"
+                ),
+            )
+
+        if not reloaded:
+            service.system_status["model"] = "error"
+            logger.error("train_reload_returned_false path=%s", config.model_path)
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Modelo entrenado y guardado en disco, pero no pudo "
+                    "recargarse en memoria. Reinicia el servicio para aplicar "
+                    "el nuevo modelo."
+                ),
+            )
+
     service.system_status["model"] = "loaded"
-    return result
+    logger.info(
+        "train_completed samples=%s users=%s",
+        result.get("samples_used"),
+        result.get("unique_users"),
+    )
+    return {**result, "reloaded": True}
 
 
 @router.get("/api/config")

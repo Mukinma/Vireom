@@ -6,8 +6,8 @@
   position: fixed;
   inset: 0;
   isolation: isolate;
-  background-color: var(--bg-main);
-  background-image: var(--kiosk-bg-image);
+  background-color: #0A0F1E;
+  background-image: radial-gradient(140% 110% at 0% 0%, #0D1A3A 0%, #0A0F1E 58%);
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -25,16 +25,13 @@
 
 .kiosk-shell::before {
   background:
-    radial-gradient(620px 420px at 10% 12%, rgba(var(--accent-rgb), 0.17), transparent 62%),
-    radial-gradient(560px 420px at 88% 85%, rgba(var(--primary-rgb), 0.14), transparent 62%);
+    radial-gradient(1120px 800px at 10% 8%, rgba(44, 78, 150, 0.17), transparent 62%),
+    radial-gradient(960px 740px at 88% 90%, rgba(12, 140, 160, 0.1), transparent 64%);
 }
 
 .kiosk-shell::after {
-  background-image:
-    linear-gradient(90deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.48;
+  background-image: none;
+  opacity: 0;
 }
 
 /* Lock Screen */
@@ -61,8 +58,8 @@
 .lockscreen__bg {
   position: absolute;
   inset: 0;
-  background-color: var(--bg-main);
-  background-image: var(--kiosk-bg-image);
+  background-color: #0A0F1E;
+  background-image: radial-gradient(140% 110% at 0% 0%, #0D1A3A 0%, #0A0F1E 58%);
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -73,19 +70,16 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(620px 420px at 10% 12%, rgba(var(--accent-rgb), 0.17), transparent 62%),
-    radial-gradient(560px 420px at 88% 85%, rgba(var(--primary-rgb), 0.14), transparent 62%);
+    radial-gradient(1180px 820px at 10% 8%, rgba(44, 78, 150, 0.18), transparent 62%),
+    radial-gradient(980px 740px at 88% 90%, rgba(12, 140, 160, 0.11), transparent 64%);
 }
 
 .lockscreen__bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(90deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(var(--primary-rgb), 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.48;
+  background-image: none;
+  opacity: 0;
 }
 
 .lockscreen__content {
@@ -112,8 +106,8 @@
   background:
     linear-gradient(160deg, rgba(var(--accent-rgb), 0.08), transparent 60%),
     var(--surface-glass);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--shadow-soft);
 }
 
@@ -150,12 +144,13 @@
 }
 
 .lockscreen__hint {
-  font-size: clamp(1rem, 1.6vw, 1.32rem);
+  font-size: clamp(1.02rem, 1.6vw, 1.32rem);
   font-weight: 400;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
   opacity: 0.7;
   animation: lockscreen-pulse 2.4s ease-in-out infinite;
+    margin-top: 15px;
 }
 
 @media (max-width: 1024px) {
@@ -189,18 +184,18 @@
 /* Kiosk Layout */
 
 .kiosk-body .kiosk-shell {
-  background-color: #060b18;
+  background-color: #0A0F1E;
+  background-image: radial-gradient(140% 110% at 0% 0%, #0D1A3A 0%, #0A0F1E 58%);
 }
 
 .kiosk-body .kiosk-shell::before {
   background:
-    radial-gradient(1000px 700px at 8% 12%, rgba(var(--accent-rgb), 0.11), transparent 55%),
-    radial-gradient(800px 600px at 90% 85%, rgba(var(--primary-rgb), 0.09), transparent 55%),
-    radial-gradient(600px 600px at 50% 50%, rgba(20, 40, 80, 0.12), transparent 70%);
+    radial-gradient(1180px 820px at 8% 8%, rgba(44, 78, 150, 0.16), transparent 60%),
+    radial-gradient(980px 740px at 90% 90%, rgba(12, 140, 160, 0.1), transparent 62%);
 }
 
 .kiosk-body .kiosk-shell::after {
-  opacity: 0.12;
+  opacity: 0;
 }
 
 .kiosk-header {
@@ -336,8 +331,8 @@
     0 24px 48px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
     inset 0 0 20px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .kiosk-camera::after {
@@ -369,6 +364,20 @@ html.theme-dark .kiosk-camera.camera-active.camera-pulse::after {
   min-height: 0;
   overflow: hidden;
   border-radius: 8px;
+}
+
+.kiosk-camera__stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(34, 197, 94, 0);
+  transition: background-color 220ms ease;
+}
+
+.kiosk-camera__stage.is-granted::after {
+  background: rgba(34, 197, 94, 0.14);
 }
 
 .kiosk-camera__feed {
@@ -548,12 +557,34 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide.is-granted {
-  opacity: 0.9;
-  color: rgba(var(--success-rgb), 0.8);
+  opacity: 0.95;
+  color: #22C55E;
+  animation: none;
+}
+
+.face-guide.is-granted::before {
+  display: none;
 }
 
 .face-guide.is-granted .face-guide__silhouette {
-  filter: drop-shadow(0 0 28px rgba(var(--success-rgb), 0.54));
+  filter: drop-shadow(0 0 26px rgba(34, 197, 94, 0.6));
+}
+
+.face-guide.is-granted .face-guide__silhouette ellipse {
+  stroke: #22C55E;
+  stroke-width: 9;
+  stroke-dasharray: none;
+  fill: rgba(34, 197, 94, 0.12);
+  opacity: 0.98;
+}
+
+.face-guide.is-granted .face-guide__silhouette path,
+.face-guide.is-granted .face-guide__silhouette line {
+  opacity: 0;
+}
+
+.kiosk-shell.is-granted-state .face-guide__msg {
+  display: none;
 }
 
 .face-guide.is-denied {
@@ -651,8 +682,8 @@ html.desktop-launch-pending .kiosk-camera__feed {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-50%) translateX(12px);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: opacity var(--ease-fast), transform var(--ease-fast);
 }
 
@@ -788,8 +819,8 @@ html.theme-light .user-photo {
   padding: clamp(24px, 3vw, 36px) clamp(28px, 3.5vw, 40px);
   border: 2px solid var(--border-glass);
   border-radius: var(--radius-glass);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow:
     0 24px 48px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
@@ -880,6 +911,37 @@ html.theme-light .user-photo {
   line-height: 1.4;
   text-align: right;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.kiosk-shell.is-granted-state .kiosk-info__hint {
+  display: none;
+}
+
+.kiosk-info.is-granted .kiosk-info__title {
+  font-size: clamp(2.4rem, 5.4vw, 4rem);
+  line-height: 1;
+  letter-spacing: 0.035em;
+  white-space: pre-line;
+  text-transform: uppercase;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.kiosk-info.is-granted .kiosk-info__footer {
+  justify-content: flex-start;
+}
+
+.kiosk-info.is-granted .kiosk-info__progress {
+  max-width: none;
+  width: 100%;
+  height: 10px;
+  margin-bottom: 0;
+  border-radius: 999px;
+}
+
+.kiosk-info.is-granted .kiosk-info__progress-bar {
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.5);
 }
 
 .tips-carousel {
@@ -1015,6 +1077,14 @@ html.theme-light .user-photo {
     margin-bottom: 10px;
   }
 
+  .kiosk-info.is-granted .kiosk-info__title {
+    font-size: clamp(2rem, 7vw, 3rem);
+  }
+
+  .kiosk-info.is-granted .kiosk-info__progress {
+    height: 9px;
+  }
+
   .face-guide {
     width: min(340px, 62%);
     min-width: 240px;
@@ -1038,6 +1108,14 @@ html.theme-light .user-photo {
   .kiosk-info__title {
     font-size: 1.4rem;
     margin-bottom: 6px;
+  }
+
+  .kiosk-info.is-granted .kiosk-info__title {
+    font-size: clamp(1.7rem, 5.5vw, 2.2rem);
+  }
+
+  .kiosk-info.is-granted .kiosk-info__progress {
+    height: 8px;
   }
 }
 
@@ -1094,6 +1172,14 @@ html.theme-light .user-photo {
     gap: 8px;
   }
 
+  .kiosk-info.is-granted .kiosk-info__title {
+    font-size: clamp(1.8rem, 9vw, 2.4rem);
+  }
+
+  .kiosk-info.is-granted .kiosk-info__progress {
+    height: 8px;
+  }
+
   .camera-badge {
     top: 10px;
     left: 10px;
@@ -1110,5 +1196,139 @@ html.theme-light .user-photo {
   .face-guide__msg {
     bottom: -36px;
     font-size: 0.82rem;
+  }
+}
+
+@media (max-aspect-ratio: 4/5) and (max-width: 900px) {
+  .lockscreen__content {
+    gap: 56px;
+    padding-top: 5vh;
+  }
+
+  .lockscreen__day {
+    font-size: 1rem;
+  }
+
+  .lockscreen__month {
+    font-size: 1.24rem;
+  }
+
+  .lockscreen__hint {
+    font-size: clamp(1.14rem, 3.8vw, 1.6rem);
+    letter-spacing: 0.06em;
+  }
+
+  .kiosk-header {
+    height: 80px;
+  }
+
+  .kiosk-content {
+    padding-top: 80px;
+  }
+
+  .kiosk-header__text strong {
+    font-size: 1.3rem;
+  }
+
+  .kiosk-header__text span {
+    font-size: 0.8rem;
+  }
+
+  .kiosk-header__clock strong {
+    font-size: 1.5rem;
+  }
+
+  .kiosk-header__clock span {
+    font-size: 0.82rem;
+  }
+
+  .kiosk-camera__title {
+    font-size: clamp(1.5rem, 4.8vw, 2rem);
+  }
+
+  .kiosk-info {
+    padding: clamp(22px, 4.2vw, 32px);
+  }
+
+  .kiosk-info__label {
+    font-size: clamp(0.95rem, 3.2vw, 1.08rem);
+  }
+
+  .kiosk-info__title {
+    font-size: clamp(2rem, 6.2vw, 2.8rem);
+  }
+
+  .kiosk-info__desc {
+    font-size: clamp(1.04rem, 3.2vw, 1.2rem);
+  }
+
+  .kiosk-info__hint {
+    font-size: clamp(0.84rem, 2.5vw, 0.96rem);
+  }
+
+  .tips-carousel__text,
+  .tips-carousel--camera .tips-carousel__text {
+    font-size: clamp(0.96rem, 3vw, 1.08rem);
+  }
+
+  .face-guide {
+    width: clamp(260px, 68vw, 390px);
+    min-width: 0;
+  }
+
+  .face-guide__msg {
+    max-width: min(86vw, 430px);
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+    font-size: clamp(0.98rem, 3.2vw, 1.14rem);
+  }
+
+  .camera-badge {
+    font-size: 0.96rem;
+    padding: 9px 16px;
+  }
+}
+
+@media (max-aspect-ratio: 4/5) and (max-width: 480px) {
+  .kiosk-header {
+    height: 72px;
+  }
+
+  .kiosk-content {
+    padding-top: 72px;
+  }
+
+  .kiosk-header__text strong {
+    font-size: 1.12rem;
+  }
+
+  .kiosk-header__clock strong {
+    font-size: 1.26rem;
+  }
+
+  .kiosk-info__title {
+    font-size: clamp(1.76rem, 7.8vw, 2.3rem);
+  }
+
+  .kiosk-info__desc {
+    font-size: 1rem;
+  }
+
+  .kiosk-info__hint {
+    font-size: 0.84rem;
+  }
+
+  .face-guide {
+    width: min(270px, 78vw);
+  }
+
+  .face-guide__msg {
+    bottom: -42px;
+    font-size: 0.92rem;
+  }
+
+  .lockscreen__hint {
+    font-size: clamp(1rem, 4vw, 1.28rem);
   }
 }

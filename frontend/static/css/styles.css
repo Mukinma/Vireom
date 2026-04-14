@@ -35,12 +35,12 @@
 :root.theme-light {
   --font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 
-  --bg-primary: #eaf2ff;
-  --bg-surface: #f5f9ff;
+  --bg-primary: #e8f5f7;
+  --bg-surface: #f2fafb;
   --text-primary: #0f172a;
   --text-secondary: #334155;
-  --border-soft: #bfd1ee;
-  --accent-primary: #2f5dff;
+  --border-soft: #9ecdd5;
+  --accent-primary: #0891b2;
 
   --bg-main: var(--bg-primary);
   --kiosk-bg-image: url("/static/images/kiosk-bg-light.png");
@@ -49,10 +49,10 @@
   --shadow-soft: 0 20px 42px rgba(15, 23, 42, 0.12);
   --text-muted: var(--text-secondary);
   --primary: var(--accent-primary);
-  --accent: #5b8cff;
+  --accent: #06b6d4;
 
-  --primary-rgb: 47 93 255;
-  --accent-rgb: 91 140 255;
+  --primary-rgb: 8 145 178;
+  --accent-rgb: 6 182 212;
   --success: #22c55e;
   --danger: #ef4444;
   --warning: #f59e0b;
@@ -112,7 +112,7 @@
     rgba(255, 255, 255, 0.74);
   --admin-input-bg: rgba(255, 255, 255, 0.6);
   --admin-input-border: rgba(255, 255, 255, 0.8);
-  --admin-input-filter: blur(12px) saturate(140%);
+  --admin-input-filter: blur(12px);
   --admin-input-shadow:
     0 8px 20px rgba(15, 23, 42, 0.09),
     inset 0 1px 0 var(--glass-highlight);
@@ -134,19 +134,19 @@ html.theme-dark {
   --text-primary: #f1f5f9;
   --text-secondary: #b8c2d4;
   --border-soft: rgba(255, 255, 255, 0.22);
-  --accent-primary: #3a6bff;
+  --accent-primary: #b7efff;
 
-  --bg-main: #0f172a;
+  --bg-main: #0a1520;
   --kiosk-bg-image: url("/static/images/kiosk-bg-dark.png");
-  --surface-glass: rgba(255, 255, 255, 0.08);
-  --border-glass: rgba(255, 255, 255, 0.18);
+  --surface-glass: rgba(255, 255, 255, 0.07);
+  --border-glass: rgba(255, 255, 255, 0.16);
   --shadow-soft: 0 20px 44px rgba(0, 0, 0, 0.4);
   --text-muted: var(--text-secondary);
   --primary: var(--accent-primary);
-  --accent: #6ea8ff;
+  --accent: #b7efff;
 
-  --primary-rgb: 58 107 255;
-  --accent-rgb: 110 168 255;
+  --primary-rgb: 6 182 212;
+  --accent-rgb: 34 211 238;
   --camera-border-fill: linear-gradient(158deg, rgba(74, 120, 200, 0.56), rgba(20, 40, 78, 0.62) 56%, rgba(14, 30, 58, 0.72));
   --camera-border-highlight: linear-gradient(180deg, rgba(196, 233, 255, 0.68), rgba(186, 223, 255, 0.22) 38%, transparent 76%);
   --camera-border-shadow:
@@ -175,11 +175,11 @@ html.theme-dark {
   --admin-base-pattern-size: 64px 64px;
   --admin-base-pattern-opacity: 0.28;
   --admin-glass-high-bg:
-    linear-gradient(158deg, rgba(76, 106, 162, 0.42), rgba(24, 39, 70, 0.34) 52%, rgba(var(--primary-rgb), 0.14)),
-    rgba(14, 25, 48, 0.68);
-  --admin-input-bg: rgba(12, 22, 42, 0.64);
-  --admin-input-border: rgba(183, 206, 255, 0.36);
-  --admin-input-filter: blur(12px) saturate(160%);
+    linear-gradient(158deg, rgba(18, 32, 38, 0.52), rgba(10, 20, 24, 0.44) 52%, rgba(var(--primary-rgb), 0.1)),
+    rgba(10, 18, 22, 0.74);
+  --admin-input-bg: rgba(8, 18, 24, 0.64);
+  --admin-input-border: rgba(var(--accent-rgb), 0.28);
+  --admin-input-filter: blur(12px);
   --admin-input-shadow:
     0 8px 20px rgba(2, 6, 23, 0.36),
     inset 0 1px 0 var(--glass-highlight);
@@ -188,11 +188,11 @@ html.theme-dark {
     0 0 0 7px rgba(var(--primary-rgb), 0.22),
     0 10px 24px rgba(var(--accent-rgb), 0.18),
     inset 0 1px 0 var(--glass-highlight);
-  --admin-table-head-bg: rgba(18, 31, 57, 0.66);
-  --admin-table-row-bg: rgba(11, 21, 40, 0.48);
-  --admin-table-row-bg-even: rgba(15, 27, 50, 0.58);
-  --admin-table-row-hover-bg: rgba(var(--accent-rgb), 0.22);
-  --admin-table-border: rgba(183, 206, 255, 0.24);
+  --admin-table-head-bg: rgba(10, 22, 28, 0.66);
+  --admin-table-row-bg: rgba(8, 18, 22, 0.48);
+  --admin-table-row-bg-even: rgba(10, 22, 26, 0.58);
+  --admin-table-row-hover-bg: rgba(var(--accent-rgb), 0.18);
+  --admin-table-border: rgba(var(--accent-rgb), 0.16);
 }
 
 * {
@@ -393,8 +393,8 @@ input::placeholder {
     0 0 48px rgba(var(--toast-accent-rgb), 0.14),
     inset 0 0 0 1px rgba(255, 255, 255, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(calc(var(--blur-glass) + 6px)) saturate(165%);
-  -webkit-backdrop-filter: blur(calc(var(--blur-glass) + 6px)) saturate(165%);
+  backdrop-filter: blur(calc(var(--blur-glass) + 6px));
+  -webkit-backdrop-filter: blur(calc(var(--blur-glass) + 6px));
   opacity: 0;
   pointer-events: none;
 }
@@ -577,8 +577,8 @@ html.theme-light .admin-toast.processing {
   box-shadow:
     0 7px 16px rgba(var(--chip-rgb), 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.34);
-  backdrop-filter: blur(9px) saturate(130%);
-  -webkit-backdrop-filter: blur(9px) saturate(130%);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
 }
 
 .state-chip::before {
@@ -630,4 +630,68 @@ html.theme-light .state-chip::before {
 
 .is-hidden {
   display: none;
+}
+
+@media (max-aspect-ratio: 4/5) and (max-width: 900px) {
+  body {
+    line-height: 1.5;
+  }
+
+  .btn {
+    min-height: 48px;
+    padding: 0 16px;
+    font-size: clamp(1rem, 3.8vw, 1.12rem);
+  }
+
+  .btn .icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .btn--sm {
+    min-height: 40px;
+    padding: 6px 12px;
+    font-size: clamp(0.92rem, 3.3vw, 1rem);
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: clamp(1rem, 3.8vw, 1.1rem);
+  }
+
+  input {
+    padding: 12px 14px;
+  }
+
+  .label {
+    font-size: clamp(0.94rem, 3.4vw, 1.02rem);
+  }
+
+  .access-toast-title {
+    font-size: clamp(1.02rem, 3.6vw, 1.22rem);
+  }
+
+  .access-toast-sub {
+    font-size: clamp(0.9rem, 3vw, 1rem);
+  }
+
+  .state-chip {
+    font-size: clamp(0.74rem, 2.8vw, 0.88rem);
+  }
+}
+
+@media (max-aspect-ratio: 4/5) and (max-width: 480px) {
+  .btn {
+    min-height: 46px;
+    padding: 0 14px;
+  }
+
+  .btn--sm {
+    min-height: 38px;
+  }
+
+  .state-chip {
+    padding-right: 10px;
+  }
 }

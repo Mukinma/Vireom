@@ -29,6 +29,7 @@ const faceGuide = document.getElementById('faceGuide');
 const guidanceMessage = document.getElementById('guidanceMessage');
 const cameraBadge = document.getElementById('cameraBadge');
 const cameraBadgeText = document.getElementById('cameraBadgeText');
+const infoPanel = document.getElementById('infoPanel');
 const infoTitle = document.getElementById('infoTitle');
 const infoDesc = document.getElementById('infoDesc');
 const cameraTitle = document.getElementById('cameraTitle');
@@ -132,7 +133,57 @@ function showToast(type) {
   }, config.timeout);
 }
 
+function setGrantedUiState(isGranted) {
+  const active = Boolean(isGranted);
+  shell?.classList.toggle('is-granted-state', active);
+  cameraStage?.classList.toggle('is-granted', active);
+  infoPanel?.classList.toggle('is-granted', active);
+}
+
+function getRecognizedUserName(rawName) {
+  const value = String(rawName || '').trim();
+  if (!value || value === '-') {
+    return null;
+  }
+
+  const normalized = value.toLowerCase();
+  if (normalized === 'desconocido') {
+    return null;
+  }
+
+  return value;
+}
+
+function formatRecognizedUserName(userName) {
+  const normalized = userName
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  const parts = normalized.split(' ');
+
+  if (parts.length < 2) {
+    return normalized;
+  }
+
+  return `${parts[0]}\n${parts.slice(1).join(' ')}`;
+}
+
+function renderGrantedUserName(stateKey, data) {
+  if (!infoTitle || stateKey !== 'granted') {
+    return;
+  }
+
+  const userName = getRecognizedUserName(data?.last_user);
+  if (!userName) {
+    return;
+  }
+
+  infoTitle.textContent = formatRecognizedUserName(userName);
+}
+
 function updateFaceIndicator(stateKey) {
+  setGrantedUiState(stateKey === 'granted');
+
   if (faceIndicator) {
     faceIndicator.classList.remove('idle', 'tracking', 'granted', 'denied', 'blocked');
     if (stateKey === 'granted') faceIndicator.classList.add('granted');
@@ -412,6 +463,7 @@ async function loadStatus() {
     setSystemBadge(uiState.badge[0], uiState.badge[1]);
 
     updateFaceIndicator(uiState.key);
+    renderGrantedUserName(uiState.key, data);
     updateFaceGuidance(data.face_guidance, uiState.key);
     showUserOverlay(data);
     faceAction?.updateStatus(data);
