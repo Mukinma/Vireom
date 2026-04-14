@@ -2,7 +2,7 @@ import { createInitialContext, transition, EVENTS, STATES, EFFECTS } from './loc
 
 const DEFAULTS = {
   lockEnterAnimMs: 260,
-  resumeTimeoutMs: 4000,
+  resumeTimeoutMs: 8000,
 };
 
 function noop() {}
