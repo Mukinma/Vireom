@@ -29,7 +29,7 @@
       title: 'Personas',
     },
     enrolamiento: {
-      title: 'Enrolamiento',
+      title: 'Registrar rostro',
     },
     accesos: {
       title: 'Accesos',
@@ -305,16 +305,37 @@
     else if (typeof mq.addListener === 'function') mq.addListener(handler);
   };
 
+  function isEnrollmentCapturing() {
+    const panel = document.getElementById('enrollStepsPanel');
+    return currentView === 'enrolamiento' && panel !== null && !panel.hidden;
+  }
+
+  async function guardedNavigate(targetView) {
+    if (isEnrollmentCapturing()) {
+      const confirmFn = window.CameraPIConfirm?.open ?? ((opts) => Promise.resolve(window.confirm(opts.text)));
+      const confirmed = await confirmFn({
+        eyebrow: 'Registro en curso',
+        title: '¿Salir del registro?',
+        text: 'Las fotos capturadas hasta ahora se perderán. Tendrás que empezar de nuevo.',
+        confirmLabel: 'Sí, salir',
+        cancelLabel: 'Seguir registrando',
+        tone: 'warning',
+      });
+      if (!confirmed) return;
+    }
+    navigateToView(targetView);
+    if (isDrawerMode()) closeDrawer();
+  }
+
   viewButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      navigateToView(btn.getAttribute('data-view'));
-      if (isDrawerMode()) closeDrawer();
+      guardedNavigate(btn.getAttribute('data-view'));
     });
   });
 
   shell.querySelectorAll('[data-quick]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      navigateToView(btn.getAttribute('data-quick'));
+      guardedNavigate(btn.getAttribute('data-quick'));
     });
   });
 

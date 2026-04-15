@@ -8,12 +8,6 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes scanLine {
-  0%   { top: 0;    opacity: 0; }
-  6%   { opacity: 1; }
-  94%  { opacity: 0.5; }
-  100% { top: 100%; opacity: 0; }
-}
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.96); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
@@ -338,18 +332,6 @@ body.admin-body::after {
   pointer-events: none;
 }
 
-/* Hero card gets a scan line animation */
-.card--hero::before {
-  content: "";
-  position: absolute; left: 0; right: 0; top: 0;
-  height: 1.5px;
-  background: linear-gradient(90deg,
-    transparent 0%, rgba(255, 255, 255, 0.06) 8%,
-    rgba(255, 255, 255, 0.65) 50%,
-    rgba(255, 255, 255, 0.06) 92%, transparent 100%);
-  animation: scanLine 2.4s ease-in-out 0.6s both;
-  pointer-events: none; z-index: 20;
-}
 
 .card--danger-zone {
   border-color: rgba(239, 68, 68, 0.2);

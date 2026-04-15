@@ -384,12 +384,12 @@ function renderUsers(users) {
           class="user-action-btn user-action-btn--primary"
           type="button"
           onclick="startEnrollForUser(${user.id}, '${escapedName}')"
-          title="Enrolar ${escapeHtml(user.nombre)}"
-          aria-label="Enrolar ${escapeHtml(user.nombre)}"
+          title="Registrar ${escapeHtml(user.nombre)}"
+          aria-label="Registrar ${escapeHtml(user.nombre)}"
           ${user.activo ? '' : ' disabled'}
         >
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-          <span>Enrolar</span>
+          <span>Registrar</span>
         </button>
         <button
           class="user-action-btn user-action-btn--neutral"
@@ -906,7 +906,7 @@ createUserBtn?.addEventListener('click', async () => {
     if (createResult) {
       const uid = user?.id ?? '';
       createResult.hidden = false;
-      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} registrado${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">Enrolar ahora &rarr;</button>`;
+      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} registrado${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">Registrar ahora &rarr;</button>`;
       setTimeout(() => { createResult.hidden = true; }, 10000);
     }
 
