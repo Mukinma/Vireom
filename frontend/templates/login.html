@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login Admin</title>
+  <title>Osvium — Administración</title>
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/login.css?v={{ asset_version }}" />
@@ -12,35 +12,76 @@
   </script>
 </head>
 <body class="centered-body">
+
+  <!-- Botón de retorno: pill flotante fuera del card, esquina superior izquierda -->
+  <a href="/" class="login-back-nav" aria-label="Volver al inicio">
+    <svg class="icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    <span>Inicio</span>
+  </a>
+
   <main class="login-shell">
+
+    <div class="login-sysid" aria-hidden="true">
+      <span class="sysid-brand">OSVIUM</span>
+      <span class="sysid-divider"></span>
+      <span class="sysid-desc">Control biométrico</span>
+    </div>
+
     <form class="login-card" action="/auth/login" method="post">
+      <span class="hud-corner hud-tl" aria-hidden="true"></span>
+      <span class="hud-corner hud-tr" aria-hidden="true"></span>
+      <span class="hud-corner hud-bl" aria-hidden="true"></span>
+      <span class="hud-corner hud-br" aria-hidden="true"></span>
+
       <div class="login-head">
-        <svg class="icon icon-lg" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
-        <h1>Acceso Administrativo</h1>
+        <div class="login-icon-badge" aria-hidden="true">
+          <!-- Logo Osvium: iris biométrico -->
+          <svg class="osvium-logo-svg" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+            <img src="/static/images/logo-white.svg" alt="Logo Osvium">
+          </svg>
+          <span class="scan-ring r1"></span>
+          <span class="scan-ring r2"></span>
+        </div>
+        <div>
+          <h1>Panel de administración</h1>
+          <p class="login-sub">Ingresa con tu cuenta para continuar</p>
+        </div>
       </div>
+
       {% if login_error %}
-      <p class="label login-error" role="alert">Credenciales inválidas.</p>
+      <div class="login-error" role="alert">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-filled"></use></svg>
+        <span>Usuario o contraseña incorrectos</span>
+      </div>
       {% endif %}
 
-      <label for="username" class="label">Usuario</label>
-      <input id="username" type="text" name="username" required />
+      <div class="field-group">
+        <label for="username" class="label">Usuario</label>
+        <div class="input-wrap">
+          <svg class="icon input-leading-icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
+          <input id="username" type="text" name="username" required autocomplete="username" />
+        </div>
+      </div>
 
-      <label for="password" class="label">Contraseña</label>
-      <input id="password" type="password" name="password" required />
+      <div class="field-group">
+        <label for="password" class="label">Contraseña</label>
+        <div class="input-wrap">
+          <svg class="icon input-leading-icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
+          <input id="password" type="password" name="password" required autocomplete="current-password" />
+        </div>
+      </div>
 
       <div class="login-actions">
-        <button type="submit" class="btn btn-primary large-touch">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check"></use></svg>
-          <span>Ingresar</span>
+        <button type="submit" class="btn btn-primary large-touch login-submit">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg>
+          <span>Entrar</span>
         </button>
-        <a href="/" class="btn btn-secondary">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-          <span>Volver a operación</span>
-        </a>
       </div>
     </form>
-  </main>
 
+  </main>
   <script src="/static/js/theme.js?v={{ asset_version }}"></script>
 </body>
 </html>
