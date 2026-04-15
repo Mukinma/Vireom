@@ -565,3 +565,196 @@ html.theme-light .login-submit:hover {
     min-height: 50px;
   }
 }
+
+/* ══════════════════════════════════════════════════════
+   ACCESS ANIMATION — Iris Bloom → Glass Dissolve
+   ══════════════════════════════════════════════════════ */
+
+/* Delta calculado por JS: posición real badge → centro del card */
+:root {
+  --iris-dx: 0px;
+  --iris-dy: 0px;
+}
+
+/* ── KEYFRAMES ──────────────────────────────────────── */
+
+/* Iris bloom: logo se mueve al centro exacto y escala */
+@keyframes irisBloom {
+  0%   {
+    transform: translate(0, 0) scale(1);
+    filter: drop-shadow(0 0 7px rgba(255,255,255,0.3));
+  }
+  65%  {
+    transform: translate(var(--iris-dx), var(--iris-dy)) scale(2.6);
+    filter: drop-shadow(0 0 24px rgba(255,255,255,0.7));
+  }
+  100% {
+    transform: translate(var(--iris-dx), var(--iris-dy)) scale(2.6);
+    filter: drop-shadow(0 0 28px rgba(255,255,255,0.55));
+  }
+}
+
+/* Flare radial detrás del logo */
+@keyframes irisFlare {
+  0%   { transform: scale(0.2); opacity: 0; }
+  35%  { opacity: 0.6; }
+  100% { transform: scale(4);   opacity: 0; }
+}
+
+/* Onda de choque: tercer anillo que se expande */
+@keyframes ringShockwave {
+  0%   { transform: scale(0.4); opacity: 0.8;  border-width: 2px; }
+  100% { transform: scale(10);  opacity: 0;    border-width: 0.5px; }
+}
+
+/* Scan rings aceleran */
+@keyframes scanRingAccelerate {
+  0%   { transform: scale(1);    opacity: 0.45; }
+  50%  { transform: scale(1.28); opacity: 0.7; }
+  100% { transform: scale(1.1);  opacity: 0.88; border-color: rgba(255,255,255,0.65); }
+}
+
+/* Shell entero se disuelve */
+@keyframes shellDissolve {
+  0%   { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* Flash radial blanco sobre el viewport */
+@keyframes overlayFlash {
+  0%   { opacity: 0; }
+  38%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Error: shake del card */
+@keyframes cardShake {
+  0%,100% { transform: translateX(0);    }
+  15%     { transform: translateX(-7px); }
+  30%     { transform: translateX(6px);  }
+  45%     { transform: translateX(-5px); }
+  60%     { transform: translateX(4px);  }
+  75%     { transform: translateX(-2px); }
+}
+
+/* ── ELEMENTOS BASE: overlay + caption (siempre ocultos) */
+.login-access-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 55% 45% at 50% 50%,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(255, 255, 255, 0.05) 45%,
+    transparent 72%
+  );
+}
+
+/* Flare pseudo-element en el badge */
+.login-icon-badge::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 65%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.2);
+}
+
+/* ── ESTADO: login-access-granted ──────────────────────── */
+
+/* 1. Ocultar todo el contenido del card excepto el badge — instantáneo */
+body.login-access-granted .login-head > div:last-child,
+body.login-access-granted .field-group,
+body.login-access-granted .login-actions,
+body.login-access-granted .login-error,
+body.login-access-granted .hud-tl,
+body.login-access-granted .hud-tr,
+body.login-access-granted .hud-bl,
+body.login-access-granted .hud-br {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* 2. Card se vuelve contenedor transparente — instantáneo */
+body.login-access-granted .login-card {
+  overflow: visible;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.login-access-granted .login-card::before,
+body.login-access-granted .login-card::after {
+  display: none;
+}
+
+/* Botón "Inicio" también desaparece */
+body.login-access-granted .login-back-nav {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Sysid desaparece */
+body.login-access-granted .login-sysid {
+  opacity: 0;
+}
+
+/* 3. Iris bloom */
+body.login-access-granted .login-icon-badge {
+  animation: irisBloom 520ms cubic-bezier(0.16, 1, 0.3, 1) 40ms forwards;
+}
+body.login-access-granted .login-icon-badge::after {
+  animation: irisFlare 520ms cubic-bezier(0.16, 1, 0.3, 1) 80ms forwards;
+}
+body.login-access-granted .scan-ring.r1 {
+  animation: scanRingAccelerate 440ms cubic-bezier(0.16, 1, 0.3, 1) 40ms forwards;
+}
+body.login-access-granted .scan-ring.r2 {
+  animation: scanRingAccelerate 440ms cubic-bezier(0.16, 1, 0.3, 1) 90ms forwards;
+}
+body.login-access-granted .login-icon-badge .shockwave-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  animation: ringShockwave 600ms cubic-bezier(0.16, 1, 0.3, 1) 60ms forwards;
+}
+
+/* 4. Dissolve + flash */
+body.login-access-granted .login-shell {
+  animation: shellDissolve 300ms cubic-bezier(0.4, 0, 1, 1) 560ms forwards;
+}
+body.login-access-granted .login-access-overlay {
+  animation: overlayFlash 300ms ease-in-out 560ms forwards;
+}
+
+/* ── ESTADO: login-access-denied ───────────────────────── */
+body.login-access-denied .login-card {
+  animation: cardShake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ── REDUCED MOTION fallback ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  body.login-access-granted .login-icon-badge,
+  body.login-access-granted .login-icon-badge::after,
+  body.login-access-granted .scan-ring.r1,
+  body.login-access-granted .scan-ring.r2,
+  body.login-access-granted .login-access-overlay {
+    animation: none !important;
+  }
+  body.login-access-granted .login-shell {
+    opacity: 0;
+    transition: opacity 180ms ease !important;
+  }
+  body.login-access-denied .login-card {
+    animation: none !important;
+  }
+}

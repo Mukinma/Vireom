@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="/static/css/admin.css?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/enrollment.css?v={{ asset_version }}" />
   <script>
-    (function(){try{var t=localStorage.getItem('camerapi_theme');document.documentElement.className=t||'theme-dark';}catch(e){document.documentElement.className='theme-dark';}})();
+    /* Admin is always dark — no theme toggle */
+    document.documentElement.className = 'theme-dark';
   </script>
 </head>
 <body class="admin-body">
@@ -32,7 +33,11 @@
       <!-- ═══════════════ VIEW: RESUMEN ═══════════════ -->
       <section class="admin-view" id="view-resumen">
         <div class="resumen-layout">
-          <section class="card resumen-hero" id="resumenHero" aria-labelledby="resumenStatusTitle">
+          <section class="card card--hero resumen-hero" id="resumenHero" aria-labelledby="resumenStatusTitle">
+            <span class="hud-corner hud-tl" aria-hidden="true"></span>
+            <span class="hud-corner hud-tr" aria-hidden="true"></span>
+            <span class="hud-corner hud-bl" aria-hidden="true"></span>
+            <span class="hud-corner hud-br" aria-hidden="true"></span>
             <div class="resumen-hero__topline">
               <span class="resumen-hero__eyebrow">Centro de control</span>
               <span class="resumen-status-chip" id="resumenStatusChip">Monitoreando</span>
@@ -145,18 +150,26 @@
       <section class="admin-view" id="view-accesos" hidden>
         <div class="stats-row" id="statsRow">
           <div class="stat-card">
+            <span class="hud-corner hud-tl" aria-hidden="true"></span>
+            <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statToday">—</span>
             <span class="stat-label">Hoy</span>
           </div>
           <div class="stat-card stat-card--success">
+            <span class="hud-corner hud-tl" aria-hidden="true"></span>
+            <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statGranted">—</span>
             <span class="stat-label">Reconocidos</span>
           </div>
           <div class="stat-card stat-card--danger">
+            <span class="hud-corner hud-tl" aria-hidden="true"></span>
+            <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statDenied">—</span>
             <span class="stat-label">Rechazados</span>
           </div>
           <div class="stat-card stat-card--muted">
+            <span class="hud-corner hud-tl" aria-hidden="true"></span>
+            <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statManual">—</span>
             <span class="stat-label">Manuales</span>
           </div>
