@@ -37,10 +37,7 @@
 
       <div class="login-head">
         <div class="login-icon-badge" aria-hidden="true">
-          <!-- Logo Osvium: iris biométrico -->
-          <svg class="osvium-logo-svg" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-            <img src="/static/images/logo-white.svg" alt="Logo Osvium">
-          </svg>
+          <img class="osvium-logo-svg" src="/static/images/logo-white.svg" alt="Logo Osvium" aria-hidden="true">
           <span class="scan-ring r1"></span>
           <span class="scan-ring r2"></span>
         </div>
@@ -82,6 +79,11 @@
     </form>
 
   </main>
+
+  <!-- Access animation: overlay flash + caption — viven fuera del shell -->
+  <div class="login-access-overlay" aria-hidden="true"></div>
+
   <script src="/static/js/theme.js?v={{ asset_version }}"></script>
+  <script src="/static/js/login.js?v={{ asset_version }}"></script>
 </body>
 </html>

@@ -18,8 +18,8 @@
   const viewButtons = Array.from(shell.querySelectorAll('[data-view]'));
   const viewSections = Array.from(document.querySelectorAll('.admin-view'));
 
-  const drawerMedia = window.matchMedia('(max-width: 1180px)');
-  const mobileMedia = window.matchMedia('(max-width: 900px)');
+  const drawerMedia = window.matchMedia('(max-width: 1279px)');
+  const mobileMedia = window.matchMedia('(max-width: 1279px)');
 
   const VIEW_META = {
     resumen: {

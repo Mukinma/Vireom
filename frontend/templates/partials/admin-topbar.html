@@ -3,51 +3,31 @@
     <div class="admin-topbar__brand">
       <img
         class="admin-topbar__brand-logo"
-        src="/static/images/logo.svg"
+        src="/static/images/logo-white.svg"
         alt="Osvium"
-        data-theme-logo
-        data-logo-light="/static/images/logo.svg"
-        data-logo-dark="/static/images/logo-white.svg"
       />
-      <strong class="admin-topbar__brand-name">Osvium</strong>
     </div>
 
     <span class="admin-topbar__divider" aria-hidden="true"></span>
-    <strong id="viewTitle" class="admin-topbar__view">Centro de control</strong>
-  </div>
-
-  <div class="admin-topbar__right">
-    <div class="admin-topbar__actions" role="group" aria-label="Acciones rápidas">
-      <button
-        class="admin-topbar__action"
-        type="button"
-        data-theme-toggle
-        aria-label="Cambiar apariencia"
-        title="Apariencia"
-      >
-        <span class="admin-topbar__action-icon" aria-hidden="true">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#contrast-filled"></use></svg>
-        </span>
-        <span class="sr-only">Cambiar apariencia</span>
-      </button>
-
-      <button
-        class="admin-topbar__action admin-topbar__action--danger"
-        type="button"
-        data-logout-action
-        aria-label="Cerrar sesión"
-        title="Cerrar sesión"
-      >
-        <span class="admin-topbar__action-icon" aria-hidden="true">
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#logout-filled"></use></svg>
-        </span>
-        <span class="sr-only">Cerrar sesión</span>
-      </button>
-    </div>
 
     <div class="admin-topbar__clock" aria-label="Hora actual">
       <strong id="adminClockTime">--:--</strong>
       <span id="adminClockDate">-- --- ----</span>
     </div>
+  </div>
+
+  <div class="admin-topbar__right">
+    <button
+      class="admin-topbar__action admin-topbar__action--danger"
+      type="button"
+      data-logout-action
+      aria-label="Cerrar sesión"
+      title="Cerrar sesión"
+    >
+      <span class="admin-topbar__action-icon" aria-hidden="true">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#logout-filled"></use></svg>
+      </span>
+      <span class="topbar-logout-label">Salir</span>
+    </button>
   </div>
 </header>
