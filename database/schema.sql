@@ -72,7 +72,18 @@ CREATE INDEX IF NOT EXISTS idx_admin_rol ON administradores(rol);
 CREATE INDEX IF NOT EXISTS idx_admin_activo ON administradores(activo);
 
 -- =========================
--- 6. Índices de rendimiento
+-- 6. Tabla model_meta
+-- =========================
+
+CREATE TABLE IF NOT EXISTS model_meta (
+    id INTEGER PRIMARY KEY CHECK(id = 1),
+    trained_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    samples INTEGER NOT NULL DEFAULT 0,
+    unique_users INTEGER NOT NULL DEFAULT 0
+);
+
+-- =========================
+-- 7. Índices de rendimiento
 -- =========================
 
 CREATE INDEX IF NOT EXISTS idx_accesos_fecha ON accesos(fecha);

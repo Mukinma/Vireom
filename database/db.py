@@ -167,8 +167,8 @@ class Database:
         return dict(row)
 
     def update_config(self, umbral_confianza: float, tiempo_apertura_seg: int, max_intentos: int) -> None:
-        if not (0.0 <= float(umbral_confianza) <= 100.0):
-            raise ValueError("umbral_confianza fuera de rango 0..100")
+        if not (1.0 <= float(umbral_confianza) <= 200.0):
+            raise ValueError("umbral_confianza fuera de rango 1..200")
         if not (1 <= int(tiempo_apertura_seg) <= 30):
             raise ValueError("tiempo_apertura_seg fuera de rango 1..30")
         if not (1 <= int(max_intentos) <= 10):
@@ -344,6 +344,46 @@ class Database:
             (lim, off),
         )
         return [dict(row) for row in rows]
+
+    # ── model_meta helpers ──────────────────────────────────────────
+
+    def get_model_meta(self) -> Optional[dict[str, Any]]:
+        row = self.fetch_one("SELECT trained_at, samples, unique_users FROM model_meta WHERE id=1")
+        return dict(row) if row else None
+
+    def save_model_meta(self, samples: int, unique_users: int) -> None:
+        self.execute(
+            """
+            INSERT INTO model_meta (id, trained_at, samples, unique_users)
+            VALUES (1, CURRENT_TIMESTAMP, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                trained_at = CURRENT_TIMESTAMP,
+                samples = excluded.samples,
+                unique_users = excluded.unique_users
+            """,
+            (int(samples), int(unique_users)),
+        )
+
+    # ── administradores helpers ─────────────────────────────────────
+
+    def get_admin_by_username(self, username: str) -> Optional[dict[str, Any]]:
+        row = self.fetch_one(
+            "SELECT id, username, password_hash, rol, activo FROM administradores WHERE username=? AND activo=1",
+            (username,),
+        )
+        return dict(row) if row else None
+
+    def upsert_admin_password(self, username: str, password_hash: str) -> None:
+        self.execute(
+            """
+            INSERT INTO administradores (username, password_hash, rol, activo)
+            VALUES (?, ?, 'CEO', 1)
+            ON CONFLICT(username) DO UPDATE SET
+                password_hash = excluded.password_hash,
+                activo = 1
+            """,
+            (username, password_hash),
+        )
 
 
 db = Database()
