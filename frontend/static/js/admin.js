@@ -7,12 +7,44 @@ const newUserName = document.getElementById('newUserName');
 const createResult = document.getElementById('createResult');
 const trainBtn = document.getElementById('trainBtn');
 const trainResult = document.getElementById('trainResult');
-const cfgThreshold = document.getElementById('cfgThreshold');
-const cfgOpenSec = document.getElementById('cfgOpenSec');
-const cfgMaxAttempts = document.getElementById('cfgMaxAttempts');
-const saveConfigBtn = document.getElementById('saveConfigBtn');
-const restartBtn = document.getElementById('restartBtn');
 const manualOpenAdminBtn = document.getElementById('manualOpenAdminBtn');
+
+// Settings — config refs
+const cfgThreshold = document.getElementById('cfgThreshold');
+const applyThresholdBtn = document.getElementById('applyThresholdBtn');
+const recogSegment = document.getElementById('recogSegment');
+const recogPresetSummary = document.getElementById('recogPresetSummary');
+const recogCustomValue = document.getElementById('recogCustomValue');
+const maxAttemptsStepper = document.getElementById('maxAttemptsStepper');
+const maxAttemptsValue = document.getElementById('maxAttemptsValue');
+const openSecStepper = document.getElementById('openSecStepper');
+const openSecValue = document.getElementById('openSecValue');
+const doorTimeSummary = document.getElementById('doorTimeSummary');
+
+// Settings — diagnostics
+const diagnosticsSummary = document.getElementById('diagnosticsSummary');
+const diagnosticsRootIcon = document.getElementById('diagnosticsRootIcon');
+const diagnosticsDetailList = document.getElementById('diagnosticsDetailList');
+
+// Settings — account
+const accountDisplayName = document.getElementById('accountDisplayName');
+const accountUsernameSummary = document.getElementById('accountUsernameSummary');
+const changePasswordBtn = document.getElementById('changePasswordBtn');
+const passwordSheet = document.getElementById('passwordSheet');
+const passwordSheetBackdrop = document.getElementById('passwordSheetBackdrop');
+const currentPasswordInput = document.getElementById('currentPasswordInput');
+const newPasswordInput = document.getElementById('newPasswordInput');
+const passwordSheetError = document.getElementById('passwordSheetError');
+const passwordSheetCancel = document.getElementById('passwordSheetCancel');
+const passwordSheetConfirm = document.getElementById('passwordSheetConfirm');
+
+// Settings — device info
+const deviceInfoName = document.getElementById('deviceInfoName');
+const deviceInfoVersion = document.getElementById('deviceInfoVersion');
+const deviceInfoHostname = document.getElementById('deviceInfoHostname');
+const deviceInfoIp = document.getElementById('deviceInfoIp');
+const deviceInfoDisk = document.getElementById('deviceInfoDisk');
+const deviceInfoUptime = document.getElementById('deviceInfoUptime');
 const adminToast = document.getElementById('adminToast');
 const adminToastText = document.getElementById('adminToastText');
 const adminToastSub = document.getElementById('adminToastSub');
@@ -828,11 +860,136 @@ async function loadStatus() {
   return cachedStatus;
 }
 
+/* ── Settings helpers ── */
+
+const PRESETS = { 50: 'Estricto', 70: 'Equilibrado', 95: 'Permisivo' };
+
+function getPresetName(umbral) {
+  const num = Number(umbral);
+  return PRESETS[num] || null;
+}
+
+function applyPresetUI(umbral) {
+  const num = Number(umbral);
+  const name = getPresetName(num);
+  if (recogSegment) {
+    recogSegment.querySelectorAll('.settings-segment__btn').forEach((btn) => {
+      const val = btn.dataset.preset;
+      const isActive = val === String(num) || (val === 'custom' && !name);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      if (val === 'custom') {
+        btn.hidden = Boolean(name);
+        if (!name && recogCustomValue) recogCustomValue.textContent = num;
+      }
+    });
+  }
+  if (recogPresetSummary) {
+    recogPresetSummary.textContent = name || `Personalizado (${num})`;
+  }
+  if (cfgThreshold) cfgThreshold.value = num;
+}
+
+function formatUptime(seconds) {
+  const s = Number(seconds);
+  if (Number.isNaN(s) || s < 0) return '—';
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
+
 async function loadConfig() {
   const cfg = await api('/api/config');
-  if (cfgThreshold) cfgThreshold.value = cfg.umbral_confianza;
-  if (cfgOpenSec) cfgOpenSec.value = cfg.tiempo_apertura_seg;
-  if (cfgMaxAttempts) cfgMaxAttempts.value = cfg.max_intentos;
+  applyPresetUI(cfg.umbral_confianza);
+  if (maxAttemptsValue) maxAttemptsValue.textContent = cfg.max_intentos;
+  if (openSecValue) openSecValue.textContent = cfg.tiempo_apertura_seg;
+  if (doorTimeSummary) doorTimeSummary.textContent = `${cfg.tiempo_apertura_seg} segundo${cfg.tiempo_apertura_seg !== 1 ? 's' : ''}`;
+}
+
+async function saveConfig(patch = {}) {
+  // build full payload from current UI values
+  const umbral = Number(cfgThreshold?.value || 70);
+  const intentos = Number(maxAttemptsValue?.textContent || 3);
+  const segundos = Number(openSecValue?.textContent || 5);
+  try {
+    await api('/api/config', {
+      method: 'PUT',
+      body: JSON.stringify({
+        umbral_confianza: patch.umbral_confianza ?? umbral,
+        tiempo_apertura_seg: patch.tiempo_apertura_seg ?? segundos,
+        max_intentos: patch.max_intentos ?? intentos,
+      }),
+    });
+    showAdminToast({ text: 'Ajuste guardado', sub: 'Configuración aplicada', cls: 'success' });
+  } catch (error) {
+    console.error(error);
+    showAdminToast({ text: 'No se pudo guardar', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
+  }
+}
+
+let configSaveTimer = null;
+function debouncedSaveConfig(patch = {}) {
+  if (configSaveTimer) clearTimeout(configSaveTimer);
+  configSaveTimer = setTimeout(() => saveConfig(patch), 400);
+}
+
+async function loadDiagnostics() {
+  try {
+    const data = await api('/api/system/diagnostics');
+    if (diagnosticsSummary) diagnosticsSummary.textContent = data.summary;
+    if (diagnosticsRootIcon) {
+      diagnosticsRootIcon.classList.toggle('is-warning', !data.all_ok);
+    }
+    if (diagnosticsDetailList) {
+      diagnosticsDetailList.innerHTML = Object.entries(data.checks).map(([key, check], idx, arr) => {
+        const labels = { camera: 'Cámara', model: 'Reconocimiento facial', door: 'Control de puerta', storage: 'Almacenamiento' };
+        const label = labels[key] || key;
+        const pillCls = check.ok ? 'settings-diag-pill--ok' : 'settings-diag-pill--warn';
+        const icon = check.ok
+          ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+          : '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>';
+        const divider = idx < arr.length - 1 ? '<div class="settings-row-divider" style="margin-left:58px"></div>' : '';
+        return `<div class="settings-diag-row">
+          <div class="settings-diag-pill ${pillCls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg></div>
+          <div class="settings-diag-body"><p class="settings-diag-title">${escapeHtml(label)}</p><p class="settings-diag-msg">${escapeHtml(check.message)}</p></div>
+        </div>${divider}`;
+      }).join('');
+    }
+  } catch (error) {
+    console.error('loadDiagnostics failed:', error);
+    const raw = String(error?.message || '');
+    const isNotFound = raw.includes('Not Found') || raw.includes('404');
+    const friendly = isNotFound
+      ? 'Reinicia el servidor para activar diagnóstico'
+      : 'No se pudo obtener el diagnóstico';
+    if (diagnosticsSummary) diagnosticsSummary.textContent = friendly;
+    if (diagnosticsRootIcon) diagnosticsRootIcon.classList.add('is-warning');
+    if (diagnosticsDetailList) {
+      const detail = isNotFound
+        ? 'El servidor está corriendo una versión sin los nuevos endpoints. Reinicia el proceso (Ctrl+C y vuelve a ejecutar) para que carguen.'
+        : `Detalle técnico: ${escapeHtml(getErrorMessage(error))}`;
+      diagnosticsDetailList.innerHTML = `<div class="settings-diag-row">
+        <div class="settings-diag-pill settings-diag-pill--warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></div>
+        <div class="settings-diag-body"><p class="settings-diag-title">${escapeHtml(friendly)}</p><p class="settings-diag-msg">${detail}</p></div>
+      </div>`;
+    }
+  }
+}
+
+async function loadDeviceInfo() {
+  try {
+    const data = await api('/api/system/device-info');
+    if (deviceInfoName) deviceInfoName.textContent = data.device_name || '—';
+    if (deviceInfoVersion) deviceInfoVersion.textContent = data.software_version || '—';
+    if (deviceInfoHostname) deviceInfoHostname.textContent = data.hostname || '—';
+    if (deviceInfoIp) deviceInfoIp.textContent = data.local_ip || '—';
+    if (deviceInfoDisk) deviceInfoDisk.textContent = data.disk_free_gb != null ? `${data.disk_free_gb} GB libres de ${data.disk_total_gb} GB` : '—';
+    if (deviceInfoUptime) deviceInfoUptime.textContent = formatUptime(data.uptime_seconds);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 /* ── Actions: Users ── */
@@ -946,46 +1103,71 @@ trainBtn?.addEventListener('click', async () => {
   }
 });
 
-/* ── Actions: Config ── */
+/* ── Settings: Preset segment ── */
 
-saveConfigBtn?.addEventListener('click', async () => {
-  try {
-    await api('/api/config', {
-      method: 'PUT',
-      body: JSON.stringify({
-        umbral_confianza: Number(cfgThreshold.value),
-        tiempo_apertura_seg: Number(cfgOpenSec.value),
-        max_intentos: Number(cfgMaxAttempts.value),
-      }),
-    });
-    showAdminToast({ text: 'Configuracion guardada', sub: 'Parametros aplicados', cls: 'success' });
-  } catch (error) {
-    console.error(error);
-    showAdminToast({ text: 'No se pudo guardar', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
-  }
+recogSegment?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.settings-segment__btn');
+  if (!btn || btn.dataset.preset === 'custom') return;
+  const preset = Number(btn.dataset.preset);
+  if (!PRESETS[preset]) return;
+  applyPresetUI(preset);
+  debouncedSaveConfig({ umbral_confianza: preset });
 });
 
-/* ── Actions: Maintenance ── */
+/* ── Settings: Steppers ── */
 
-restartBtn?.addEventListener('click', async () => {
-  const confirmed = await openAdminConfirm({
-    eyebrow: 'Mantenimiento',
-    title: 'Reiniciar sistema',
-    text: 'El servicio se interrumpira brevemente mientras el sistema se reinicia.',
-    confirmLabel: 'Reiniciar',
-    tone: 'warning',
-  });
-  if (!confirmed) return;
-  try {
-    await api('/api/restart', { method: 'POST' });
-    showAdminToast({ text: 'Reinicio solicitado', sub: 'El sistema se reiniciara', cls: 'warning', timeout: 3400 });
-  } catch (error) {
-    console.error(error);
-    showAdminToast({ text: 'Error al reiniciar', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
+function initStepper(stepper, valueEl, onChange) {
+  if (!stepper || !valueEl) return;
+  const min = Number(stepper.dataset.min ?? 1);
+  const max = Number(stepper.dataset.max ?? 20);
+
+  function update(val) {
+    const clamped = Math.min(max, Math.max(min, val));
+    valueEl.textContent = clamped;
+    stepper.querySelector('[data-action="dec"]').disabled = clamped <= min;
+    stepper.querySelector('[data-action="inc"]').disabled = clamped >= max;
+    return clamped;
   }
+
+  stepper.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const current = Number(valueEl.textContent);
+    const next = btn.dataset.action === 'inc' ? current + 1 : current - 1;
+    const clamped = update(next);
+    onChange(clamped);
+  });
+
+  update(Number(valueEl.textContent));
+}
+
+initStepper(maxAttemptsStepper, maxAttemptsValue, (val) => {
+  debouncedSaveConfig({ max_intentos: val });
+});
+
+initStepper(openSecStepper, openSecValue, (val) => {
+  if (doorTimeSummary) doorTimeSummary.textContent = `${val} segundo${val !== 1 ? 's' : ''}`;
+  debouncedSaveConfig({ tiempo_apertura_seg: val });
+});
+
+/* ── Settings: Advanced threshold ── */
+
+applyThresholdBtn?.addEventListener('click', () => {
+  const val = Number(cfgThreshold?.value);
+  if (!val || val < 1 || val > 200) return;
+  applyPresetUI(val);
+  debouncedSaveConfig({ umbral_confianza: val });
 });
 
 manualOpenAdminBtn?.addEventListener('click', async () => {
+  const confirmed = await openAdminConfirm({
+    eyebrow: 'Mantenimiento',
+    title: 'Abrir puerta ahora',
+    text: 'Se enviará un pulso al actuador para abrir la puerta manualmente.',
+    confirmLabel: 'Abrir',
+    tone: 'primary',
+  });
+  if (!confirmed) return;
   try {
     await api('/api/manual-open', { method: 'POST' });
     await loadStatus();
@@ -994,6 +1176,71 @@ manualOpenAdminBtn?.addEventListener('click', async () => {
     console.error(error);
     showAdminToast({ text: 'No se pudo abrir', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
   }
+});
+
+/* ── Settings: Password sheet ── */
+
+function openPasswordSheet() {
+  if (!passwordSheet) return;
+  if (currentPasswordInput) currentPasswordInput.value = '';
+  if (newPasswordInput) newPasswordInput.value = '';
+  if (passwordSheetError) { passwordSheetError.textContent = ''; passwordSheetError.hidden = true; }
+  passwordSheet.classList.remove('is-hidden');
+  passwordSheet.setAttribute('aria-hidden', 'false');
+  setTimeout(() => currentPasswordInput?.focus(), 80);
+}
+
+function closePasswordSheet() {
+  if (!passwordSheet) return;
+  passwordSheet.classList.add('is-hidden');
+  passwordSheet.setAttribute('aria-hidden', 'true');
+}
+
+changePasswordBtn?.addEventListener('click', openPasswordSheet);
+passwordSheetCancel?.addEventListener('click', closePasswordSheet);
+passwordSheetBackdrop?.addEventListener('click', closePasswordSheet);
+
+passwordSheetConfirm?.addEventListener('click', async () => {
+  const current = currentPasswordInput?.value || '';
+  const next = newPasswordInput?.value || '';
+  if (!current || !next) {
+    if (passwordSheetError) { passwordSheetError.textContent = 'Completa ambos campos.'; passwordSheetError.hidden = false; }
+    return;
+  }
+  if (next.length < 8) {
+    if (passwordSheetError) { passwordSheetError.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.'; passwordSheetError.hidden = false; }
+    return;
+  }
+  if (passwordSheetError) passwordSheetError.hidden = true;
+  passwordSheetConfirm.disabled = true;
+  passwordSheetConfirm.textContent = 'Guardando…';
+  try {
+    await api('/api/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: current, new_password: next }),
+    });
+    closePasswordSheet();
+    showAdminToast({ text: 'Contraseña actualizada', sub: 'Los cambios se aplicaron correctamente', cls: 'success' });
+  } catch (error) {
+    const msg = getErrorMessage(error, 'No se pudo cambiar la contraseña.');
+    if (passwordSheetError) { passwordSheetError.textContent = msg; passwordSheetError.hidden = false; }
+  } finally {
+    passwordSheetConfirm.disabled = false;
+    passwordSheetConfirm.textContent = 'Cambiar';
+  }
+});
+
+/* ── Settings: back buttons ── */
+
+document.querySelectorAll('[data-back]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.back;
+    if (window.CameraPIAdminLayout?.navigateToView) {
+      window.CameraPIAdminLayout.navigateToView(target);
+    } else {
+      window.location.hash = target;
+    }
+  });
 });
 
 /* ── Personas / Enrolamiento navigation ── */
@@ -1026,11 +1273,28 @@ window.startEnrollForUser = function (userId, userName) {
 
 window.showAdminToast = showAdminToast;
 
+/* ── Settings: view-change lazy load ── */
+
+window.addEventListener('admin:viewchange', (e) => {
+  const { viewId } = e.detail || {};
+  if (viewId === 'sistema' || viewId === 'sistema-diagnostico') {
+    loadDiagnostics().catch(console.error);
+  }
+  if (viewId === 'sistema-acerca') {
+    loadDeviceInfo().catch(console.error);
+  }
+});
+
 /* ── Init ── */
 
 async function init() {
   window.CameraPITheme?.initTheme();
   window.CameraPITheme?.bindToggleButtons();
+
+  // Populate account display from config username
+  const adminUser = document.querySelector('meta[name="admin-user"]')?.content || 'admin';
+  if (accountDisplayName) accountDisplayName.textContent = adminUser;
+  if (accountUsernameSummary) accountUsernameSummary.textContent = adminUser;
 
   await Promise.all([
     loadUsers(),
@@ -1038,6 +1302,9 @@ async function init() {
     loadStatus(),
     loadConfig(),
   ]);
+
+  // Pre-load diagnostics in background
+  loadDiagnostics().catch(console.error);
 
   dashboardReady = true;
   renderDashboardFromCache();

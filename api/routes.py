@@ -1,11 +1,11 @@
 import hmac
 import logging
-import os
-import signal
-import threading
+import shutil
+import socket
 import time
 from typing import Optional
 
+import bcrypt
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -46,10 +46,30 @@ def _admin_required(request: Request) -> None:
         raise HTTPException(status_code=401, detail="No autorizado")
 
 
+def _verify_admin_password(username: str, password: str) -> bool:
+    """Verifica credenciales: primero SQLite (bcrypt), luego fallback a .env (texto plano)."""
+    admin_row = db.get_admin_by_username(username)
+    if admin_row:
+        try:
+            return bcrypt.checkpw(password.encode("utf-8"), admin_row["password_hash"].encode("utf-8"))
+        except Exception:
+            return False
+    # Fallback: admin no está en DB aún, usar credenciales de .env
+    admin_password = config.admin_password
+    valid_user = hmac.compare_digest(username, config.admin_user)
+    valid_password = bool(admin_password) and hmac.compare_digest(password, admin_password)
+    return valid_user and valid_password
+
+
 class ConfigUpdate(BaseModel):
     umbral_confianza: float = Field(ge=1, le=200)
     tiempo_apertura_seg: int = Field(ge=1, le=20)
     max_intentos: int = Field(ge=1, le=20)
+
+
+class ChangePasswordPayload(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class EnrollmentStart(BaseModel):
@@ -83,15 +103,15 @@ def admin(request: Request):
             "login.html",
             _template_context(request, login_error=has_error),
         )
-    return request.app.state.templates.TemplateResponse("admin.html", _template_context(request))
+    return request.app.state.templates.TemplateResponse(
+        "admin.html",
+        _template_context(request, admin_user=config.admin_user),
+    )
 
 
 @router.post("/auth/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    admin_password = config.admin_password
-    valid_user = hmac.compare_digest(username, config.admin_user)
-    valid_password = bool(admin_password) and hmac.compare_digest(password, admin_password)
-    if valid_user and valid_password:
+    if _verify_admin_password(username, password):
         request.session["admin_authenticated"] = True
         return RedirectResponse(url="/admin", status_code=303)
     client_ip = request.client.host if request.client else "unknown"
@@ -284,6 +304,13 @@ def train(request: Request):
         result.get("samples_used"),
         result.get("unique_users"),
     )
+    try:
+        db.save_model_meta(
+            samples=result.get("samples_used", 0),
+            unique_users=result.get("unique_users", 0),
+        )
+    except Exception:
+        logger.exception("train_save_meta_failed")
     return {**result, "reloaded": True}
 
 
@@ -308,18 +335,143 @@ def access_logs(request: Request, limit: int = 100, offset: int = 0):
     return db.list_access_logs(limit=limit, offset=offset)
 
 
-@router.post("/api/restart")
-def restart(request: Request):
+@router.get("/api/system/diagnostics")
+def system_diagnostics(request: Request):
     _admin_required(request)
-    if not config.debug:
-        raise HTTPException(status_code=403, detail="No permitido en produccion")
+    service = request.app.state.service
+    detail = service.health_detail()
 
-    def _restart_proc():
-        time.sleep(0.5)
-        os.kill(os.getpid(), signal.SIGTERM)
+    # Cámara
+    camera_ok = bool(detail.get("camera_active"))
+    if camera_ok:
+        camera_msg = "La cámara está funcionando correctamente"
+    else:
+        camera_msg = "No detectamos la cámara — verifica la conexión"
 
-    threading.Thread(target=_restart_proc, daemon=True).start()
-    return JSONResponse({"ok": True, "message": "Reinicio solicitado"})
+    # Modelo
+    model_loaded = bool(detail.get("model_loaded"))
+    meta = db.get_model_meta()
+    if model_loaded and meta:
+        model_msg = f"El sistema reconoce a {meta['unique_users']} persona{'s' if meta['unique_users'] != 1 else ''}"
+        model_trained_at = meta.get("trained_at")
+        model_users = meta.get("unique_users", 0)
+    elif model_loaded:
+        model_msg = "Modelo activo, sin historial de entrenamiento"
+        model_trained_at = None
+        model_users = 0
+    else:
+        model_msg = "Aún no hay un modelo entrenado — ve a Mantenimiento para entrenar"
+        model_trained_at = None
+        model_users = 0
+
+    # Puerta / GPIO
+    gpio_ok = bool(detail.get("gpio_initialized"))
+    gpio_mode = "rpi" if gpio_ok else "simulado"
+    if gpio_ok:
+        door_msg = "La puerta responde correctamente"
+    else:
+        door_msg = "Control de puerta no disponible (modo simulado)"
+
+    # Almacenamiento
+    try:
+        usage = shutil.disk_usage("/")
+        free_gb = usage.free / (1024 ** 3)
+        percent_used = (usage.used / usage.total) * 100
+        storage_ok = free_gb >= 0.5
+        if storage_ok:
+            storage_msg = f"Hay suficiente espacio disponible ({free_gb:.1f} GB libres)"
+        else:
+            storage_msg = f"Poco espacio en disco ({free_gb:.1f} GB libres) — podrían perderse registros nuevos"
+    except Exception:
+        free_gb = 0.0
+        percent_used = 0.0
+        storage_ok = False
+        storage_msg = "No se pudo verificar el espacio en disco"
+
+    issues = sum([not camera_ok, not model_loaded, not gpio_ok, not storage_ok])
+    if issues == 0:
+        summary = "Todo en orden"
+    elif issues == 1:
+        summary = "Hay 1 aspecto a revisar"
+    else:
+        summary = f"Hay {issues} aspectos a revisar"
+
+    return {
+        "summary": summary,
+        "all_ok": issues == 0,
+        "checks": {
+            "camera": {"ok": camera_ok, "message": camera_msg},
+            "model": {
+                "ok": model_loaded,
+                "message": model_msg,
+                "trained_users": model_users,
+                "last_trained_at": model_trained_at,
+            },
+            "door": {"ok": gpio_ok, "message": door_msg, "mode": gpio_mode},
+            "storage": {"ok": storage_ok, "message": storage_msg, "free_gb": round(free_gb, 2), "percent_used": round(percent_used, 1)},
+        },
+    }
+
+
+@router.get("/api/system/device-info")
+def system_device_info(request: Request):
+    _admin_required(request)
+
+    hostname = socket.gethostname()
+
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+    except Exception:
+        local_ip = "No disponible"
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+    uptime_seconds = int(time.monotonic())
+
+    try:
+        usage = shutil.disk_usage("/")
+        disk_free_gb = round(usage.free / (1024 ** 3), 2)
+        disk_total_gb = round(usage.total / (1024 ** 3), 2)
+    except Exception:
+        disk_free_gb = 0.0
+        disk_total_gb = 0.0
+
+    software_version = getattr(config, "version", "1.0.0")
+    device_name = getattr(config, "device_name", "Vireom — Acceso Principal")
+
+    return {
+        "device_name": device_name,
+        "hostname": hostname,
+        "local_ip": local_ip,
+        "uptime_seconds": uptime_seconds,
+        "disk_free_gb": disk_free_gb,
+        "disk_total_gb": disk_total_gb,
+        "software_version": software_version,
+    }
+
+
+@router.post("/api/admin/change-password")
+def change_password(payload: ChangePasswordPayload, request: Request):
+    _admin_required(request)
+    admin_username = config.admin_user
+
+    if not _verify_admin_password(admin_username, payload.current_password):
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
+
+    password_hash = bcrypt.hashpw(
+        payload.new_password.encode("utf-8"),
+        bcrypt.gensalt(),
+    ).decode("utf-8")
+
+    db.upsert_admin_password(admin_username, password_hash)
+    auth_logger.info("admin_password_changed username=%s", admin_username)
+    return {"ok": True}
 
 
 # ── Enrollment endpoints ───────────────────────────────────────────

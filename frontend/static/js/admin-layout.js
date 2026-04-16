@@ -37,6 +37,27 @@
     sistema: {
       title: 'Sistema',
     },
+    'sistema-diagnostico': {
+      title: 'Diagnóstico',
+    },
+    'sistema-reconocimiento': {
+      title: 'Reconocimiento',
+    },
+    'sistema-puerta': {
+      title: 'Puerta',
+    },
+    'sistema-mantenimiento': {
+      title: 'Mantenimiento',
+    },
+    'sistema-cuenta': {
+      title: 'Cuenta',
+    },
+    'sistema-acerca': {
+      title: 'Acerca de',
+    },
+    'sistema-avanzado': {
+      title: 'Avanzado',
+    },
   };
 
   const VALID_VIEWS = Object.keys(VIEW_META);
@@ -152,6 +173,7 @@
 
   function getActiveNavView(viewId = currentView) {
     if (shell.classList.contains('is-bottom-nav-mode') && viewId === 'enrolamiento') return 'personas';
+    if (viewId.startsWith('sistema-')) return 'sistema';
     return viewId;
   }
 

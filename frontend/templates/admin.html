@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="admin-user" content="{{ admin_user | e }}" />
   <title>Osvium · Administración</title>
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
@@ -222,71 +223,337 @@
         </div>
       </section>
 
-      <!-- ═══════════════ VIEW: SISTEMA ═══════════════ -->
-      <section class="admin-view" id="view-sistema" hidden>
-        <div class="card">
-          <div class="section-head">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sliders-filled"></use></svg>
-            <h2>Reconocimiento</h2>
-          </div>
+      <!-- ═══════════════ VIEW: SISTEMA (raíz) ═══════════════ -->
+      <section class="admin-view settings-page" id="view-sistema" hidden>
 
-          <div class="form-group">
-            <label for="cfgThreshold" class="label">Nivel de coincidencia (1–200)</label>
-            <p class="text-micro muted">Menor = más estricto. Mayor = más flexible.</p>
-            <input id="cfgThreshold" type="number" step="0.1" min="1" max="200" />
-          </div>
-
-          <div class="form-group mt-3">
-            <label for="cfgMaxAttempts" class="label">Intentos permitidos sin éxito</label>
-            <input id="cfgMaxAttempts" type="number" min="1" max="20" />
-          </div>
-
-          <hr class="separator my-4" />
-
-          <div class="section-head">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#door-filled"></use></svg>
-            <h2>Puerta</h2>
-          </div>
-
-          <div class="form-group">
-            <label for="cfgOpenSec" class="label">Tiempo de apertura (segundos)</label>
-            <input id="cfgOpenSec" type="number" min="1" max="20" />
-          </div>
-
-          <button id="saveConfigBtn" class="btn btn-primary mt-4 w-full" type="button">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg>
-            <span>Guardar ajustes</span>
-          </button>
+        <!-- Grupo 1: Diagnóstico -->
+        <div class="settings-group">
+          <a href="#sistema-diagnostico" class="settings-row settings-row--hero" id="diagnosticsRootRow">
+            <div class="settings-row__icon-wrap settings-row__icon-wrap--status" id="diagnosticsRootIcon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Diagnóstico</span>
+              <span class="settings-row__sub" id="diagnosticsSummary">Comprobando…</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#wrench-filled"></use></svg>
-            <h2>Mantenimiento</h2>
-          </div>
-          <button id="manualOpenAdminBtn" class="btn btn-secondary large-touch w-full" type="button">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#unlock-filled"></use></svg>
-            <span>Abrir puerta ahora</span>
-          </button>
-          <button id="trainBtn" class="btn btn-secondary large-touch w-full mt-3" type="button">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg>
-            <span>Reentrenar modelo</span>
-          </button>
-          <p id="trainResult" class="muted mt-2 text-sm"></p>
+        <!-- Grupo 2: Configuración -->
+        <p class="settings-group-label">Configuración</p>
+        <div class="settings-group">
+          <a href="#sistema-reconocimiento" class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Reconocimiento</span>
+              <span class="settings-row__sub" id="recogPresetSummary">Cargando…</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+          <div class="settings-row-divider"></div>
+          <a href="#sistema-puerta" class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Puerta</span>
+              <span class="settings-row__sub" id="doorTimeSummary">Cargando…</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+          <div class="settings-row-divider"></div>
+          <a href="#sistema-mantenimiento" class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Mantenimiento</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
         </div>
 
-        <div class="card card--danger-zone">
-          <div class="section-head">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-filled"></use></svg>
-            <h2>Zona delicada</h2>
+        <!-- Grupo 3: Sistema y cuenta -->
+        <p class="settings-group-label">Sistema y cuenta</p>
+        <div class="settings-group">
+          <a href="#sistema-cuenta" class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Cuenta</span>
+              <span class="settings-row__sub" id="accountUsernameSummary">Administrador</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+          <div class="settings-row-divider"></div>
+          <a href="#sistema-acerca" class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Acerca de</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+          <div class="settings-row-divider"></div>
+          <a href="#sistema-avanzado" class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Avanzado</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — DIAGNÓSTICO ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-diagnostico" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <div class="settings-group" id="diagnosticsDetailList">
+          <!-- filled by JS -->
+        </div>
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — RECONOCIMIENTO ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-reconocimiento" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <p class="settings-group-label">Modo de reconocimiento</p>
+        <div class="settings-group">
+          <div class="settings-row settings-row--control">
+            <div class="settings-segment" id="recogSegment" role="group" aria-label="Modo de reconocimiento">
+              <button class="settings-segment__btn" type="button" data-preset="50" aria-pressed="false">
+                <span class="settings-segment__name">Estricto</span>
+                <span class="settings-segment__desc">Mayor seguridad</span>
+              </button>
+              <button class="settings-segment__btn" type="button" data-preset="70" aria-pressed="false">
+                <span class="settings-segment__name">Equilibrado</span>
+                <span class="settings-segment__desc">Recomendado</span>
+              </button>
+              <button class="settings-segment__btn" type="button" data-preset="95" aria-pressed="false">
+                <span class="settings-segment__name">Permisivo</span>
+                <span class="settings-segment__desc">Más tolerante</span>
+              </button>
+              <button class="settings-segment__btn settings-segment__btn--custom" type="button" data-preset="custom" aria-pressed="false" hidden>
+                <span class="settings-segment__name">Personalizado</span>
+                <span class="settings-segment__desc" id="recogCustomValue">—</span>
+              </button>
+            </div>
           </div>
-          <p class="text-hint text-sm mb-3">Esta acción interrumpirá brevemente el servicio.</p>
-          <button id="restartBtn" class="btn btn-danger" type="button">
-            <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#power-filled"></use></svg>
-            <span>Reiniciar sistema</span>
+        </div>
+        <p class="settings-group-label">Intentos antes de bloquear</p>
+        <div class="settings-group">
+          <div class="settings-row settings-row--control">
+            <span class="settings-row__label">Intentos máximos</span>
+            <div class="settings-stepper" id="maxAttemptsStepper" data-min="1" data-max="10">
+              <button class="settings-stepper__btn" type="button" data-action="dec" aria-label="Reducir">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <span class="settings-stepper__value" id="maxAttemptsValue">3</span>
+              <button class="settings-stepper__btn" type="button" data-action="inc" aria-label="Aumentar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="settings-footer-hint">Los intentos fallidos consecutivos bloquean el acceso temporalmente.</p>
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — PUERTA ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-puerta" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <p class="settings-group-label">Tiempo de apertura</p>
+        <div class="settings-group">
+          <div class="settings-row settings-row--control">
+            <span class="settings-row__label">Segundos abierta</span>
+            <div class="settings-stepper" id="openSecStepper" data-min="1" data-max="20">
+              <button class="settings-stepper__btn" type="button" data-action="dec" aria-label="Reducir">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <span class="settings-stepper__value" id="openSecValue">5</span>
+              <button class="settings-stepper__btn" type="button" data-action="inc" aria-label="Aumentar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="settings-footer-hint">Tiempo que permanece desbloqueada la puerta tras un acceso autorizado.</p>
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — MANTENIMIENTO ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-mantenimiento" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <p class="settings-group-label">Acciones de mantenimiento</p>
+        <div class="settings-group">
+          <button id="manualOpenAdminBtn" class="settings-row settings-row--action" type="button">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Abrir puerta ahora</span>
+              <span class="settings-row__sub">Activa el actuador manualmente</span>
+            </div>
+          </button>
+          <div class="settings-row-divider"></div>
+          <button id="trainBtn" class="settings-row settings-row--action" type="button">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Reentrenar modelo</span>
+              <span class="settings-row__sub" id="trainResult">Actualiza el modelo de reconocimiento facial</span>
+            </div>
           </button>
         </div>
       </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — CUENTA ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-cuenta" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <p class="settings-group-label">Sesión actual</p>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label" id="accountDisplayName">Administrador</span>
+              <span class="settings-row__sub">Cuenta de administrador</span>
+            </div>
+          </div>
+        </div>
+        <p class="settings-group-label">Seguridad</p>
+        <div class="settings-group">
+          <button class="settings-row settings-row--action" type="button" id="changePasswordBtn">
+            <div class="settings-row__icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Cambiar contraseña</span>
+            </div>
+            <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <p class="settings-group-label">Sesión</p>
+        <div class="settings-group">
+          <button class="settings-row settings-row--danger" type="button" data-logout-action>
+            <div class="settings-row__body">
+              <span class="settings-row__label">Cerrar sesión</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — ACERCA DE ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-acerca" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <p class="settings-group-label">Información del dispositivo</p>
+        <div class="settings-group" id="deviceInfoList">
+          <div class="settings-row">
+            <div class="settings-row__body"><span class="settings-row__label">Nombre</span></div>
+            <span class="settings-row__value" id="deviceInfoName">—</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-row__body"><span class="settings-row__label">Versión del software</span></div>
+            <span class="settings-row__value" id="deviceInfoVersion">—</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-row__body"><span class="settings-row__label">Hostname</span></div>
+            <span class="settings-row__value" id="deviceInfoHostname">—</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-row__body"><span class="settings-row__label">Dirección IP</span></div>
+            <span class="settings-row__value" id="deviceInfoIp">—</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-row__body"><span class="settings-row__label">Espacio libre</span></div>
+            <span class="settings-row__value" id="deviceInfoDisk">—</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-row__body"><span class="settings-row__label">Tiempo encendido</span></div>
+            <span class="settings-row__value" id="deviceInfoUptime">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ VIEW: SISTEMA — AVANZADO ═══════════════ -->
+      <section class="admin-view settings-page settings-subpage" id="view-sistema-avanzado" hidden>
+        <button class="settings-back-btn" type="button" data-back="sistema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Sistema
+        </button>
+        <p class="settings-group-label">Parámetros avanzados</p>
+        <div class="settings-group">
+          <div class="settings-row settings-row--control settings-row--stacked">
+            <div class="settings-row__body">
+              <span class="settings-row__label">Umbral de coincidencia</span>
+              <span class="settings-row__sub">Rango 1–200 · Menor = más estricto</span>
+            </div>
+            <div class="settings-advanced-input-wrap">
+              <input id="cfgThreshold" class="settings-advanced-input" type="number" step="1" min="1" max="200" value="70" />
+              <button class="settings-advanced-apply" id="applyThresholdBtn" type="button">Aplicar</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-advanced-hint">
+          <p><strong>Estricto (50)</strong> — Más exigente. Rechaza si hay la menor duda. Puede denegar a personas registradas en condiciones difíciles.</p>
+          <p><strong>Equilibrado (70)</strong> — Configuración recomendada para la mayoría de los casos.</p>
+          <p><strong>Permisivo (95)</strong> — Acepta con mayor flexibilidad. Útil cuando las personas cambian mucho de apariencia.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════ SHEET: CAMBIAR CONTRASEÑA ═══════════════ -->
+      <div id="passwordSheet" class="settings-sheet is-hidden" aria-hidden="true">
+        <div class="settings-sheet__backdrop" id="passwordSheetBackdrop"></div>
+        <div class="settings-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="passwordSheetTitle">
+          <div class="settings-sheet__handle"></div>
+          <h2 class="settings-sheet__title" id="passwordSheetTitle">Cambiar contraseña</h2>
+          <div class="settings-sheet__field">
+            <label for="currentPasswordInput" class="settings-sheet__label">Contraseña actual</label>
+            <input id="currentPasswordInput" class="settings-sheet__input" type="password" autocomplete="current-password" placeholder="••••••••" />
+          </div>
+          <div class="settings-sheet__field">
+            <label for="newPasswordInput" class="settings-sheet__label">Nueva contraseña</label>
+            <input id="newPasswordInput" class="settings-sheet__input" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+          </div>
+          <p id="passwordSheetError" class="settings-sheet__error" hidden></p>
+          <div class="settings-sheet__actions">
+            <button class="btn btn-ghost" type="button" id="passwordSheetCancel">Cancelar</button>
+            <button class="btn btn-primary" type="button" id="passwordSheetConfirm">Cambiar</button>
+          </div>
+        </div>
+      </div>
 
     </main>
   </div>
