@@ -410,17 +410,7 @@ html.desktop-launch-pending .kiosk-camera__feed {
 }
 
 .face-guide::before {
-  content: "";
-  position: absolute;
-  inset: 8% 10%;
-  z-index: 1;
-  border-radius: 50% 50% 46% 46% / 42% 42% 56% 56%;
-  background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 72%);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 42px rgba(255, 255, 255, 0.08);
-  opacity: 0.9;
+  display: none;
 }
 
 .face-guide__silhouette {
