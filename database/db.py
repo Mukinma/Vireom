@@ -146,6 +146,18 @@ class Database:
             logger.exception("db_execute_failed query=%s", query)
             raise
 
+    def execute_many(self, query: str, params: Iterable[tuple]) -> int:
+        params_list = list(params)
+        if not params_list:
+            return 0
+        try:
+            with self.connect() as conn:
+                conn.executemany(query, params_list)
+            return len(params_list)
+        except Exception:
+            logger.exception("db_execute_many_failed query=%s", query)
+            raise
+
     def health_check(self) -> bool:
         try:
             row = self.fetch_one("SELECT 1 AS ok")
@@ -245,6 +257,22 @@ class Database:
         return self.execute(
             "INSERT INTO muestras (usuario_id, imagen_ref, pose_type) VALUES (?, ?, ?)",
             (int(user_id), imagen_ref_norm, pose),
+        )
+
+    def insert_samples_with_pose(self, user_id: int, samples: Iterable[tuple[str, str]]) -> int:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        valid_poses = {"frontal", "tilt_left", "tilt_right", "look_up", "look_down", "turn_left", "turn_right", "center"}
+        rows = []
+        for imagen_ref, pose_type in samples:
+            imagen_ref_norm = self._normalize_imagen_ref(imagen_ref)
+            pose = pose_type.strip().lower() if pose_type else "frontal"
+            if pose not in valid_poses:
+                pose = "frontal"
+            rows.append((int(user_id), imagen_ref_norm, pose))
+        return self.execute_many(
+            "INSERT INTO muestras (usuario_id, imagen_ref, pose_type) VALUES (?, ?, ?)",
+            rows,
         )
 
     def insert_sample(self, user_id: int, imagen_ref: str) -> int:

@@ -1,10 +1,13 @@
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import cv2
 import numpy as np
 
 from config import config
+
+if TYPE_CHECKING:
+    from vision.secure_storage import SecureStorage
 
 
 class LBPHRecognizer:
@@ -26,7 +29,12 @@ class LBPHRecognizer:
         )
         self.loaded = False
 
-    def load_model(self, path: str = config.model_path) -> bool:
+    def load_model(self, path: str = config.model_path,
+                   store: "Optional[SecureStorage]" = None) -> bool:
+        if store is not None:
+            ok = store.load_model(self.recognizer, path)
+            self.loaded = ok
+            return ok
         model_file = Path(path)
         if not model_file.exists():
             self.loaded = False
@@ -35,7 +43,12 @@ class LBPHRecognizer:
         self.loaded = True
         return True
 
-    def save_model(self, path: str = config.model_path) -> None:
+    def save_model(self, path: str = config.model_path,
+                   store: "Optional[SecureStorage]" = None) -> None:
+        if store is not None:
+            store.save_model(self.recognizer, path)
+            self.loaded = True
+            return
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.recognizer.write(path)
         self.loaded = True

@@ -40,7 +40,7 @@ Los sistemas de control de acceso biométrico comerciales dependen de servicios 
 ├────────┬────────┬──────────┬─────────────────────┤
 │ vision │  api   │ database │     hardware        │
 │ camera │ routes │  db.py   │  gpio_control.py    │
-│detector│        │schema.sql│  serial_control.py  │
+│detector│        │schema.sql│                     │
 │recognzr│        │          │                     │
 │trainer │        │          │                     │
 ├────────┴────────┴──────────┴─────────────────────┤
@@ -52,7 +52,7 @@ Los sistemas de control de acceso biométrico comerciales dependen de servicios 
 ## Estructura del proyecto
 
 ```
-CameraPI/
+Vireom/
 ├── main.py                  # Punto de entrada, orquestador
 ├── config.py                # Configuración centralizada (dataclass)
 ├── init_db.py               # Inicialización de la base de datos
@@ -68,14 +68,12 @@ CameraPI/
 │   ├── recognizer.py        # Reconocimiento LBPH
 │   └── trainer.py           # Entrenamiento del modelo
 ├── hardware/
-│   ├── gpio_control.py      # Control de relé GPIO
-│   └── serial_control.py    # Control serial (stub)
+│   └── gpio_control.py      # Control de relé GPIO
 ├── frontend/
 │   ├── templates/           # Jinja2 (index, login, admin)
 │   └── static/              # CSS, JS, fuentes, iconos
 ├── models/                  # Modelo LBPH entrenado (.xml)
 ├── dataset/                 # Imágenes de entrenamiento
-├── dataset_processed/       # Imágenes preprocesadas
 ├── logs/                    # Logs de ejecución y reportes
 ├── scripts de validación    # cross_validation.py, statistical_analysis.py, etc.
 ├── .env.example             # Variables de entorno de referencia
@@ -92,7 +90,7 @@ CameraPI/
 
 ```bash
 # 1. Clonar el repositorio
-git https://github.com/Mukinma/Vireom.git
+git clone https://github.com/Mukinma/Vireom.git
 cd Vireom
 
 # 2. Crear entorno virtual
@@ -184,7 +182,11 @@ Esto crea:
 | `CAMERAPI_SECRET` | Clave secreta para sesiones | `camerapi-local-secret` |
 | `CAMERAPI_ADMIN_USER` | Usuario administrador | `admin` |
 | `CAMERAPI_ADMIN_PASSWORD` | Contraseña administrador | `""` (debe definirse) |
+| `CAMERAPI_SESSION_HTTPS_ONLY` | Marca la cookie de sesión como solo HTTPS | `false` |
+| `CAMERAPI_SESSION_MAX_AGE_SECONDS` | Duración máxima de sesión | `28800` |
+| `CAMERAPI_ENABLE_RESTART` | Habilita `/api/restart` solo en modo debug | `false` |
 | `CAMERAPI_MAX_FPS` | FPS objetivo del stream de cámara | `30` |
+| `CAMERAPI_STREAM_FPS` | FPS objetivo del video MJPEG servido al navegador | `15` |
 | `CAMERAPI_PROCESS_INTERVAL_MS` | Intervalo del loop de detección/análisis | `200` |
 | `CAMERAPI_CV_THREADS` | Hilos internos de OpenCV | `2` |
 | `CAMERAPI_CAMERA_BUFFER_SIZE` | Buffer de captura de cámara | `1` |
@@ -208,14 +210,23 @@ Esto crea:
 ## Seguridad
 
 - Login administrativo local con sesión (`SessionMiddleware`)
-- Endpoints administrativos protegidos con verificación de sesión
+- Endpoints administrativos protegidos con verificación de sesión y token CSRF
+- Endpoints operativos que pueden accionar hardware requieren sesión de kiosco/admin y token CSRF
 - Validación de entradas con Pydantic
 - Sin dependencias de servicios externos ni transmisión de datos biométricos
+
+## Validación local
+
+```bash
+./.venv/bin/pytest -q
+npm test -- --run
+PYTHONPYCACHEPREFIX=/tmp/vireom-pycache ./.venv/bin/python -m compileall -q .
+./.venv/bin/python -m pip check
+```
 
 ## Licencia
 
 Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
-- Registro de actividad y errores en `logs/system.log`
 
 ## Robustez de ejecución continua
 
@@ -224,13 +235,14 @@ Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
 - Verificación de existencia/carga de modelo antes de reconocimiento
 - Manejo robusto de errores en BD y GPIO
 - Logging rotativo con `RotatingFileHandler` (5 archivos de 5MB)
+- Registro de actividad y errores en `logs/system.log`
 - Registro de tiempos por frame y errores críticos
 
 ## Health check
 
-- Endpoint: `GET /health`
-- Valida: cámara activa, modelo cargado, BD accesible y GPIO inicializado
-- Incluye métricas: `avg_recognition_ms`, `fps`, `failed_attempts_consecutive`
+- Endpoint público mínimo: `GET /health`
+- Endpoint detallado para administración: `GET /api/health/detail`
+- El detalle valida cámara, modelo, BD, GPIO e incluye métricas como `avg_recognition_ms`, `fps` y `failed_attempts_consecutive`
 
 ## Prueba de estabilidad 2 horas
 

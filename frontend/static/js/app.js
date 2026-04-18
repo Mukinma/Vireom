@@ -1,6 +1,7 @@
 import { isWakeReadyStatus } from './wake-readiness.js';
 import { isCurrentWakeAttempt } from './wake-attempt-guard.js';
 import { bindDesktopReady, isDesktopLaunchPending } from './desktop-ready.js';
+import { createFramePreviewController } from './frame-preview.js';
 
 const shell = document.getElementById('kioskShell');
 const accessToast = document.getElementById('accessToast');
@@ -75,7 +76,17 @@ let isPollingPaused = false;
 let isScanPaused = false;
 let wakeAbortController = null;
 let sleepPromise = null;
+let framePreview = null;
 const IDLE_TIMEOUT_MS = 45000;
+
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function csrfHeaders() {
+  const token = getCsrfToken();
+  return token ? { 'x-csrf-token': token } : {};
+}
 
 function getDefaultStreamSrc() {
   return videoFeed?.dataset.streamSrc || '/api/stream';
@@ -86,17 +97,20 @@ function initializeVideoFeed() {
     return;
   }
 
-  const defaultSrc = getDefaultStreamSrc();
-  videoFeed.dataset.prevSrc = defaultSrc;
+  framePreview = createFramePreviewController({
+    imageElement: videoFeed,
+    streamUrl: getDefaultStreamSrc(),
+    onError: (error) => {
+      console.warn('[frame-preview:error]', { error: error?.message || String(error), ts: Date.now() });
+    },
+  });
 
   if (desktopLaunchPending) {
-    videoFeed.setAttribute('src', '');
+    framePreview.pause();
     return;
   }
 
-  if (!videoFeed.getAttribute('src')) {
-    videoFeed.setAttribute('src', defaultSrc);
-  }
+  framePreview.resume('initial');
 }
 
 function setCameraStageActive(isActive) {
@@ -458,6 +472,9 @@ async function loadStatus() {
     gpioState.textContent = data.gpio || '-';
     fpsState.textContent = data.fps ?? 0;
     setCameraStageActive(data.camera === 'online');
+    if (data.camera === 'online') {
+      framePreview?.ensureRunning();
+    }
 
     const uiState = classifyState(data);
     setSystemBadge(uiState.badge[0], uiState.badge[1]);
@@ -515,22 +532,6 @@ function handleAnalysisResult(payload, statusCode) {
   showToast(toastKey);
 }
 
-videoFeed?.addEventListener('error', () => {
-  setSystemBadge('Error de cámara', 'state-error');
-  setCameraStageActive(false);
-  showToast('cameraError');
-  updateFaceIndicator('cameraError');
-
-  const lockSnapshot = lockscreenController?.getSnapshot?.();
-  if (lockSnapshot?.state === LOCK_STATES.WAKING) {
-    lockscreenController.dispatch({
-      type: LOCK_EVENTS.RESUME_FAIL,
-      wakeAttemptId: lockSnapshot.wakeAttemptId,
-      errorCode: 'video_feed_error',
-    });
-  }
-});
-
 faceAction = window.CameraPIFaceAction?.create({
   stageElement: cameraStage,
   videoElement: videoFeed,
@@ -555,19 +556,14 @@ function startStatusPolling() {
 
 function pauseCamera() {
   if (!videoFeed) return true;
-  if (!videoFeed.dataset.prevSrc) {
-    videoFeed.dataset.prevSrc = videoFeed.getAttribute('src') || getDefaultStreamSrc();
-  }
-  videoFeed.setAttribute('src', '');
+  framePreview?.pause();
   setCameraStageActive(false);
   return true;
 }
 
 function resumeCamera(cacheKey = 'wake') {
   if (!videoFeed) return true;
-  const prevSrc = videoFeed.dataset.prevSrc || getDefaultStreamSrc();
-  const separator = prevSrc.includes('?') ? '&' : '?';
-  videoFeed.setAttribute('src', `${prevSrc}${separator}${cacheKey}=${Date.now()}`);
+  framePreview?.resume(cacheKey);
   return true;
 }
 
@@ -588,7 +584,11 @@ function pausePolling() {
   }
   isPollingPaused = true;
   stopStatusPolling();
-  const p = fetch('/api/kiosk/sleep', { method: 'POST', credentials: 'same-origin' })
+  const p = fetch('/api/kiosk/sleep', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: csrfHeaders(),
+  })
     .then((r) => r.ok)
     .catch(() => false);
   sleepPromise = p;
@@ -610,6 +610,7 @@ async function resumePolling(wakeAttemptId) {
     const response = await fetch('/api/kiosk/wake', {
       method: 'POST',
       credentials: 'same-origin',
+      headers: csrfHeaders(),
       signal: ac.signal,
     });
     if (!response.ok) {

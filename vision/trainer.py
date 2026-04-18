@@ -5,6 +5,7 @@ import cv2
 from config import config
 from database.db import db
 from vision.recognizer import LBPHRecognizer
+from vision.secure_storage import storage as _storage
 
 
 class FaceTrainer:
@@ -20,7 +21,7 @@ class FaceTrainer:
             path = Path(sample["imagen_ref"])
             if not path.exists():
                 continue
-            image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+            image = _storage.read_image(path, flags=cv2.IMREAD_GRAYSCALE)
             if image is None:
                 continue
             image = cv2.resize(image, (200, 200))
@@ -31,7 +32,7 @@ class FaceTrainer:
             raise ValueError("No hay muestras válidas para entrenar")
 
         self.recognizer.train(images, labels)
-        self.recognizer.save_model(config.model_path)
+        self.recognizer.save_model(config.model_path, _storage)
 
         return {
             "samples_used": len(images),

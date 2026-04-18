@@ -54,6 +54,17 @@ class AppConfig:
     debug: bool = _env_bool("CAMERAPI_DEBUG", False)
     secret_key: str = _resolve_secret_key()
     cors_origins: list[str] = field(default_factory=_resolve_cors_origins)
+    session_https_only: bool = _env_bool("CAMERAPI_SESSION_HTTPS_ONLY", False)
+    session_max_age_seconds: int = _clamp_int(
+        _env_int("CAMERAPI_SESSION_MAX_AGE_SECONDS", 8 * 60 * 60),
+        300,
+        7 * 24 * 60 * 60,
+    )
+    enable_restart: bool = _env_bool("CAMERAPI_ENABLE_RESTART", False)
+
+    # Encrypt biometric files at rest (AES-128-CBC via Fernet).
+    # Requires CAMERAPI_SECRET to be set.  Run migrate_encrypt_dataset.py first.
+    storage_encrypted: bool = _env_bool("CAMERAPI_STORAGE_ENCRYPTED", False)
 
     db_path: str = "database/camerapi.db"
     model_path: str = "models/lbph_model.xml"
@@ -64,6 +75,7 @@ class AppConfig:
     frame_width: int = 640
     frame_height: int = 480
     max_fps: int = _clamp_int(_env_int("CAMERAPI_MAX_FPS", 30), 1, 120)
+    stream_fps: int = _clamp_int(_env_int("CAMERAPI_STREAM_FPS", 15), 1, 60)
     process_interval_ms: int = _clamp_int(_env_int("CAMERAPI_PROCESS_INTERVAL_MS", 200), 10, 2000)
     cv_threads: int = _clamp_int(_env_int("CAMERAPI_CV_THREADS", 2), 1, 16)
     camera_buffer_size: int = _clamp_int(_env_int("CAMERAPI_CAMERA_BUFFER_SIZE", 1), 1, 8)
@@ -98,6 +110,29 @@ class AppConfig:
     enrollment_brightness_threshold: float = 40.0
     enrollment_face_lost_timeout_ms: int = 3000
     enrollment_bbox_offset_tolerance: float = 0.04
+
+    # ── Liveness / anti-spoofing ──
+    liveness_enabled: bool = _env_bool("CAMERAPI_LIVENESS_ENABLED", False)
+    liveness_buffer_size: int = _clamp_int(_env_int("CAMERAPI_LIVENESS_BUFFER_SIZE", 10), 4, 30)
+    liveness_t_live: float = float(os.getenv("CAMERAPI_LIVENESS_T_LIVE", "0.70"))
+    liveness_t_spoof: float = float(os.getenv("CAMERAPI_LIVENESS_T_SPOOF", "0.30"))
+    liveness_w_passive: float = float(os.getenv("CAMERAPI_LIVENESS_W_PASSIVE", "0.5"))
+    liveness_w_motion: float = float(os.getenv("CAMERAPI_LIVENESS_W_MOTION", "0.5"))
+    liveness_fft_band_low: float = float(os.getenv("CAMERAPI_LIVENESS_FFT_BAND_LOW", "0.25"))
+    liveness_fft_band_high: float = float(os.getenv("CAMERAPI_LIVENESS_FFT_BAND_HIGH", "0.45"))
+    liveness_challenge_pool: list[str] = field(
+        default_factory=lambda: [
+            s.strip()
+            for s in os.getenv("CAMERAPI_LIVENESS_CHALLENGE_POOL", "blink,smile").split(",")
+            if s.strip()
+        ]
+    )
+    liveness_challenge_timeout_ms: int = _clamp_int(
+        _env_int("CAMERAPI_LIVENESS_CHALLENGE_TIMEOUT_MS", 5000), 2000, 15000
+    )
+    liveness_challenge_max_retries: int = _clamp_int(
+        _env_int("CAMERAPI_LIVENESS_CHALLENGE_MAX_RETRIES", 1), 0, 3
+    )
 
 
 config = AppConfig()

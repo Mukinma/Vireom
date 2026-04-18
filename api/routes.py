@@ -1,5 +1,6 @@
 import hmac
 import logging
+import secrets
 import shutil
 import socket
 import time
@@ -7,7 +8,7 @@ from typing import Optional
 
 import bcrypt
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from config import config
@@ -17,15 +18,26 @@ from rate_limit import limiter
 router = APIRouter()
 auth_logger = logging.getLogger("camerapi.auth")
 logger = logging.getLogger("camerapi.routes")
+CSRF_SESSION_KEY = "csrf_token"
+CSRF_HEADER = "x-csrf-token"
 
 
 def _template_context(request: Request, **extra: object) -> dict[str, object]:
     context: dict[str, object] = {
         "request": request,
         "asset_version": getattr(request.app.state, "asset_version", "dev"),
+        "csrf_token": _get_or_create_csrf_token(request),
     }
     context.update(extra)
     return context
+
+
+def _get_or_create_csrf_token(request: Request) -> str:
+    token = request.session.get(CSRF_SESSION_KEY)
+    if not isinstance(token, str) or len(token) < 32:
+        token = secrets.token_urlsafe(32)
+        request.session[CSRF_SESSION_KEY] = token
+    return token
 
 
 def _is_admin(request: Request) -> bool:
@@ -44,6 +56,23 @@ def _session_required(request: Request) -> None:
 def _admin_required(request: Request) -> None:
     if not _is_admin(request):
         raise HTTPException(status_code=401, detail="No autorizado")
+
+
+def _csrf_required(request: Request, supplied_token: Optional[str] = None) -> None:
+    expected = request.session.get(CSRF_SESSION_KEY)
+    token = supplied_token or request.headers.get(CSRF_HEADER, "")
+    if not isinstance(expected, str) or not token or not hmac.compare_digest(expected, token):
+        raise HTTPException(status_code=403, detail="Token CSRF inválido")
+
+
+def _session_write_required(request: Request, supplied_token: Optional[str] = None) -> None:
+    _session_required(request)
+    _csrf_required(request, supplied_token)
+
+
+def _admin_write_required(request: Request, supplied_token: Optional[str] = None) -> None:
+    _admin_required(request)
+    _csrf_required(request, supplied_token)
 
 
 def _verify_admin_password(username: str, password: str) -> bool:
@@ -92,7 +121,11 @@ class SimulateAccessPayload(BaseModel):
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
     request.session.setdefault("kiosk", True)
-    return request.app.state.templates.TemplateResponse("index.html", _template_context(request))
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "index.html",
+        _template_context(request),
+    )
 
 
 @router.get("/admin", response_class=HTMLResponse)
@@ -100,10 +133,12 @@ def admin(request: Request):
     if not _is_admin(request):
         has_error = request.query_params.get("error") == "1"
         return request.app.state.templates.TemplateResponse(
+            request,
             "login.html",
             _template_context(request, login_error=has_error),
         )
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin.html",
         _template_context(request, admin_user=config.admin_user),
     )
@@ -125,7 +160,8 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
 
 
 @router.post("/auth/logout")
-def logout(request: Request):
+def logout(request: Request, csrf_token: str = Form("")):
+    _csrf_required(request, csrf_token)
     request.session.clear()
     return RedirectResponse(url="/admin", status_code=303)
 
@@ -139,16 +175,26 @@ def stream(request: Request):
         last_seq = 0
         register = getattr(service.camera, "register_jpeg_client", None)
         unregister = getattr(service.camera, "unregister_jpeg_client", None)
+        get_stream_frame_seq = getattr(service.camera, "get_stream_frame_seq", None)
+        get_frame_seq = getattr(service.camera, "get_frame_seq", None)
+        get_content_type = getattr(service.camera, "get_stream_content_type", None)
+        content_type = get_content_type() if callable(get_content_type) else "image/jpeg"
         if callable(register):
             register()
+        if callable(get_stream_frame_seq):
+            last_seq = get_stream_frame_seq()
+        elif callable(get_frame_seq):
+            last_seq = get_frame_seq()
         try:
             while True:
                 frame, last_seq = service.camera.get_jpeg(last_seq=last_seq, timeout=0.5)
                 if frame is None:
                     if not service.running:
                         break
+                    time.sleep(0.05)
                     continue
-                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+                header = f"--frame\r\nContent-Type: {content_type}\r\n\r\n".encode("ascii")
+                yield header + frame + b"\r\n"
         finally:
             if callable(unregister):
                 unregister()
@@ -156,27 +202,52 @@ def stream(request: Request):
     return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
+@router.get("/api/frame")
+def frame_snapshot(request: Request):
+    _session_required(request)
+    camera = request.app.state.service.camera
+    is_active = getattr(camera, "is_active", None)
+    if callable(is_active) and not is_active():
+        return Response(status_code=503, headers={"Cache-Control": "no-store"})
+
+    get_snapshot_frame = getattr(camera, "get_snapshot_frame", None)
+    if not callable(get_snapshot_frame):
+        return Response(status_code=503, headers={"Cache-Control": "no-store"})
+
+    frame, content_type = get_snapshot_frame()
+    if frame is None:
+        return Response(status_code=204, headers={"Cache-Control": "no-store"})
+
+    return Response(
+        content=frame,
+        media_type=content_type or "application/octet-stream",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @router.get("/api/status")
 def status(request: Request):
+    _session_required(request)
     return request.app.state.service.get_status()
 
 
 @router.post("/api/recognize")
 @limiter.limit("10/minute")
 def recognize(request: Request):
+    _session_write_required(request)
     payload, status_code = request.app.state.service.analyze_once()
     return JSONResponse(payload, status_code=status_code)
 
 
 @router.post("/api/kiosk/sleep")
 def kiosk_sleep(request: Request):
-    _session_required(request)
+    _session_write_required(request)
     return request.app.state.service.set_backend_sleep(True)
 
 
 @router.post("/api/kiosk/wake")
 def kiosk_wake(request: Request):
-    _session_required(request)
+    _session_write_required(request)
     return request.app.state.service.set_backend_sleep(False)
 
 
@@ -193,7 +264,7 @@ def health_detail(request: Request):
 
 @router.post("/api/manual-open")
 def manual_open(request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     request.app.state.service.manual_open()
     return {"ok": True}
 
@@ -206,7 +277,7 @@ def list_users(request: Request):
 
 @router.post("/api/users")
 def create_user(payload: UserCreate, request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     user_id = db.create_user(payload.nombre)
     return {"id": user_id}
 
@@ -228,14 +299,14 @@ def get_user_detail(user_id: int, request: Request):
 
 @router.patch("/api/users/{user_id}")
 def update_user(user_id: int, payload: UserStatusUpdate, request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     db.set_user_status(user_id, payload.activo)
     return {"ok": True}
 
 
 @router.delete("/api/users/{user_id}")
 def delete_user(user_id: int, request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     deleted = db.delete_user(user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -244,7 +315,7 @@ def delete_user(user_id: int, request: Request):
 
 @router.post("/api/users/{user_id}/capture")
 def capture_samples(user_id: int, request: Request, count: int = 30):
-    _admin_required(request)
+    _admin_write_required(request)
     user = db.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -266,7 +337,7 @@ def capture_samples(user_id: int, request: Request, count: int = 30):
 
 @router.post("/api/train")
 def train(request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     service = request.app.state.service
 
     with service.analysis_lock:
@@ -322,9 +393,23 @@ def get_config(request: Request):
 
 @router.put("/api/config")
 def update_config(payload: ConfigUpdate, request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     db.update_config(payload.umbral_confianza, payload.tiempo_apertura_seg, payload.max_intentos)
     return {"ok": True}
+
+
+@router.post("/api/restart")
+def restart(request: Request):
+    _admin_write_required(request)
+    if not config.debug or not config.enable_restart:
+        raise HTTPException(status_code=403, detail="Reinicio deshabilitado")
+
+    restart_hook = getattr(request.app.state.service, "restart", None)
+    if callable(restart_hook):
+        restart_hook()
+        return {"ok": True}
+
+    raise HTTPException(status_code=501, detail="Reinicio no disponible en este entorno")
 
 
 @router.get("/api/access-logs")
@@ -458,7 +543,7 @@ def system_device_info(request: Request):
 
 @router.post("/api/admin/change-password")
 def change_password(payload: ChangePasswordPayload, request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     admin_username = config.admin_user
 
     if not _verify_admin_password(admin_username, payload.current_password):
@@ -479,7 +564,7 @@ def change_password(payload: ChangePasswordPayload, request: Request):
 
 @router.post("/api/enrollment/start")
 def enrollment_start(payload: EnrollmentStart, request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     user = db.get_user(payload.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -496,7 +581,7 @@ def enrollment_status(request: Request):
 
 @router.post("/api/enrollment/abort")
 def enrollment_abort(request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     result = request.app.state.service.abort_enrollment()
     status_code = 200 if result.get("ok") else 404
     return JSONResponse(result, status_code=status_code)
@@ -504,7 +589,7 @@ def enrollment_abort(request: Request):
 
 @router.post("/api/enrollment/retry-step")
 def enrollment_retry_step(request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     result = request.app.state.service.retry_enrollment_step()
     status_code = 200 if result.get("ok") else 409 if result.get("error") == "enrollment_not_retryable" else 404
     return JSONResponse(result, status_code=status_code)
@@ -512,7 +597,7 @@ def enrollment_retry_step(request: Request):
 
 @router.post("/api/enrollment/finish")
 def enrollment_finish(request: Request):
-    _admin_required(request)
+    _admin_write_required(request)
     result = request.app.state.service.finish_enrollment()
     status_code = 200 if result.get("ok") else 409 if result.get("error") == "enrollment_not_finishable" else 404
     return JSONResponse(result, status_code=status_code)
@@ -522,7 +607,7 @@ def enrollment_finish(request: Request):
 def simulate_access(payload: SimulateAccessPayload, request: Request):
     if not config.debug:
         raise HTTPException(status_code=404, detail="No encontrado")
-    _admin_required(request)
+    _admin_write_required(request)
     return request.app.state.service.simulate_access_attempt(
         is_valid=payload.is_valid,
         confidence=payload.confidence,
