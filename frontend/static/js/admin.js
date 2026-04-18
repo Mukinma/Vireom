@@ -233,10 +233,28 @@ function escapeHtml(value) {
 
 /* ── API helper ── */
 
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function withSecurityHeaders(options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+  const token = getCsrfToken();
+  if (token && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    headers['x-csrf-token'] = token;
+  }
+  return headers;
+}
+
 async function api(url, options = {}) {
   const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     ...options,
+    headers: withSecurityHeaders(options),
   });
   if (!response.ok) {
     const txt = await response.text();

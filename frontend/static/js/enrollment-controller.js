@@ -149,10 +149,25 @@
     overlay.height = rect.height;
   }
 
+  function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  }
+
+  function withSecurityHeaders(options = {}) {
+    const method = String(options.method || 'GET').toUpperCase();
+    const headers = { ...(options.headers || {}) };
+    const token = getCsrfToken();
+    if (token && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      headers['x-csrf-token'] = token;
+    }
+    return headers;
+  }
+
   async function requestJson(url, options = {}) {
     const response = await fetch(url, {
       credentials: 'same-origin',
       ...options,
+      headers: withSecurityHeaders(options),
     });
     const data = await response.json().catch(() => ({}));
     return { ok: response.ok, status: response.status, data };

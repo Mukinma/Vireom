@@ -54,6 +54,13 @@ class AppConfig:
     debug: bool = _env_bool("CAMERAPI_DEBUG", False)
     secret_key: str = _resolve_secret_key()
     cors_origins: list[str] = field(default_factory=_resolve_cors_origins)
+    session_https_only: bool = _env_bool("CAMERAPI_SESSION_HTTPS_ONLY", False)
+    session_max_age_seconds: int = _clamp_int(
+        _env_int("CAMERAPI_SESSION_MAX_AGE_SECONDS", 8 * 60 * 60),
+        300,
+        7 * 24 * 60 * 60,
+    )
+    enable_restart: bool = _env_bool("CAMERAPI_ENABLE_RESTART", False)
 
     db_path: str = "database/camerapi.db"
     model_path: str = "models/lbph_model.xml"
@@ -64,6 +71,7 @@ class AppConfig:
     frame_width: int = 640
     frame_height: int = 480
     max_fps: int = _clamp_int(_env_int("CAMERAPI_MAX_FPS", 30), 1, 120)
+    stream_fps: int = _clamp_int(_env_int("CAMERAPI_STREAM_FPS", 15), 1, 60)
     process_interval_ms: int = _clamp_int(_env_int("CAMERAPI_PROCESS_INTERVAL_MS", 200), 10, 2000)
     cv_threads: int = _clamp_int(_env_int("CAMERAPI_CV_THREADS", 2), 1, 16)
     camera_buffer_size: int = _clamp_int(_env_int("CAMERAPI_CAMERA_BUFFER_SIZE", 1), 1, 8)

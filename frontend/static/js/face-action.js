@@ -33,7 +33,12 @@
       let payload = null;
 
       try {
-        const response = await fetch('/api/recognize', { method: 'POST' });
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const response = await fetch('/api/recognize', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: token ? { 'x-csrf-token': token } : {},
+        });
         statusCode = response.status;
         payload = await response.json();
       } catch (error) {

@@ -12,8 +12,26 @@ from rate_limit import limiter
 
 
 class _DummyCamera:
+    def __init__(self):
+        self.active = True
+        self.snapshot_payload = b"\xff\xd8fake"
+        self.snapshot_content_type = "image/jpeg"
+        self.stream_seq = 0
+
     def get_jpeg(self, last_seq=0, timeout=0.5):
-        return b"jpeg-bytes", int(last_seq) + 1
+        self.stream_seq = int(last_seq) + 1
+        return b"\xff\xd8jpeg-bytes", self.stream_seq
+
+    def get_stream_frame_seq(self):
+        return self.stream_seq
+
+    def is_active(self):
+        return self.active
+
+    def get_snapshot_frame(self):
+        if self.snapshot_payload is None:
+            return None, self.snapshot_content_type
+        return self.snapshot_payload, self.snapshot_content_type
 
 
 class _DummyService:

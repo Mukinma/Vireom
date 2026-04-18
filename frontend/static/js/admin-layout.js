@@ -18,8 +18,8 @@
   const viewButtons = Array.from(shell.querySelectorAll('[data-view]'));
   const viewSections = Array.from(document.querySelectorAll('.admin-view'));
 
-  const drawerMedia = window.matchMedia('(max-width: 1279px)');
-  const mobileMedia = window.matchMedia('(max-width: 1279px)');
+  const drawerMedia = window.matchMedia('(max-width: 1180px)');
+  const mobileMedia = window.matchMedia('(max-width: 900px)');
 
   const VIEW_META = {
     resumen: {
@@ -71,6 +71,15 @@
   };
   let clockTimeoutId = null;
   let lastClockSignature = '';
+
+  function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  }
+
+  function csrfHeaders() {
+    const token = getCsrfToken();
+    return token ? { 'x-csrf-token': token } : {};
+  }
 
   function isDrawerMode() {
     return drawerMedia.matches && !isBottomNavMode();
@@ -301,7 +310,11 @@
   async function logout() {
     clearStoredAuthState();
     try {
-      const response = await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      const response = await fetch('/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: csrfHeaders(),
+      });
       if (!response.ok) throw new Error(`logout_http_${response.status}`);
       window.location.assign('/admin');
     } catch (_) {
