@@ -28,6 +28,7 @@ from vision.enrollment import ENROLLMENT_STEPS, EnrollmentSession
 from vision.face_guidance import FaceGuidanceEngine
 from vision.pose_heuristic import PoseHeuristic
 from vision.recognizer import LBPHRecognizer
+from vision.secure_storage import storage as _storage
 from vision.trainer import FaceTrainer
 
 
@@ -119,7 +120,7 @@ class AccessService:
             logger.critical("camera_start_failed", exc_info=True)
 
         try:
-            self.system_status["model"] = "loaded" if self.recognizer.load_model(config.model_path) else "not_loaded"
+            self.system_status["model"] = "loaded" if self.recognizer.load_model(config.model_path, _storage) else "not_loaded"
         except Exception:
             self.system_status["model"] = "error"
             logger.critical("model_load_failed path=%s", config.model_path, exc_info=True)
@@ -465,7 +466,7 @@ class AccessService:
                 return payload, 503
 
             if not self.recognizer.loaded:
-                loaded = self.recognizer.load_model(config.model_path)
+                loaded = self.recognizer.load_model(config.model_path, _storage)
                 with self.lock:
                     self.system_status["model"] = "loaded" if loaded else "not_loaded"
                 if not loaded:
@@ -610,7 +611,7 @@ class AccessService:
         user_dir.mkdir(parents=True, exist_ok=True)
         relative_path = f"{config.dataset_dir}/user_{user_id}/sample_{sample_index:03d}.jpg"
         full_path = user_dir / f"sample_{sample_index:03d}.jpg"
-        cv2.imwrite(str(full_path), roi)
+        _storage.write_image(full_path, roi)
         return relative_path
 
     # ── Enrollment management ─────────────────────────────────────

@@ -15,6 +15,7 @@ import numpy as np
 
 from config import config
 from vision.pose_heuristic import PoseHeuristic
+from vision.secure_storage import storage as _storage
 
 logger = logging.getLogger("camerapi.enrollment")
 
@@ -270,7 +271,7 @@ class EnrollmentSession:
         idx = len(self._step_samples) + 1
         filename = f"enroll_{step_name}_{idx:03d}.jpg"
         full_path = self._user_dir / filename
-        cv2.imwrite(str(full_path), roi_resized)
+        _storage.write_image(full_path, roi_resized)
         return f"{config.dataset_dir}/user_{self.user_id}/{filename}"
 
     def _advance_step(self, now: Optional[float] = None) -> None:
