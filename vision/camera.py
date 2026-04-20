@@ -20,19 +20,14 @@ except ImportError:
 
 
 class CameraStream:
-    STALE_FRAME_SECONDS = 3.0
-
     def __init__(self):
         self.lock = threading.Lock()
         self.frame_cond = threading.Condition(self.lock)
         self.frame = None
         self.jpeg_frame: Optional[bytes] = None
-        self.stream_frame_content_type = "image/jpeg"
         self.frame_seq = 0
-        self.stream_frame_seq = 0
         self.running = False
         self.thread: Optional[threading.Thread] = None
-        self.started_at = 0.0
         self.last_frame_time = 0.0
         self.retry_delay_sec = 2.0
         self.max_open_retries = 5
@@ -40,9 +35,6 @@ class CameraStream:
         self._fps_tick_perf = time.perf_counter()
         self._fps_counter = 0
         self._jpeg_clients = 0
-        self._last_stream_encode_perf = 0.0
-        self.restart_count = 0
-        self._capture_generation = 0
 
         self._use_picamera2 = _HAS_PICAMERA2 and sys.platform == "linux"
 
@@ -57,6 +49,7 @@ class CameraStream:
             logger.info("camera_backend=picamera2")
         else:
             logger.info("camera_backend=opencv")
+        logger.info("camera_orientation flip_horizontal=%s", config.camera_flip_horizontal)
 
     # ── Picamera2 backend ────────────────────────────────────────────
 
@@ -229,65 +222,41 @@ class CameraStream:
             return self._picam is None or not self._picam_started
         return self.cap is None or not self.cap.isOpened()
 
+    def _apply_frame_orientation(self, frame):
+        if frame is None:
+            return None
+        if config.camera_flip_horizontal:
+            return cv2.flip(frame, 1)
+        return frame
+
     def _read_frame(self):
         if self._use_picamera2:
-            return self._read_picamera2()
-        if self.cap is not None:
-            return self.cap.read()
-        return False, None
+            ok, frame = self._read_picamera2()
+        elif self.cap is not None:
+            ok, frame = self.cap.read()
+        else:
+            return False, None
 
-    def _encode_stream_frame(self, frame) -> Optional[bytes]:
-        try:
-            if frame is None or len(frame.shape) != 3 or frame.shape[2] < 3:
-                return None
-            bgr = frame[:, :, :3]
-            if bgr.dtype != np.uint8:
-                bgr = bgr.astype(np.uint8, copy=False)
+        if not ok or frame is None:
+            return ok, frame
 
-            encoded_ok, encoded = cv2.imencode(
-                ".jpg",
-                bgr,
-                [cv2.IMWRITE_JPEG_QUALITY, config.camera_jpeg_quality],
-            )
-            if encoded_ok:
-                return encoded.tobytes()
-        except Exception:
-            logger.exception("camera_stream_frame_encode_failed")
-        return None
+        return True, self._apply_frame_orientation(frame)
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
     def start(self) -> None:
-        thread_alive = self.thread is not None and self.thread.is_alive()
-        if self.running and thread_alive:
+        if self.running:
             return
-        if self.running and not thread_alive:
-            self.stop(reset_clients=False)
-
-        with self.frame_cond:
-            self.frame = None
-            self.jpeg_frame = None
-            self.last_frame_time = 0.0
-            self.capture_fps = 0.0
-            self._fps_tick_perf = time.perf_counter()
-            self._fps_counter = 0
-            self.frame_cond.notify_all()
-
         if not self._open_camera():
             raise RuntimeError("No se pudo inicializar la cámara")
-        with self.lock:
-            self.running = True
-            self.started_at = time.time()
-            self._capture_generation += 1
-            generation = self._capture_generation
-        self.thread = threading.Thread(target=self._capture_loop, args=(generation,), daemon=True)
+        self.running = True
+        self.thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.thread.start()
 
-    def _capture_loop(self, generation: int) -> None:
+    def _capture_loop(self) -> None:
         min_interval = 1.0 / max(1, config.max_fps)
-        stream_interval = 1.0 / max(1, min(config.max_fps, config.stream_fps))
         next_tick = time.perf_counter()
-        while self.running and generation == self._capture_generation:
+        while self.running:
             now_perf = time.perf_counter()
             sleep_s = next_tick - now_perf
             if sleep_s > 0:
@@ -306,28 +275,23 @@ class CameraStream:
             if ok:
                 with self.lock:
                     encode_jpeg = self._jpeg_clients > 0
-                    last_stream_encode_perf = self._last_stream_encode_perf
 
-                frame_tick_perf = time.perf_counter()
-                should_encode_stream = (
-                    encode_jpeg
-                    and (
-                        last_stream_encode_perf <= 0.0
-                        or frame_tick_perf - last_stream_encode_perf >= stream_interval
+                jpeg = None
+                if encode_jpeg:
+                    encoded_ok, encoded = cv2.imencode(
+                        ".jpg",
+                        raw,
+                        [cv2.IMWRITE_JPEG_QUALITY, config.camera_jpeg_quality],
                     )
-                )
-                jpeg = self._encode_stream_frame(raw) if should_encode_stream else None
+                    if encoded_ok:
+                        jpeg = encoded.tobytes()
                 with self.frame_cond:
                     self.frame = raw.copy()
+                    self.jpeg_frame = jpeg if encode_jpeg else None
                     self.frame_seq += 1
-                    if jpeg is not None:
-                        self.jpeg_frame = jpeg
-                        self.stream_frame_seq += 1
-                        self._last_stream_encode_perf = frame_tick_perf
-                    elif not encode_jpeg:
-                        self.jpeg_frame = None
                     self.last_frame_time = time.time()
                     self._fps_counter += 1
+                    frame_tick_perf = time.perf_counter()
                     elapsed = frame_tick_perf - self._fps_tick_perf
                     if elapsed >= 1.0:
                         self.capture_fps = self._fps_counter / elapsed
@@ -358,96 +322,47 @@ class CameraStream:
         with self.lock:
             self._jpeg_clients = max(0, self._jpeg_clients - 1)
 
-    def get_frame_seq(self) -> int:
-        with self.lock:
-            return int(self.frame_seq)
-
-    def get_stream_frame_seq(self) -> int:
-        with self.lock:
-            return int(self.stream_frame_seq)
-
-    def get_stream_content_type(self) -> str:
-        return self.stream_frame_content_type
-
-    def get_snapshot_frame(self) -> tuple[Optional[bytes], str]:
-        frame = self.get_frame(copy=True)
-        if frame is None:
-            return None, self.stream_frame_content_type
-        return self._encode_stream_frame(frame), self.stream_frame_content_type
-
     def get_jpeg(self, last_seq: int = 0, timeout: float = 0.5) -> tuple[Optional[bytes], int]:
         deadline = time.monotonic() + max(0.0, timeout)
         with self.frame_cond:
-            while self.running and self.stream_frame_seq <= last_seq:
+            while self.running and self.frame_seq <= last_seq:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     break
                 self.frame_cond.wait(timeout=remaining)
-            if self.stream_frame_seq <= last_seq or self.jpeg_frame is None:
-                return None, last_seq
-            return self.jpeg_frame, self.stream_frame_seq
+            return self.jpeg_frame, self.frame_seq
 
-    def stop(self, reset_clients: bool = True) -> None:
-        with self.lock:
-            self.running = False
-            self._capture_generation += 1
-        self._release_capture()
+    def stop(self) -> None:
+        self.running = False
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
+        self._release_capture()
         with self.frame_cond:
             self.frame = None
             self.jpeg_frame = None
-            self.last_frame_time = 0.0
-            self.started_at = 0.0
             self.frame_cond.notify_all()
         with self.lock:
             self.capture_fps = 0.0
             self._fps_tick_perf = time.perf_counter()
             self._fps_counter = 0
-            self._last_stream_encode_perf = 0.0
-            if reset_clients:
-                self._jpeg_clients = 0
-
-    def is_stale(self, timeout_seconds: float = STALE_FRAME_SECONDS) -> bool:
-        with self.lock:
-            if not self.running:
-                return False
-            last_frame_time = float(self.last_frame_time or 0.0)
-            started_at = float(self.started_at or 0.0)
-        now = time.time()
-        if last_frame_time <= 0.0:
-            return started_at > 0.0 and (now - started_at) >= timeout_seconds
-        return (now - last_frame_time) >= timeout_seconds
+            self._jpeg_clients = 0
 
     def is_active(self) -> bool:
-        recent = not self.is_stale(self.STALE_FRAME_SECONDS)
+        recent = (time.time() - self.last_frame_time) < 3.0
         thread_alive = self.thread is not None and self.thread.is_alive()
         cam_ok = not self._camera_lost()
         return bool(self.running and thread_alive and cam_ok and recent)
-
-    def restart(self, reason: str = "unknown") -> bool:
-        logger.warning("camera_restart_requested reason=%s", reason)
-        self.stop(reset_clients=False)
-        try:
-            self.start()
-            with self.lock:
-                self.restart_count += 1
-            logger.info("camera_restart_ok reason=%s", reason)
-            return True
-        except Exception:
-            logger.exception("camera_restart_failed reason=%s", reason)
-            return False
 
     def ensure_running(self) -> bool:
         if not self.running:
             return False
         if self.thread is None or not self.thread.is_alive():
             logger.critical("camera_capture_thread_dead restarting=true")
-            return self.restart("thread_dead")
-        if self._camera_lost():
-            logger.critical("camera_device_lost restarting=true")
-            return self.restart("device_lost")
-        if self.is_stale(self.STALE_FRAME_SECONDS):
-            logger.critical("camera_frame_stale restarting=true")
-            return self.restart("frame_stale")
+            try:
+                self.thread = threading.Thread(target=self._capture_loop, daemon=True)
+                self.thread.start()
+                return True
+            except Exception:
+                logger.exception("camera_thread_restart_failed")
+                return False
         return True

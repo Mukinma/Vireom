@@ -191,9 +191,11 @@ Esto crea:
 | `CAMERAPI_CV_THREADS` | Hilos internos de OpenCV | `2` |
 | `CAMERAPI_CAMERA_BUFFER_SIZE` | Buffer de captura de cámara | `1` |
 | `CAMERAPI_CAMERA_JPEG_QUALITY` | Calidad JPEG del stream MJPEG | `80` |
+| `CAMERAPI_CAMERA_FLIP_HORIZONTAL` | Corrige efecto espejo horizontal del stream | `true` |
 
 > **Importante:** cambia estos valores antes de cualquier despliegue en producción.
 > `CAMERAPI_ADMIN_PASSWORD` vacío deshabilita el login administrativo.
+> Si tu cámara ya entrega una imagen no espejada, define `CAMERAPI_CAMERA_FLIP_HORIZONTAL=false`.
 
 ## Scripts de validación y análisis
 
