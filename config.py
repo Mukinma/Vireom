@@ -80,6 +80,7 @@ class AppConfig:
     cv_threads: int = _clamp_int(_env_int("CAMERAPI_CV_THREADS", 2), 1, 16)
     camera_buffer_size: int = _clamp_int(_env_int("CAMERAPI_CAMERA_BUFFER_SIZE", 1), 1, 8)
     camera_jpeg_quality: int = _clamp_int(_env_int("CAMERAPI_CAMERA_JPEG_QUALITY", 80), 55, 95)
+    camera_flip_horizontal: bool = _env_bool("CAMERAPI_CAMERA_FLIP_HORIZONTAL", True)
 
     cascade_filename: str = "haarcascade_frontalface_default.xml"
     detect_downscale: float = 0.5
