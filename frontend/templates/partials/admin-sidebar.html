@@ -1,4 +1,4 @@
-<aside class="admin-sidebar" id="adminSidebar" aria-label="Navegación principal">
+<aside class="admin-sidebar" id="adminSidebar" aria-label="Navegación principal" data-i18n-attr="aria-label:Navegación principal">
   <div class="admin-rail">
     <div class="admin-sidebar__header">
       <div class="admin-sidebar__intro">
@@ -13,9 +13,9 @@
         </span>
 
         <div class="admin-sidebar__intro-copy">
-          <p class="admin-sidebar__eyebrow">Administración</p>
-          <strong class="admin-sidebar__title">Centro operativo</strong>
-          <span class="admin-sidebar__summary">Personas, accesos y ajustes</span>
+          <p class="admin-sidebar__eyebrow" data-i18n>Administración</p>
+          <strong class="admin-sidebar__title" data-i18n>Centro operativo</strong>
+          <span class="admin-sidebar__summary" data-i18n>Personas, accesos y ajustes</span>
         </div>
       </div>
 
@@ -26,71 +26,72 @@
         aria-label="Alternar navegación lateral"
         aria-controls="adminSidebar"
         aria-expanded="false"
+        data-i18n-attr="aria-label:Alternar navegación lateral"
       >
         <span class="admin-sidebar__toggle-icon" aria-hidden="true">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </span>
-        <span class="sr-only">Alternar navegación lateral</span>
+        <span class="sr-only" data-i18n>Alternar navegación lateral</span>
       </button>
     </div>
 
-    <nav class="admin-sidebar-nav" aria-label="Secciones principales">
+    <nav class="admin-sidebar-nav" aria-label="Secciones principales" data-i18n-attr="aria-label:Secciones principales">
       <div class="admin-nav-group">
-        <p class="admin-nav-caption">Principal</p>
+        <p class="admin-nav-caption" data-i18n>Principal</p>
 
-        <button class="admin-nav-btn" data-view="resumen" type="button" title="Centro de control" aria-label="Centro de control">
+        <button class="admin-nav-btn" data-view="resumen" type="button" title="Centro de control" aria-label="Centro de control" data-i18n-attr="title:Centro de control;aria-label:Centro de control">
           <span class="admin-nav-btn__icon">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#home-filled"></use></svg>
           </span>
           <span class="admin-nav-copy">
-            <span class="nav-label nav-label--desktop">Centro de control</span>
-            <span class="nav-label nav-label--mobile">Resumen</span>
-            <small class="admin-nav-meta">Estado y actividad</small>
+            <span class="nav-label nav-label--desktop" data-i18n>Centro de control</span>
+            <span class="nav-label nav-label--mobile" data-i18n>Resumen</span>
+            <small class="admin-nav-meta" data-i18n>Estado y actividad</small>
           </span>
         </button>
 
-        <button class="admin-nav-btn" data-view="personas" type="button" title="Personas" aria-label="Personas">
+        <button class="admin-nav-btn" data-view="personas" type="button" title="Personas" aria-label="Personas" data-i18n-attr="title:Personas;aria-label:Personas">
           <span class="admin-nav-btn__icon">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#users-filled"></use></svg>
           </span>
           <span class="admin-nav-copy">
-            <span class="nav-label nav-label--desktop">Personas</span>
-            <span class="nav-label nav-label--mobile">Personas</span>
-            <small class="admin-nav-meta">Gestión y enrolamiento</small>
+            <span class="nav-label nav-label--desktop" data-i18n>Personas</span>
+            <span class="nav-label nav-label--mobile" data-i18n>Personas</span>
+            <small class="admin-nav-meta" data-i18n>Gestión y enrolamiento</small>
           </span>
         </button>
 
-        <button class="admin-nav-btn" data-view="accesos" type="button" title="Accesos" aria-label="Accesos">
+        <button class="admin-nav-btn" data-view="accesos" type="button" title="Accesos" aria-label="Accesos" data-i18n-attr="title:Accesos;aria-label:Accesos">
           <span class="admin-nav-btn__icon">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#shield-filled"></use></svg>
           </span>
           <span class="admin-nav-copy">
-            <span class="nav-label nav-label--desktop">Accesos</span>
-            <span class="nav-label nav-label--mobile">Accesos</span>
-            <small class="admin-nav-meta">Historial reciente</small>
+            <span class="nav-label nav-label--desktop" data-i18n>Accesos</span>
+            <span class="nav-label nav-label--mobile" data-i18n>Accesos</span>
+            <small class="admin-nav-meta" data-i18n>Historial reciente</small>
           </span>
         </button>
       </div>
 
       <div class="admin-nav-group admin-nav-group--secondary" id="adminConfigNavGroup">
-        <p class="admin-nav-caption">Configuración</p>
+        <p class="admin-nav-caption" data-i18n>Configuración</p>
 
-        <button class="admin-nav-btn" data-view="sistema" type="button" title="Sistema" aria-label="Sistema">
+        <button class="admin-nav-btn" data-view="sistema" type="button" title="Sistema" aria-label="Sistema" data-i18n-attr="title:Sistema;aria-label:Sistema">
           <span class="admin-nav-btn__icon">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#settings-filled"></use></svg>
           </span>
           <span class="admin-nav-copy">
-            <span class="nav-label nav-label--desktop">Sistema</span>
-            <span class="nav-label nav-label--mobile">Sistema</span>
-            <small class="admin-nav-meta">Puerta y ajustes</small>
+            <span class="nav-label nav-label--desktop" data-i18n>Sistema</span>
+            <span class="nav-label nav-label--mobile" data-i18n>Sistema</span>
+            <small class="admin-nav-meta" data-i18n>Puerta y ajustes</small>
           </span>
         </button>
       </div>
     </nav>
 
-    <div class="admin-utility-dock" role="group" aria-label="Utilidades">
+    <div class="admin-utility-dock" role="group" aria-label="Utilidades" data-i18n-attr="aria-label:Utilidades">
       <button
         id="sidebarLogoutBtn"
         class="admin-utility-btn admin-utility-btn--danger"
@@ -98,11 +99,12 @@
         data-logout-action
         title="Cerrar sesión"
         aria-label="Cerrar sesión"
+        data-i18n-attr="title:Cerrar sesión;aria-label:Cerrar sesión"
       >
         <span class="admin-utility-btn__icon">
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#logout-filled"></use></svg>
         </span>
-        <span class="admin-utility-label">Salir</span>
+        <span class="admin-utility-label" data-i18n>Salir</span>
       </button>
     </div>
   </div>

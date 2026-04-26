@@ -1,0 +1,90 @@
+/* Osvium · Language toggle button (kiosk only, top-right) */
+
+.i18n-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px 10px 6px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+
+  background: rgba(18, 22, 32, 0.72);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+
+  color: #f4f6fb;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 120ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.i18n-toggle:hover {
+  background: rgba(28, 34, 48, 0.88);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.i18n-toggle:active {
+  transform: scale(0.96);
+}
+
+.i18n-toggle:focus-visible {
+  outline: 2px solid #7aa6ff;
+  outline-offset: 2px;
+}
+
+.i18n-toggle__flag {
+  display: inline-flex;
+  width: 28px;
+  height: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) inset,
+              0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.i18n-toggle__flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.i18n-toggle__label {
+  line-height: 1;
+}
+
+/* Portrait 720x1280 — mantener el botón dentro del área segura */
+@media (max-width: 800px) {
+  .i18n-toggle {
+    top: 12px;
+    right: 12px;
+    padding: 5px 9px 5px 5px;
+    font-size: 11px;
+  }
+  .i18n-toggle__flag {
+    width: 24px;
+    height: 17px;
+  }
+}
+
+/* Cuando el lockscreen está activo (no descartado), ocultar el botón
+   para no competir con el prompt táctil. Se muestra de nuevo al desbloquear.
+   En este proyecto el lockscreen se oculta agregando la clase .is-dismissed. */
+body:has(.lockscreen:not(.is-dismissed)) .i18n-toggle {
+  opacity: 0;
+  pointer-events: none;
+}

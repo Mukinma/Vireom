@@ -9,11 +9,12 @@
         class="enroll-back-btn"
         type="button"
         aria-label="Volver a personas"
+        data-i18n-attr="aria-label:Volver a personas"
       >
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#chevron-left"></use></svg>
       </button>
-      <span class="enroll-hud-label">Osvium <span class="enroll-hud-sep" aria-hidden="true">·</span> Registro</span>
-      <span class="enroll-stage-tag">Paso 1 de 2</span>
+      <span class="enroll-hud-label">Osvium <span class="enroll-hud-sep" aria-hidden="true">·</span> <span data-i18n>Registro</span></span>
+      <span class="enroll-stage-tag" data-i18n>Paso 1 de 2</span>
     </div>
 
     <!-- Card: ¿Quién? -->
@@ -23,39 +24,39 @@
       <span class="hud-corner hud-bl" aria-hidden="true"></span>
       <span class="hud-corner hud-br" aria-hidden="true"></span>
 
-      <p class="enroll-card-eyebrow">¿Quién se va a registrar?</p>
+      <p class="enroll-card-eyebrow" data-i18n>¿Quién se va a registrar?</p>
       <div class="enroll-select-wrap">
-        <select id="enrollUserSelect" class="enroll-select" aria-label="Seleccionar persona">
-          <option value="">Elige una persona...</option>
+        <select id="enrollUserSelect" class="enroll-select" aria-label="Seleccionar persona" data-i18n-attr="aria-label:Seleccionar persona">
+          <option value="" data-i18n>Elige una persona...</option>
         </select>
         <svg class="enroll-select-chevron" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
       </div>
-      <p class="enroll-start-note" id="enrollStartNote">Elige quién se va a registrar.</p>
+      <p class="enroll-start-note" id="enrollStartNote" data-i18n>Elige quién se va a registrar.</p>
     </div>
 
     <!-- Card: Tips -->
     <div class="enroll-card enroll-tips-card">
-      <p class="enroll-card-eyebrow">Antes de empezar</p>
-      <ul class="enroll-tips-list" aria-label="Condiciones recomendadas">
+      <p class="enroll-card-eyebrow" data-i18n>Antes de empezar</p>
+      <ul class="enroll-tips-list" aria-label="Condiciones recomendadas" data-i18n-attr="aria-label:Condiciones recomendadas">
         <li>
           <span class="enroll-tip-icon" aria-hidden="true">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sun"></use></svg>
           </span>
-          Buena luz, sin sombras en el rostro
+          <span data-i18n>Buena luz, sin sombras en el rostro</span>
         </li>
         <li>
           <span class="enroll-tip-icon" aria-hidden="true">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#maximize"></use></svg>
           </span>
-          Rostro centrado y fondo limpio
+          <span data-i18n>Rostro centrado y fondo limpio</span>
         </li>
         <li>
           <span class="enroll-tip-icon" aria-hidden="true">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
           </span>
-          Sin gorras ni lentes que tapen el rostro
+          <span data-i18n>Sin gorras ni lentes que tapen el rostro</span>
         </li>
       </ul>
     </div>
@@ -63,19 +64,19 @@
     <!-- Card: Revisión rápida -->
     <div class="enroll-card enroll-readiness-card">
       <div class="enroll-readiness-head">
-        <p class="enroll-card-eyebrow">Revisión rápida</p>
-        <span class="enroll-readiness-meta" id="enrollReadinessMeta">Verificando...</span>
+        <p class="enroll-card-eyebrow" data-i18n>Revisión rápida</p>
+        <span class="enroll-readiness-meta" id="enrollReadinessMeta" data-i18n>Verificando...</span>
       </div>
       <div class="enroll-readiness-grid">
         <article class="enrollment-readiness__item" id="enrollCameraReadyItem">
-          <p class="enroll-readiness-label">Cámara</p>
-          <strong class="enroll-readiness-value" id="enrollCameraReadyText">Sin verificar</strong>
-          <span class="enrollment-readiness__badge" id="enrollCameraReadyBadge">Pendiente</span>
+          <p class="enroll-readiness-label" data-i18n>Cámara</p>
+          <strong class="enroll-readiness-value" id="enrollCameraReadyText" data-i18n>Sin verificar</strong>
+          <span class="enrollment-readiness__badge" id="enrollCameraReadyBadge" data-i18n>Pendiente</span>
         </article>
         <article class="enrollment-readiness__item" id="enrollModelReadyItem">
-          <p class="enroll-readiness-label">Modelo</p>
-          <strong class="enroll-readiness-value" id="enrollModelReadyText">Sin verificar</strong>
-          <span class="enrollment-readiness__badge enrollment-readiness__badge--info" id="enrollModelReadyBadge">Info</span>
+          <p class="enroll-readiness-label" data-i18n>Modelo</p>
+          <strong class="enroll-readiness-value" id="enrollModelReadyText" data-i18n>Sin verificar</strong>
+          <span class="enrollment-readiness__badge enrollment-readiness__badge--info" id="enrollModelReadyBadge" data-i18n>Info</span>
         </article>
       </div>
     </div>
@@ -84,7 +85,7 @@
     <div class="enroll-sticky-actions">
       <button id="enrollStartBtn" class="btn btn-primary enroll-cta-btn" type="button">
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
-        Comenzar
+        <span data-i18n>Comenzar</span>
       </button>
     </div>
 
@@ -96,7 +97,7 @@
   <div id="enrollStepsPanel" class="enroll-stage" hidden>
 
     <div class="enroll-hud-strip">
-      <span class="enroll-hud-label">Osvium <span class="enroll-hud-sep" aria-hidden="true">·</span> Registro</span>
+      <span class="enroll-hud-label">Osvium <span class="enroll-hud-sep" aria-hidden="true">·</span> <span data-i18n>Registro</span></span>
       <div class="enroll-hud-right">
         <span class="enroll-user-chip" id="enrollUserMeta">—</span>
         <span class="enroll-total-chip" id="enrollSummaryTotal">0 / 35</span>
@@ -111,18 +112,19 @@
         src="/api/stream"
         alt="Cámara en vivo"
         draggable="false"
+        data-i18n-attr="alt:Cámara en vivo"
       />
       <canvas id="enrollOverlay" class="enroll-overlay"></canvas>
 
       <!-- HUD chips + instruction bar -->
       <div class="enroll-vp-hud" id="enrollHud" aria-live="polite">
         <div class="enroll-vp-topline">
-          <span class="enrollment-step-badge" id="enrollStepBadge">Preparando</span>
+          <span class="enrollment-step-badge" id="enrollStepBadge" data-i18n>Preparando</span>
           <span class="enroll-vp-counter" id="enrollStepCounter">0 / 35</span>
         </div>
         <div class="enroll-vp-instr-bar">
-          <p class="enroll-instruction" id="enrollInstruction">Selecciona una persona</p>
-          <p class="enroll-message" id="enrollMessage">Centra el rostro antes de empezar.</p>
+          <p class="enroll-instruction" id="enrollInstruction" data-i18n>Selecciona una persona</p>
+          <p class="enroll-message" id="enrollMessage" data-i18n>Centra el rostro antes de empezar.</p>
         </div>
       </div>
 
@@ -133,15 +135,15 @@
       <!-- Warnings -->
       <div class="enroll-warning is-hidden" id="enrollFaceWarning" aria-live="assertive" aria-atomic="true">
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#scan-face"></use></svg>
-        <span id="enrollFaceWarningText">Centra tu rostro</span>
+        <span id="enrollFaceWarningText" data-i18n>Centra tu rostro</span>
       </div>
       <div class="enroll-warning enroll-warning--light is-hidden" id="enrollLightWarning">
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sun"></use></svg>
-        <span>Mejora la iluminación</span>
+        <span data-i18n>Mejora la iluminación</span>
       </div>
       <div class="enroll-warning enroll-warning--multi is-hidden" id="enrollMultiFaceWarning">
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#users"></use></svg>
-        <span>Solo una persona</span>
+        <span data-i18n>Solo una persona</span>
       </div>
 
       <!-- Capture flash -->
@@ -154,20 +156,20 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <p class="enroll-completion-title">Listo</p>
+        <p class="enroll-completion-title" data-i18n>Listo</p>
         <p class="enroll-completion-sub" id="enrollCompletionSub">35 fotos guardadas</p>
         <div class="enroll-completion-actions">
           <button id="enrollTrainBtn" class="btn btn-primary" type="button">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sparkles"></use></svg>
-            Guardar
+            <span data-i18n>Guardar</span>
           </button>
-          <button id="enrollFinishBtn" class="btn btn-secondary" type="button">Salir</button>
+          <button id="enrollFinishBtn" class="btn btn-secondary" type="button" data-i18n>Salir</button>
         </div>
       </div>
     </div>
 
     <!-- Dots -->
-    <div class="enroll-dots" id="enrollDots" role="progressbar" aria-label="Pasos completados"></div>
+    <div class="enroll-dots" id="enrollDots" role="progressbar" aria-label="Pasos completados" data-i18n-attr="aria-label:Pasos completados"></div>
 
     <!-- Hidden summary (consumed by controller) -->
     <div class="sr-only" aria-hidden="true">
@@ -184,9 +186,9 @@
 
       <!-- Active step focus -->
       <div class="enroll-step-focus" id="enrollStepFocus">
-        <p class="enroll-step-eyebrow">Paso actual</p>
-        <h3 class="enroll-step-title" id="enrollActiveStepLabel">Mira de frente</h3>
-        <p class="enroll-step-hint" id="enrollActiveStepHint">Sigue la guía hasta estabilizar el rostro.</p>
+        <p class="enroll-step-eyebrow" data-i18n>Paso actual</p>
+        <h3 class="enroll-step-title" id="enrollActiveStepLabel" data-i18n>Mira de frente</h3>
+        <p class="enroll-step-hint" id="enrollActiveStepHint" data-i18n>Sigue la guía hasta estabilizar el rostro.</p>
         <div class="enroll-step-stats">
           <span id="enrollActiveStepSamples">0 / 5</span>
           <span id="enrollActiveTotalSamples">0 / 35</span>
@@ -197,8 +199,8 @@
       <div class="enrollment-error-banner is-hidden" id="enrollErrorBanner" role="alert">
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-triangle"></use></svg>
         <div>
-          <strong id="enrollErrorTitle">Error en la captura</strong>
-          <p id="enrollErrorText">Revisa la cámara e intenta de nuevo.</p>
+          <strong id="enrollErrorTitle" data-i18n>Error en la captura</strong>
+          <p id="enrollErrorText" data-i18n>Revisa la cámara e intenta de nuevo.</p>
         </div>
       </div>
 
@@ -218,11 +220,9 @@
     <div class="enroll-sticky-actions enroll-sticky-actions--capture">
       <button id="enrollRetryBtn" class="btn btn-ghost enroll-action-ghost" type="button" hidden>
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-cw"></use></svg>
-        Repetir
+        <span data-i18n>Repetir</span>
       </button>
-      <button id="enrollAbortBtn" class="btn enroll-abort-btn" type="button">
-        Cancelar
-      </button>
+      <button id="enrollAbortBtn" class="btn enroll-abort-btn" type="button"><span data-i18n>Cancelar</span></button>
     </div>
 
   </div>

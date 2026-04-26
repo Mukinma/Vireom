@@ -1,3 +1,10 @@
+/* ── i18n helper ── */
+
+function tr(text) {
+  try { return (window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t(text) : text; }
+  catch (_) { return text; }
+}
+
 /* ── DOM References ── */
 
 const usersList = document.getElementById('usersList');
@@ -114,8 +121,10 @@ function showAdminToast({
 } = {}) {
   if (!adminToast || !adminToastText || !adminToastSub) return;
 
-  adminToastText.textContent = text;
-  adminToastSub.textContent = sub;
+  adminToastText.textContent = tr(text);
+  adminToastSub.textContent = tr(sub);
+  adminToastText.dataset.i18nKey = String(text || '');
+  adminToastSub.dataset.i18nKey = String(sub || '');
   adminToast.classList.remove('is-hidden', 'success', 'error', 'warning', 'processing');
   adminToast.classList.add(cls, 'is-visible');
 
@@ -129,7 +138,7 @@ function showAdminToast({
 
 function getErrorMessage(error, fallback = 'No se pudo completar la operacion') {
   const raw = String(error?.message || '').trim();
-  if (!raw || raw.startsWith('<')) return fallback;
+  if (!raw || raw.startsWith('<')) return tr(fallback);
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
 
@@ -188,11 +197,11 @@ function openAdminConfirm(options = {}) {
   if (adminDialogResolver) closeAdminDialog(false);
 
   adminDialogRestoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  adminDialogEyebrow.textContent = eyebrow;
-  adminDialogTitle.textContent = title;
-  adminDialogText.textContent = text;
-  adminDialogCancel.textContent = cancelLabel;
-  adminDialogConfirm.textContent = confirmLabel;
+  adminDialogEyebrow.textContent = tr(eyebrow);
+  adminDialogTitle.textContent = tr(title);
+  adminDialogText.textContent = tr(text);
+  adminDialogCancel.textContent = tr(cancelLabel);
+  adminDialogConfirm.textContent = tr(confirmLabel);
   setAdminDialogTone(tone);
 
   adminDialog.classList.remove('is-hidden');
@@ -283,7 +292,7 @@ function parseDateTime(raw) {
 
 function formatLogMoment(raw) {
   const date = parseDateTime(raw);
-  if (!date || Number.isNaN(date.getTime())) return 'sin hora';
+  if (!date || Number.isNaN(date.getTime())) return tr('sin hora');
 
   const now = new Date();
   const sameDay = (
@@ -303,10 +312,10 @@ function formatPercent(value) {
 }
 
 function formatConfidence(value) {
-  if (value == null || value === '') return 'Sin confianza';
+  if (value == null || value === '') return tr('Sin confianza');
   const numeric = Number(value);
-  if (Number.isNaN(numeric)) return 'Sin confianza';
-  return `${numeric.toFixed(1)}% confianza`;
+  if (Number.isNaN(numeric)) return tr('Sin confianza');
+  return `${numeric.toFixed(1)}% ${tr('confianza')}`;
 }
 
 function getDoorState(status) {
@@ -375,7 +384,7 @@ function getAccessResultMeta(result) {
   }
 
   return {
-    label: result || 'Sin dato',
+    label: result || tr('Sin dato'),
     badgeClass: 'badge--neutral',
     timelineTone: 'is-neutral',
     isGranted: false,
@@ -388,28 +397,28 @@ function getAccessResultMeta(result) {
 
 function getCameraSummary(state) {
   const normalized = String(state || '').toLowerCase();
-  if (normalized === 'online') return 'Camara en linea';
-  if (normalized === 'degraded') return 'camara degradada';
-  if (normalized === 'error') return 'camara con error';
-  return 'camara fuera de linea';
+  if (normalized === 'online') return tr('Camara en linea');
+  if (normalized === 'degraded') return tr('camara degradada');
+  if (normalized === 'error') return tr('camara con error');
+  return tr('camara fuera de linea');
 }
 
 function getModelSummary(state) {
   const normalized = String(state || '').toLowerCase();
-  if (normalized === 'loaded') return 'modelo cargado';
-  if (normalized === 'error') return 'modelo con error';
-  return 'modelo no cargado';
+  if (normalized === 'loaded') return tr('modelo cargado');
+  if (normalized === 'error') return tr('modelo con error');
+  return tr('modelo no cargado');
 }
 
 function getDoorSummary(state) {
-  if (state === 'ready' || state === 'closed') return 'puerta lista';
-  if (state === 'mock') return 'puerta en simulacion';
-  if (state) return 'puerta con alerta';
-  return 'puerta sin estado';
+  if (state === 'ready' || state === 'closed') return tr('puerta lista');
+  if (state === 'mock') return tr('puerta en simulacion');
+  if (state) return tr('puerta con alerta');
+  return tr('puerta sin estado');
 }
 
 function formatSystemCaption(status) {
-  return `${getCameraSummary(status?.camera)}, ${getModelSummary(status?.model)} y ${getDoorSummary(getDoorState(status))}.`;
+  return `${getCameraSummary(status?.camera)}, ${getModelSummary(status?.model)} ${tr('y')} ${getDoorSummary(getDoorState(status))}.`;
 }
 
 function upperFirst(value) {
@@ -428,38 +437,38 @@ function renderUsers(users) {
     <tr>
       <td>${user.id}</td>
       <td>${escapeHtml(user.nombre)}</td>
-      <td><span class="badge ${user.activo ? 'badge--active' : 'badge--inactive'}">${user.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td><span class="badge ${user.activo ? 'badge--active' : 'badge--inactive'}">${user.activo ? tr('Activo') : tr('Inactivo')}</span></td>
       <td class="table-actions">
         <button
           class="user-action-btn user-action-btn--primary"
           type="button"
           onclick="startEnrollForUser(${user.id}, '${escapedName}')"
-          title="Registrar ${escapeHtml(user.nombre)}"
-          aria-label="Registrar ${escapeHtml(user.nombre)}"
+          title="${tr('Registrar')} ${escapeHtml(user.nombre)}"
+          aria-label="${tr('Registrar')} ${escapeHtml(user.nombre)}"
           ${user.activo ? '' : ' disabled'}
         >
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-          <span>Registrar</span>
+          <span>${tr('Registrar')}</span>
         </button>
         <button
           class="user-action-btn user-action-btn--neutral"
           type="button"
           onclick="toggleUser(${user.id}, ${user.activo ? 'false' : 'true'})"
-          title="${user.activo ? 'Desactivar' : 'Activar'} ${escapeHtml(user.nombre)}"
-          aria-label="${user.activo ? 'Desactivar' : 'Activar'} ${escapeHtml(user.nombre)}"
+          title="${user.activo ? tr('Desactivar') : tr('Activar')} ${escapeHtml(user.nombre)}"
+          aria-label="${user.activo ? tr('Desactivar') : tr('Activar')} ${escapeHtml(user.nombre)}"
         >
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${user.activo ? 'lock' : 'unlock'}"></use></svg>
-          <span>${user.activo ? 'Desactivar' : 'Activar'}</span>
+          <span>${user.activo ? tr('Desactivar') : tr('Activar')}</span>
         </button>
         <button
           class="user-action-btn user-action-btn--danger"
           type="button"
           onclick="deleteUser(${user.id}, '${escapedName}')"
-          title="Eliminar usuario"
-          aria-label="Eliminar ${escapeHtml(user.nombre)}"
+          title="${tr('Eliminar usuario')}"
+          aria-label="${tr('Eliminar')} ${escapeHtml(user.nombre)}"
         >
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
-          <span>Eliminar</span>
+          <span>${tr('Eliminar')}</span>
         </button>
       </td>
     </tr>`;
@@ -467,8 +476,8 @@ function renderUsers(users) {
 
   usersList.innerHTML = `
     <table>
-      <thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Accion</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4" class="text-center muted">Sin personas registradas</td></tr>'}</tbody>
+      <thead><tr><th>${tr('ID')}</th><th>${tr('Nombre')}</th><th>${tr('Estado')}</th><th>${tr('Accion')}</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="4" class="text-center muted">${tr('Sin personas registradas')}</td></tr>`}</tbody>
     </table>
   `;
 }
@@ -484,14 +493,14 @@ function renderLogs(logs) {
       <td>${escapeHtml(log.fecha || '-')}</td>
       <td>${escapeHtml(log.nombre || '-')}</td>
       <td>${log.confianza == null ? '-' : Number(log.confianza).toFixed(1)}</td>
-      <td><span class="badge ${resultMeta.badgeClass}">${escapeHtml(resultMeta.label)}</span></td>
+      <td><span class="badge ${resultMeta.badgeClass}">${escapeHtml(tr(resultMeta.label))}</span></td>
     </tr>`;
   }).join('');
 
   logsList.innerHTML = `
     <table>
-      <thead><tr><th>Fecha</th><th>Persona</th><th>Confianza</th><th>Resultado</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4" class="text-center muted">Sin registros</td></tr>'}</tbody>
+      <thead><tr><th>${tr('Fecha')}</th><th>${tr('Persona')}</th><th>${tr('Confianza')}</th><th>${tr('Resultado')}</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="4" class="text-center muted">${tr('Sin registros')}</td></tr>`}</tbody>
     </table>
   `;
 }
@@ -532,7 +541,7 @@ function buildActionPlan(model) {
     return {
       primary: 'personas',
       secondary: ['accesos'],
-      hint: 'Crea la primera identidad activa.',
+      hint: tr('Crea la primera identidad activa.'),
     };
   }
 
@@ -540,7 +549,7 @@ function buildActionPlan(model) {
     return {
       primary: 'personas',
       secondary: ['accesos'],
-      hint: 'Agrega identidad y valida actividad reciente.',
+      hint: tr('Agrega identidad y valida actividad reciente.'),
     };
   }
 
@@ -548,14 +557,14 @@ function buildActionPlan(model) {
     return {
       primary: 'accesos',
       secondary: ['personas'],
-      hint: 'Revisa lo ultimo antes de seguir.',
+      hint: tr('Revisa lo ultimo antes de seguir.'),
     };
   }
 
   return {
     primary: 'accesos',
     secondary: ['personas'],
-    hint: 'Valida actividad y mantén actualizado el padrón.',
+    hint: tr('Valida actividad y mantén actualizado el padrón.'),
   };
 }
 
@@ -568,37 +577,37 @@ function buildAlertCopy(model) {
 
     return {
       visible: true,
-      badge: 'Critico',
+      badge: tr('Critico'),
       message: model.lastEvent
-        ? `${upperFirst(issues.join(' · '))}. Ultimo evento ${formatLogMoment(model.lastEvent.fecha)}.`
-        : `${upperFirst(issues.join(' · '))}. Corrige la falla antes de seguir.`,
+        ? `${upperFirst(issues.join(' · '))}. ${tr('Ultimo evento')} ${formatLogMoment(model.lastEvent.fecha)}.`
+        : `${upperFirst(issues.join(' · '))}. ${tr('Corrige la falla antes de seguir.')}`,
     };
   }
 
   if (model.isOnboarding) {
     return {
       visible: true,
-      badge: 'Preparacion',
-      message: 'Agrega la primera identidad para habilitar reconocimiento.',
+      badge: tr('Preparacion'),
+      message: tr('Agrega la primera identidad para habilitar reconocimiento.'),
     };
   }
 
   if (model.alertState === 'warning') {
     const lastResult = model.lastEvent ? getAccessResultMeta(model.lastEvent.resultado) : null;
     const warningLead = lastResult?.isBlocked
-      ? 'Ultimo intento bloqueado'
+      ? tr('Ultimo intento bloqueado')
       : lastResult?.isDenied
-        ? 'Ultimo intento rechazado'
-        : 'Actividad que conviene revisar';
+        ? tr('Ultimo intento rechazado')
+        : tr('Actividad que conviene revisar');
     const streakText = model.failedAttemptsConsecutive > 0
-      ? ` · ${model.failedAttemptsConsecutive} fallos seguidos`
+      ? ` · ${model.failedAttemptsConsecutive} ${tr('fallos seguidos')}`
       : model.todayDenied > 0
-        ? ` · ${model.todayDenied} rechazo(s) hoy`
+        ? ` · ${model.todayDenied} ${tr('rechazo(s) hoy')}`
         : '';
 
     return {
       visible: true,
-      badge: 'Revision',
+      badge: tr('Revision'),
       message: `${warningLead}${streakText}.`,
     };
   }
@@ -633,25 +642,25 @@ function computeResumenModel(users, logs, status) {
 
   const isOnboarding = activeUsers === 0;
   const heroHeadline = alertState === 'critical'
-    ? 'Atencion inmediata'
+    ? tr('Atencion inmediata')
     : (alertState === 'warning' || isOnboarding)
-      ? 'Revision recomendada'
-      : 'Sistema listo';
+      ? tr('Revision recomendada')
+      : tr('Sistema listo');
 
   const heroMetaParts = [
-    `${activeUsers} ${activeUsers === 1 ? 'persona' : 'personas'}`,
-    stats.today > 0 ? `${stats.today} hoy` : 'sin actividad hoy',
-    `${stats.granted} reconocidos`,
+    `${activeUsers} ${activeUsers === 1 ? tr('persona') : tr('personas')}`,
+    stats.today > 0 ? `${stats.today} ${tr('hoy')}` : tr('sin actividad hoy'),
+    `${stats.granted} ${tr('reconocidos')}`,
   ];
 
   if (lastEvent) {
-    heroMetaParts.push(`ultimo evento ${formatLogMoment(lastEvent.fecha)}`);
+    heroMetaParts.push(`${tr('ultimo evento')} ${formatLogMoment(lastEvent.fecha)}`);
   }
 
   const tone = alertState === 'critical' ? 'critical' : ((alertState === 'warning' || isOnboarding) ? 'warning' : 'ok');
   const statusChipText = alertState === 'critical'
-    ? 'Critico'
-    : (alertState === 'warning' ? 'Vigilar' : (isOnboarding ? 'Preparacion' : 'Estable'));
+    ? tr('Critico')
+    : (alertState === 'warning' ? tr('Vigilar') : (isOnboarding ? tr('Preparacion') : tr('Estable')));
 
   return {
     status,
@@ -664,7 +673,7 @@ function computeResumenModel(users, logs, status) {
     alertState,
     tone,
     statusChipText,
-    heroLabel: 'Estado del sistema',
+    heroLabel: tr('Estado del sistema'),
     heroHeadline,
     heroMeta: heroMetaParts.join(' · '),
     statusCaption: formatSystemCaption(status),
@@ -690,11 +699,11 @@ function computeResumenModel(users, logs, status) {
 function renderResumenTimeline(items) {
   if (!resumenTimelineList) return;
   if (resumenTimelineMeta) {
-    resumenTimelineMeta.textContent = items.length ? `${items.length} eventos` : 'Sin movimiento';
+    resumenTimelineMeta.textContent = items.length ? `${items.length} ${tr('eventos')}` : tr('Sin movimiento');
   }
 
   if (!items.length) {
-    resumenTimelineList.innerHTML = '<p class="resumen-empty-state">Sin accesos recientes.</p>';
+    resumenTimelineList.innerHTML = `<p class="resumen-empty-state">${tr('Sin accesos recientes.')}</p>`;
     return;
   }
 
@@ -709,8 +718,8 @@ function renderResumenTimeline(items) {
         <div class="resumen-timeline__marker" aria-hidden="true"></div>
         <div class="resumen-timeline__content">
           <div class="resumen-timeline__row">
-            <strong>${escapeHtml(item.nombre || 'Desconocido')}</strong>
-            <span class="badge ${resultMeta.badgeClass}">${escapeHtml(resultMeta.label)}</span>
+            <strong>${escapeHtml(item.nombre || tr('Desconocido'))}</strong>
+            <span class="badge ${resultMeta.badgeClass}">${escapeHtml(tr(resultMeta.label))}</span>
           </div>
           <div class="resumen-timeline__row resumen-timeline__row--meta">
             <span class="resumen-timeline__time">${escapeHtml(formatLogMoment(item.fecha))}</span>
@@ -902,7 +911,7 @@ function applyPresetUI(umbral) {
     });
   }
   if (recogPresetSummary) {
-    recogPresetSummary.textContent = name || `Personalizado (${num})`;
+    recogPresetSummary.textContent = name ? tr(name) : `${tr('Personalizado')} (${num})`;
   }
   if (cfgThreshold) cfgThreshold.value = num;
 }
@@ -923,7 +932,7 @@ async function loadConfig() {
   applyPresetUI(cfg.umbral_confianza);
   if (maxAttemptsValue) maxAttemptsValue.textContent = cfg.max_intentos;
   if (openSecValue) openSecValue.textContent = cfg.tiempo_apertura_seg;
-  if (doorTimeSummary) doorTimeSummary.textContent = `${cfg.tiempo_apertura_seg} segundo${cfg.tiempo_apertura_seg !== 1 ? 's' : ''}`;
+  if (doorTimeSummary) doorTimeSummary.textContent = `${cfg.tiempo_apertura_seg} ${cfg.tiempo_apertura_seg !== 1 ? tr('segundos') : tr('segundo')}`;
 }
 
 async function saveConfig(patch = {}) {
@@ -943,7 +952,7 @@ async function saveConfig(patch = {}) {
     showAdminToast({ text: 'Ajuste guardado', sub: 'Configuración aplicada', cls: 'success' });
   } catch (error) {
     console.error(error);
-    showAdminToast({ text: 'No se pudo guardar', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
+    showAdminToast({ text: 'No se pudo guardar', sub: getErrorMessage(error, 'No se pudo completar la operacion'), cls: 'error', timeout: 3200 });
   }
 }
 
@@ -956,13 +965,16 @@ function debouncedSaveConfig(patch = {}) {
 async function loadDiagnostics() {
   try {
     const data = await api('/api/system/diagnostics');
-    if (diagnosticsSummary) diagnosticsSummary.textContent = data.summary;
+    if (diagnosticsSummary) {
+      diagnosticsSummary.textContent = tr(data.summary);
+      diagnosticsSummary.dataset.i18nKey = String(data.summary || '');
+    }
     if (diagnosticsRootIcon) {
       diagnosticsRootIcon.classList.toggle('is-warning', !data.all_ok);
     }
     if (diagnosticsDetailList) {
       diagnosticsDetailList.innerHTML = Object.entries(data.checks).map(([key, check], idx, arr) => {
-        const labels = { camera: 'Cámara', model: 'Reconocimiento facial', door: 'Control de puerta', storage: 'Almacenamiento' };
+        const labels = { camera: tr('Cámara'), model: tr('Reconocimiento facial'), door: tr('Control de puerta'), storage: tr('Almacenamiento') };
         const label = labels[key] || key;
         const pillCls = check.ok ? 'settings-diag-pill--ok' : 'settings-diag-pill--warn';
         const icon = check.ok
@@ -971,7 +983,7 @@ async function loadDiagnostics() {
         const divider = idx < arr.length - 1 ? '<div class="settings-row-divider" style="margin-left:58px"></div>' : '';
         return `<div class="settings-diag-row">
           <div class="settings-diag-pill ${pillCls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg></div>
-          <div class="settings-diag-body"><p class="settings-diag-title">${escapeHtml(label)}</p><p class="settings-diag-msg">${escapeHtml(check.message)}</p></div>
+          <div class="settings-diag-body"><p class="settings-diag-title">${escapeHtml(label)}</p><p class="settings-diag-msg">${escapeHtml(tr(check.message))}</p></div>
         </div>${divider}`;
       }).join('');
     }
@@ -980,14 +992,14 @@ async function loadDiagnostics() {
     const raw = String(error?.message || '');
     const isNotFound = raw.includes('Not Found') || raw.includes('404');
     const friendly = isNotFound
-      ? 'Reinicia el servidor para activar diagnóstico'
-      : 'No se pudo obtener el diagnóstico';
+      ? tr('Reinicia el servidor para activar diagnóstico')
+      : tr('No se pudo obtener el diagnóstico');
     if (diagnosticsSummary) diagnosticsSummary.textContent = friendly;
     if (diagnosticsRootIcon) diagnosticsRootIcon.classList.add('is-warning');
     if (diagnosticsDetailList) {
       const detail = isNotFound
-        ? 'El servidor está corriendo una versión sin los nuevos endpoints. Reinicia el proceso (Ctrl+C y vuelve a ejecutar) para que carguen.'
-        : `Detalle técnico: ${escapeHtml(getErrorMessage(error))}`;
+        ? tr('El servidor está corriendo una versión sin los nuevos endpoints. Reinicia el proceso (Ctrl+C y vuelve a ejecutar) para que carguen.')
+        : `${tr('Detalle técnico')}: ${escapeHtml(getErrorMessage(error))}`;
       diagnosticsDetailList.innerHTML = `<div class="settings-diag-row">
         <div class="settings-diag-pill settings-diag-pill--warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></div>
         <div class="settings-diag-body"><p class="settings-diag-title">${escapeHtml(friendly)}</p><p class="settings-diag-msg">${detail}</p></div>
@@ -1003,7 +1015,7 @@ async function loadDeviceInfo() {
     if (deviceInfoVersion) deviceInfoVersion.textContent = data.software_version || '—';
     if (deviceInfoHostname) deviceInfoHostname.textContent = data.hostname || '—';
     if (deviceInfoIp) deviceInfoIp.textContent = data.local_ip || '—';
-    if (deviceInfoDisk) deviceInfoDisk.textContent = data.disk_free_gb != null ? `${data.disk_free_gb} GB libres de ${data.disk_total_gb} GB` : '—';
+    if (deviceInfoDisk) deviceInfoDisk.textContent = data.disk_free_gb != null ? `${data.disk_free_gb} ${tr('GB libres de')} ${data.disk_total_gb} GB` : '—';
     if (deviceInfoUptime) deviceInfoUptime.textContent = formatUptime(data.uptime_seconds);
   } catch (error) {
     console.error(error);
@@ -1016,8 +1028,8 @@ window.toggleUser = async function (userId, active) {
   const action = active ? 'activar' : 'desactivar';
   const confirmed = await openAdminConfirm({
     eyebrow: 'Estado de persona',
-    title: `${active ? 'Activar' : 'Desactivar'} usuario`,
-    text: `Se actualizara el estado operativo de la persona con ID ${userId}.`,
+    title: active ? 'Activar usuario' : 'Desactivar usuario',
+    text: `${tr('Se actualizara el estado operativo de la persona con ID')} ${userId}.`,
     confirmLabel: active ? 'Activar' : 'Desactivar',
     tone: 'primary',
   });
@@ -1030,7 +1042,7 @@ window.toggleUser = async function (userId, active) {
     await loadUsers();
     showAdminToast({
       text: active ? 'Persona activada' : 'Persona desactivada',
-      sub: `ID ${userId} actualizado`,
+      sub: `ID ${userId} ${tr('actualizado')}`,
       cls: 'success',
     });
   } catch (error) {
@@ -1043,7 +1055,7 @@ window.deleteUser = async function(userId, nombre) {
   const confirmed = await openAdminConfirm({
     eyebrow: 'Accion irreversible',
     title: 'Eliminar usuario',
-    text: `${nombre} (ID ${userId}) sera eliminado junto con sus muestras y su relacion con los accesos. Esta accion no se puede deshacer.`,
+    text: `${nombre} (ID ${userId}) ${tr('sera eliminado junto con sus muestras y su relacion con los accesos. Esta accion no se puede deshacer.')}`,
     confirmLabel: 'Eliminar',
     tone: 'danger',
   });
@@ -1053,7 +1065,7 @@ window.deleteUser = async function(userId, nombre) {
     await loadUsers();
     showAdminToast({
       text: 'Usuario eliminado',
-      sub: `${nombre} (ID ${userId}) fue eliminado`,
+      sub: `${nombre} (ID ${userId}) ${tr('fue eliminado')}`,
       cls: 'success',
     });
   } catch (error) {
@@ -1081,11 +1093,11 @@ createUserBtn?.addEventListener('click', async () => {
     if (createResult) {
       const uid = user?.id ?? '';
       createResult.hidden = false;
-      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} registrado${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">Registrar ahora &rarr;</button>`;
+      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} ${tr('registrado')}${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">${tr('Registrar ahora')} &rarr;</button>`;
       setTimeout(() => { createResult.hidden = true; }, 10000);
     }
 
-    showAdminToast({ text: 'Persona registrada', sub: `${nombre} fue agregado`, cls: 'success' });
+    showAdminToast({ text: 'Persona registrada', sub: `${nombre} ${tr('fue agregado')}`, cls: 'success' });
   } catch (error) {
     console.error(error);
     showAdminToast({ text: 'No se pudo crear', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
@@ -1104,20 +1116,20 @@ trainBtn?.addEventListener('click', async () => {
   });
   if (!confirmed) return;
   trainBtn.disabled = true;
-  trainBtn.innerHTML = '<svg class="icon spin" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#loader"></use></svg> <span>Procesando...</span>';
+  trainBtn.innerHTML = `<svg class="icon spin" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#loader"></use></svg> <span>${tr('Procesando...')}</span>`;
   showAdminToast({ text: 'Entrenando modelo...', sub: 'Esto puede tardar unos segundos', cls: 'processing', timeout: 15000 });
   try {
     const result = await api('/api/train', { method: 'POST' });
-    if (trainResult) trainResult.textContent = `Entrenado con ${result.samples_used} muestras de ${result.unique_users} personas.`;
+    if (trainResult) trainResult.textContent = `${tr('Entrenado con')} ${result.samples_used} ${tr('muestras de')} ${result.unique_users} ${tr('personas')}.`;
     await loadStatus();
-    showAdminToast({ text: 'Entrenamiento completado', sub: `${result.samples_used} muestras de ${result.unique_users} personas`, cls: 'success', timeout: 3200 });
+    showAdminToast({ text: 'Entrenamiento completado', sub: `${result.samples_used} ${tr('muestras de')} ${result.unique_users} ${tr('personas')}`, cls: 'success', timeout: 3200 });
   } catch (error) {
     console.error(error);
     if (trainResult) trainResult.textContent = getErrorMessage(error, 'No se pudo entrenar el modelo.');
     showAdminToast({ text: 'Error de entrenamiento', sub: getErrorMessage(error), cls: 'error', timeout: 3400 });
   } finally {
     trainBtn.disabled = false;
-    trainBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg> <span>Reentrenar modelo</span>';
+    trainBtn.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#refresh-filled"></use></svg> <span>${tr('Reentrenar modelo')}</span>`;
   }
 });
 
@@ -1222,16 +1234,16 @@ passwordSheetConfirm?.addEventListener('click', async () => {
   const current = currentPasswordInput?.value || '';
   const next = newPasswordInput?.value || '';
   if (!current || !next) {
-    if (passwordSheetError) { passwordSheetError.textContent = 'Completa ambos campos.'; passwordSheetError.hidden = false; }
+    if (passwordSheetError) { passwordSheetError.textContent = tr('Completa ambos campos.'); passwordSheetError.hidden = false; }
     return;
   }
   if (next.length < 8) {
-    if (passwordSheetError) { passwordSheetError.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.'; passwordSheetError.hidden = false; }
+    if (passwordSheetError) { passwordSheetError.textContent = tr('La nueva contraseña debe tener al menos 8 caracteres.'); passwordSheetError.hidden = false; }
     return;
   }
   if (passwordSheetError) passwordSheetError.hidden = true;
   passwordSheetConfirm.disabled = true;
-  passwordSheetConfirm.textContent = 'Guardando…';
+  passwordSheetConfirm.textContent = tr('Guardando…');
   try {
     await api('/api/admin/change-password', {
       method: 'POST',
@@ -1244,7 +1256,7 @@ passwordSheetConfirm?.addEventListener('click', async () => {
     if (passwordSheetError) { passwordSheetError.textContent = msg; passwordSheetError.hidden = false; }
   } finally {
     passwordSheetConfirm.disabled = false;
-    passwordSheetConfirm.textContent = 'Cambiar';
+    passwordSheetConfirm.textContent = tr('Cambiar');
   }
 });
 
@@ -1342,4 +1354,32 @@ init().catch((err) => {
     cls: 'error',
     timeout: 3600,
   });
+});
+
+/* ── i18n live re-render ── */
+
+document.addEventListener('i18n:change', () => {
+  try {
+    if (dashboardReady) {
+      renderUsers(cachedUsers);
+      applyLogFilter();
+      renderDashboardFromCache();
+    }
+    // Re-translate persistent toast/diagnostic strings whose original key is preserved
+    if (adminToastText && adminToastText.dataset.i18nKey) {
+      adminToastText.textContent = tr(adminToastText.dataset.i18nKey);
+    }
+    if (adminToastSub && adminToastSub.dataset.i18nKey) {
+      adminToastSub.textContent = tr(adminToastSub.dataset.i18nKey);
+    }
+    if (diagnosticsSummary && diagnosticsSummary.dataset.i18nKey) {
+      diagnosticsSummary.textContent = tr(diagnosticsSummary.dataset.i18nKey);
+    }
+    // Re-render config-derived labels
+    loadConfig().catch(() => {});
+    // Re-render diagnostics labels (Cámara, Reconocimiento facial, etc.)
+    loadDiagnostics().catch(() => {});
+    // Re-render device info disk text fragment
+    loadDeviceInfo().catch(() => {});
+  } catch (_) { /* silent */ }
 });
