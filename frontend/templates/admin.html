@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/admin.css?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/enrollment.css?v={{ asset_version }}" />
+  <link rel="stylesheet" href="/static/css/i18n.css?v={{ asset_version }}" />
   <script>
     /* Admin is always dark — no theme toggle */
     document.documentElement.className = 'theme-dark';
@@ -28,9 +29,10 @@
       type="button"
       aria-label="Cerrar navegación lateral"
       tabindex="-1"
+      data-i18n-attr="aria-label:Cerrar navegación lateral"
     ></button>
 
-    <main class="admin-main" id="adminMain" aria-label="Área principal">
+    <main class="admin-main" id="adminMain" aria-label="Área principal" data-i18n-attr="aria-label:Área principal">
 
       <!-- ═══════════════ VIEW: RESUMEN ═══════════════ -->
       <section class="admin-view" id="view-resumen">
@@ -41,62 +43,62 @@
             <span class="hud-corner hud-bl" aria-hidden="true"></span>
             <span class="hud-corner hud-br" aria-hidden="true"></span>
             <div class="resumen-hero__topline">
-              <span class="resumen-hero__eyebrow">Centro de control</span>
-              <span class="resumen-status-chip" id="resumenStatusChip">Monitoreando</span>
+              <span class="resumen-hero__eyebrow" data-i18n>Centro de control</span>
+              <span class="resumen-status-chip" id="resumenStatusChip" data-i18n>Monitoreando</span>
             </div>
 
             <div class="resumen-hero__copy">
-              <p class="resumen-hero__label" id="resumenStatusLabel">Estado actual</p>
-              <h2 class="resumen-hero__title" id="resumenStatusTitle">Cargando estado operativo…</h2>
-              <p class="resumen-hero__meta" id="resumenStatusMeta">Sincronizando estado y actividad.</p>
-              <p class="resumen-hero__caption" id="resumenStatusCaption">Cámara, modelo y puerta en una sola lectura.</p>
+              <p class="resumen-hero__label" id="resumenStatusLabel" data-i18n>Estado actual</p>
+              <h2 class="resumen-hero__title" id="resumenStatusTitle" data-i18n>Cargando estado operativo…</h2>
+              <p class="resumen-hero__meta" id="resumenStatusMeta" data-i18n>Sincronizando estado y actividad.</p>
+              <p class="resumen-hero__caption" id="resumenStatusCaption" data-i18n>Cámara, modelo y puerta en una sola lectura.</p>
             </div>
 
             <div class="resumen-alert-inline" id="resumenInlineAlert" hidden>
-              <span class="resumen-alert-inline__badge" id="resumenInlineAlertBadge">Atención</span>
-              <p class="resumen-alert-inline__text" id="resumenInlineAlertText">El sistema mostrará aquí la incidencia principal.</p>
+              <span class="resumen-alert-inline__badge" id="resumenInlineAlertBadge" data-i18n>Atención</span>
+              <p class="resumen-alert-inline__text" id="resumenInlineAlertText" data-i18n>El sistema mostrará aquí la incidencia principal.</p>
             </div>
 
-            <div class="resumen-metric-strip" aria-label="Indicadores operativos">
+            <div class="resumen-metric-strip" aria-label="Indicadores operativos" data-i18n-attr="aria-label:Indicadores operativos">
               <article class="resumen-metric">
                 <span class="resumen-metric__value" id="resumenMetricActiveUsers">—</span>
-                <span class="resumen-metric__label">Personas activas</span>
+                <span class="resumen-metric__label" data-i18n>Personas activas</span>
               </article>
               <article class="resumen-metric">
                 <span class="resumen-metric__value" id="resumenMetricToday">—</span>
-                <span class="resumen-metric__label">Actividad hoy</span>
+                <span class="resumen-metric__label" data-i18n>Actividad hoy</span>
               </article>
               <article class="resumen-metric resumen-metric--accent">
                 <span class="resumen-metric__value" id="resumenMetricSuccess">—</span>
-                <span class="resumen-metric__label">Tasa de reconocimiento</span>
+                <span class="resumen-metric__label" data-i18n>Tasa de reconocimiento</span>
               </article>
               <article class="resumen-metric">
                 <span class="resumen-metric__value" id="resumenMetricManual">—</span>
-                <span class="resumen-metric__label">Manuales hoy</span>
+                <span class="resumen-metric__label" data-i18n>Manuales hoy</span>
               </article>
             </div>
           </section>
 
           <section class="card resumen-actions" aria-labelledby="resumenActionTitle">
             <div class="resumen-panel-head resumen-panel-head--stack">
-              <p class="resumen-panel-head__eyebrow">Siguiente movimiento</p>
-              <h2 class="resumen-panel-title" id="resumenActionTitle">Acción sugerida</h2>
+              <p class="resumen-panel-head__eyebrow" data-i18n>Siguiente movimiento</p>
+              <h2 class="resumen-panel-title" id="resumenActionTitle" data-i18n>Acción sugerida</h2>
             </div>
-            <p class="resumen-action-hint" id="resumenActionHint">Seleccionando la mejor acción.</p>
+            <p class="resumen-action-hint" id="resumenActionHint" data-i18n>Seleccionando la mejor acción.</p>
 
             <div class="resumen-action-stack" id="resumenActionStack">
               <button id="resumenActionAccesos" class="resumen-action-btn" type="button" data-quick="accesos">
                 <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#list-filled"></use></svg>
                 <span class="resumen-action-btn__content">
-                  <strong>Ver accesos</strong>
-                  <small>Revisa rechazos.</small>
+                  <strong data-i18n>Ver accesos</strong>
+                  <small data-i18n>Revisa rechazos.</small>
                 </span>
               </button>
               <button id="resumenActionPersonas" class="resumen-action-btn" type="button" data-quick="personas">
                 <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
                 <span class="resumen-action-btn__content">
-                  <strong>Agregar persona</strong>
-                  <small>Crea identidad.</small>
+                  <strong data-i18n>Agregar persona</strong>
+                  <small data-i18n>Crea identidad.</small>
                 </span>
               </button>
             </div>
@@ -105,14 +107,14 @@
           <section class="card resumen-timeline" aria-labelledby="resumenTimelineTitle">
             <div class="section-head-row resumen-timeline__head">
               <div>
-                <p class="resumen-panel-head__eyebrow">Actividad reciente</p>
-                <h2 id="resumenTimelineTitle">Lo último</h2>
+                <p class="resumen-panel-head__eyebrow" data-i18n>Actividad reciente</p>
+                <h2 id="resumenTimelineTitle" data-i18n>Lo último</h2>
               </div>
-              <p class="muted text-sm resumen-timeline__meta" id="resumenTimelineMeta">Sin movimiento</p>
+              <p class="muted text-sm resumen-timeline__meta" id="resumenTimelineMeta" data-i18n>Sin movimiento</p>
             </div>
 
             <div class="resumen-timeline__list" id="resumenTimelineList" aria-live="polite">
-              <p class="resumen-empty-state">Sin accesos recientes.</p>
+              <p class="resumen-empty-state" data-i18n>Sin accesos recientes.</p>
             </div>
           </section>
         </div>
@@ -122,10 +124,10 @@
       <section class="admin-view" id="view-personas" hidden>
         <div class="card">
           <div class="admin-form-bar">
-            <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" />
+            <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" data-i18n-attr="placeholder:Nombre completo" />
             <button id="createUserBtn" class="btn btn-primary" type="button">
               <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
-              <span>Agregar</span>
+              <span data-i18n>Agregar</span>
             </button>
           </div>
           <p id="createResult" class="create-result" hidden></p>
@@ -133,10 +135,10 @@
 
         <div class="card">
           <div class="section-head-row">
-            <h2>Personas registradas</h2>
+            <h2 data-i18n>Personas registradas</h2>
             <div class="search-wrap">
               <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#search-filled"></use></svg>
-              <input id="userSearch" type="text" placeholder="Buscar…" />
+              <input id="userSearch" type="text" placeholder="Buscar…" data-i18n-attr="placeholder:Buscar…" />
             </div>
           </div>
           <div id="usersList" class="table-wrap"></div>
@@ -155,69 +157,69 @@
             <span class="hud-corner hud-tl" aria-hidden="true"></span>
             <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statToday">—</span>
-            <span class="stat-label">Hoy</span>
+            <span class="stat-label" data-i18n>Hoy</span>
           </div>
           <div class="stat-card stat-card--success">
             <span class="hud-corner hud-tl" aria-hidden="true"></span>
             <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statGranted">—</span>
-            <span class="stat-label">Reconocidos</span>
+            <span class="stat-label" data-i18n>Reconocidos</span>
           </div>
           <div class="stat-card stat-card--danger">
             <span class="hud-corner hud-tl" aria-hidden="true"></span>
             <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statDenied">—</span>
-            <span class="stat-label">Rechazados</span>
+            <span class="stat-label" data-i18n>Rechazados</span>
           </div>
           <div class="stat-card stat-card--muted">
             <span class="hud-corner hud-tl" aria-hidden="true"></span>
             <span class="hud-corner hud-br" aria-hidden="true"></span>
             <span class="stat-value" id="statManual">—</span>
-            <span class="stat-label">Manuales</span>
+            <span class="stat-label" data-i18n>Manuales</span>
           </div>
         </div>
 
         <div class="card">
           <div class="section-head-row">
-            <h2>Historial reciente</h2>
+            <h2 data-i18n>Historial reciente</h2>
             <div class="filter-bar filter-bar--access">
-              <label for="logFilterResult" class="sr-only">Filtrar por resultado</label>
+              <label for="logFilterResult" class="sr-only" data-i18n>Filtrar por resultado</label>
               <select id="logFilterResult" class="select-input select-input--sm">
-                <option value="">Todos</option>
-                <option value="autorizado">Reconocidos</option>
-                <option value="rechazado">Rechazados</option>
-                <option value="manual">Manuales</option>
+                <option value="" data-i18n>Todos</option>
+                <option value="autorizado" data-i18n>Reconocidos</option>
+                <option value="rechazado" data-i18n>Rechazados</option>
+                <option value="manual" data-i18n>Manuales</option>
               </select>
               <button id="logAdvancedToggle" class="btn btn-secondary btn--sm" type="button" aria-expanded="false" aria-controls="logAdvancedPanel">
-                Búsqueda avanzada
+                <span data-i18n>Búsqueda avanzada</span>
               </button>
             </div>
           </div>
           <div id="logAdvancedPanel" class="log-advanced-panel" hidden>
             <div class="log-advanced-grid">
               <label class="log-advanced-field">
-                <span>Buscar</span>
-                <input id="logSearch" type="text" class="select-input" placeholder="Persona, ID, motivo" />
+                <span data-i18n>Buscar</span>
+                <input id="logSearch" type="text" class="select-input" placeholder="Persona, ID, motivo" data-i18n-attr="placeholder:Persona, ID, motivo" />
               </label>
               <label class="log-advanced-field">
-                <span>Desde</span>
+                <span data-i18n>Desde</span>
                 <input id="logDateFrom" type="date" class="select-input" />
               </label>
               <label class="log-advanced-field">
-                <span>Hasta</span>
+                <span data-i18n>Hasta</span>
                 <input id="logDateTo" type="date" class="select-input" />
               </label>
               <label class="log-advanced-field">
-                <span>Confianza mín.</span>
+                <span data-i18n>Confianza mín.</span>
                 <input id="logConfidenceMin" type="number" step="0.1" min="0" max="100" class="select-input" placeholder="0" />
               </label>
               <label class="log-advanced-field">
-                <span>Confianza máx.</span>
+                <span data-i18n>Confianza máx.</span>
                 <input id="logConfidenceMax" type="number" step="0.1" min="0" max="100" class="select-input" placeholder="100" />
               </label>
             </div>
             <div class="log-advanced-actions">
-              <button id="logAdvancedReset" class="btn btn-ghost btn--sm" type="button">Limpiar filtros</button>
+              <button id="logAdvancedReset" class="btn btn-ghost btn--sm" type="button" data-i18n>Limpiar filtros</button>
             </div>
           </div>
           <div id="logsList" class="table-wrap table-wrap--tall"></div>
@@ -236,23 +238,23 @@
               </svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Diagnóstico</span>
-              <span class="settings-row__sub" id="diagnosticsSummary">Comprobando…</span>
+              <span class="settings-row__label" data-i18n>Diagnóstico</span>
+              <span class="settings-row__sub" id="diagnosticsSummary" data-i18n>Comprobando…</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
         </div>
 
         <!-- Grupo 2: Configuración -->
-        <p class="settings-group-label">Configuración</p>
+        <p class="settings-group-label" data-i18n>Configuración</p>
         <div class="settings-group">
           <a href="#sistema-reconocimiento" class="settings-row">
             <div class="settings-row__icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Reconocimiento</span>
-              <span class="settings-row__sub" id="recogPresetSummary">Cargando…</span>
+              <span class="settings-row__label" data-i18n>Reconocimiento</span>
+              <span class="settings-row__sub" id="recogPresetSummary" data-i18n>Cargando…</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
@@ -262,8 +264,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Puerta</span>
-              <span class="settings-row__sub" id="doorTimeSummary">Cargando…</span>
+              <span class="settings-row__label" data-i18n>Puerta</span>
+              <span class="settings-row__sub" id="doorTimeSummary" data-i18n>Cargando…</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
@@ -273,21 +275,21 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Mantenimiento</span>
+              <span class="settings-row__label" data-i18n>Mantenimiento</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
         </div>
 
         <!-- Grupo 3: Sistema y cuenta -->
-        <p class="settings-group-label">Sistema y cuenta</p>
+        <p class="settings-group-label" data-i18n>Sistema y cuenta</p>
         <div class="settings-group">
           <a href="#sistema-cuenta" class="settings-row">
             <div class="settings-row__icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Cuenta</span>
+              <span class="settings-row__label" data-i18n>Cuenta</span>
               <span class="settings-row__sub" id="accountUsernameSummary">Administrador</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
@@ -298,7 +300,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Acerca de</span>
+              <span class="settings-row__label" data-i18n>Acerca de</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
@@ -308,7 +310,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Avanzado</span>
+              <span class="settings-row__label" data-i18n>Avanzado</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
@@ -320,7 +322,7 @@
       <section class="admin-view settings-page settings-subpage" id="view-sistema-diagnostico" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
         <div class="settings-group" id="diagnosticsDetailList">
           <!-- filled by JS -->
@@ -331,88 +333,88 @@
       <section class="admin-view settings-page settings-subpage" id="view-sistema-reconocimiento" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
-        <p class="settings-group-label">Modo de reconocimiento</p>
+        <p class="settings-group-label" data-i18n>Modo de reconocimiento</p>
         <div class="settings-group">
           <div class="settings-row settings-row--control">
-            <div class="settings-segment" id="recogSegment" role="group" aria-label="Modo de reconocimiento">
+            <div class="settings-segment" id="recogSegment" role="group" aria-label="Modo de reconocimiento" data-i18n-attr="aria-label:Modo de reconocimiento">
               <button class="settings-segment__btn" type="button" data-preset="50" aria-pressed="false">
-                <span class="settings-segment__name">Estricto</span>
-                <span class="settings-segment__desc">Mayor seguridad</span>
+                <span class="settings-segment__name" data-i18n>Estricto</span>
+                <span class="settings-segment__desc" data-i18n>Mayor seguridad</span>
               </button>
               <button class="settings-segment__btn" type="button" data-preset="70" aria-pressed="false">
-                <span class="settings-segment__name">Equilibrado</span>
-                <span class="settings-segment__desc">Recomendado</span>
+                <span class="settings-segment__name" data-i18n>Equilibrado</span>
+                <span class="settings-segment__desc" data-i18n>Recomendado</span>
               </button>
               <button class="settings-segment__btn" type="button" data-preset="95" aria-pressed="false">
-                <span class="settings-segment__name">Permisivo</span>
-                <span class="settings-segment__desc">Más tolerante</span>
+                <span class="settings-segment__name" data-i18n>Permisivo</span>
+                <span class="settings-segment__desc" data-i18n>Más tolerante</span>
               </button>
               <button class="settings-segment__btn settings-segment__btn--custom" type="button" data-preset="custom" aria-pressed="false" hidden>
-                <span class="settings-segment__name">Personalizado</span>
+                <span class="settings-segment__name" data-i18n>Personalizado</span>
                 <span class="settings-segment__desc" id="recogCustomValue">—</span>
               </button>
             </div>
           </div>
         </div>
-        <p class="settings-group-label">Intentos antes de bloquear</p>
+        <p class="settings-group-label" data-i18n>Intentos antes de bloquear</p>
         <div class="settings-group">
           <div class="settings-row settings-row--control">
-            <span class="settings-row__label">Intentos máximos</span>
+            <span class="settings-row__label" data-i18n>Intentos máximos</span>
             <div class="settings-stepper" id="maxAttemptsStepper" data-min="1" data-max="10">
-              <button class="settings-stepper__btn" type="button" data-action="dec" aria-label="Reducir">
+              <button class="settings-stepper__btn" type="button" data-action="dec" aria-label="Reducir" data-i18n-attr="aria-label:Reducir">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <span class="settings-stepper__value" id="maxAttemptsValue">3</span>
-              <button class="settings-stepper__btn" type="button" data-action="inc" aria-label="Aumentar">
+              <button class="settings-stepper__btn" type="button" data-action="inc" aria-label="Aumentar" data-i18n-attr="aria-label:Aumentar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
             </div>
           </div>
         </div>
-        <p class="settings-footer-hint">Los intentos fallidos consecutivos bloquean el acceso temporalmente.</p>
+        <p class="settings-footer-hint" data-i18n>Los intentos fallidos consecutivos bloquean el acceso temporalmente.</p>
       </section>
 
       <!-- ═══════════════ VIEW: SISTEMA — PUERTA ═══════════════ -->
       <section class="admin-view settings-page settings-subpage" id="view-sistema-puerta" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
-        <p class="settings-group-label">Tiempo de apertura</p>
+        <p class="settings-group-label" data-i18n>Tiempo de apertura</p>
         <div class="settings-group">
           <div class="settings-row settings-row--control">
-            <span class="settings-row__label">Segundos abierta</span>
+            <span class="settings-row__label" data-i18n>Segundos abierta</span>
             <div class="settings-stepper" id="openSecStepper" data-min="1" data-max="20">
-              <button class="settings-stepper__btn" type="button" data-action="dec" aria-label="Reducir">
+              <button class="settings-stepper__btn" type="button" data-action="dec" aria-label="Reducir" data-i18n-attr="aria-label:Reducir">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <span class="settings-stepper__value" id="openSecValue">5</span>
-              <button class="settings-stepper__btn" type="button" data-action="inc" aria-label="Aumentar">
+              <button class="settings-stepper__btn" type="button" data-action="inc" aria-label="Aumentar" data-i18n-attr="aria-label:Aumentar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
             </div>
           </div>
         </div>
-        <p class="settings-footer-hint">Tiempo que permanece desbloqueada la puerta tras un acceso autorizado.</p>
+        <p class="settings-footer-hint" data-i18n>Tiempo que permanece desbloqueada la puerta tras un acceso autorizado.</p>
       </section>
 
       <!-- ═══════════════ VIEW: SISTEMA — MANTENIMIENTO ═══════════════ -->
       <section class="admin-view settings-page settings-subpage" id="view-sistema-mantenimiento" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
-        <p class="settings-group-label">Acciones de mantenimiento</p>
+        <p class="settings-group-label" data-i18n>Acciones de mantenimiento</p>
         <div class="settings-group">
           <button id="manualOpenAdminBtn" class="settings-row settings-row--action" type="button">
             <div class="settings-row__icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Abrir puerta ahora</span>
-              <span class="settings-row__sub">Activa el actuador manualmente</span>
+              <span class="settings-row__label" data-i18n>Abrir puerta ahora</span>
+              <span class="settings-row__sub" data-i18n>Activa el actuador manualmente</span>
             </div>
           </button>
           <div class="settings-row-divider"></div>
@@ -421,8 +423,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Reentrenar modelo</span>
-              <span class="settings-row__sub" id="trainResult">Actualiza el modelo de reconocimiento facial</span>
+              <span class="settings-row__label" data-i18n>Reentrenar modelo</span>
+              <span class="settings-row__sub" id="trainResult" data-i18n>Actualiza el modelo de reconocimiento facial</span>
             </div>
           </button>
         </div>
@@ -432,9 +434,9 @@
       <section class="admin-view settings-page settings-subpage" id="view-sistema-cuenta" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
-        <p class="settings-group-label">Sesión actual</p>
+        <p class="settings-group-label" data-i18n>Sesión actual</p>
         <div class="settings-group">
           <div class="settings-row">
             <div class="settings-row__icon-wrap">
@@ -442,27 +444,27 @@
             </div>
             <div class="settings-row__body">
               <span class="settings-row__label" id="accountDisplayName">Administrador</span>
-              <span class="settings-row__sub">Cuenta de administrador</span>
+              <span class="settings-row__sub" data-i18n>Cuenta de administrador</span>
             </div>
           </div>
         </div>
-        <p class="settings-group-label">Seguridad</p>
+        <p class="settings-group-label" data-i18n>Seguridad</p>
         <div class="settings-group">
           <button class="settings-row settings-row--action" type="button" id="changePasswordBtn">
             <div class="settings-row__icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
             <div class="settings-row__body">
-              <span class="settings-row__label">Cambiar contraseña</span>
+              <span class="settings-row__label" data-i18n>Cambiar contraseña</span>
             </div>
             <svg class="settings-row__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <p class="settings-group-label">Sesión</p>
+        <p class="settings-group-label" data-i18n>Sesión</p>
         <div class="settings-group">
           <button class="settings-row settings-row--danger" type="button" data-logout-action>
             <div class="settings-row__body">
-              <span class="settings-row__label">Cerrar sesión</span>
+              <span class="settings-row__label" data-i18n>Cerrar sesión</span>
             </div>
           </button>
         </div>
@@ -472,17 +474,17 @@
       <section class="admin-view settings-page settings-subpage" id="view-sistema-acerca" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
-        <p class="settings-group-label">Información del dispositivo</p>
+        <p class="settings-group-label" data-i18n>Información del dispositivo</p>
         <div class="settings-group" id="deviceInfoList">
           <div class="settings-row">
-            <div class="settings-row__body"><span class="settings-row__label">Nombre</span></div>
+            <div class="settings-row__body"><span class="settings-row__label" data-i18n>Nombre</span></div>
             <span class="settings-row__value" id="deviceInfoName">—</span>
           </div>
           <div class="settings-row-divider"></div>
           <div class="settings-row">
-            <div class="settings-row__body"><span class="settings-row__label">Versión del software</span></div>
+            <div class="settings-row__body"><span class="settings-row__label" data-i18n>Versión del software</span></div>
             <span class="settings-row__value" id="deviceInfoVersion">—</span>
           </div>
           <div class="settings-row-divider"></div>
@@ -492,17 +494,17 @@
           </div>
           <div class="settings-row-divider"></div>
           <div class="settings-row">
-            <div class="settings-row__body"><span class="settings-row__label">Dirección IP</span></div>
+            <div class="settings-row__body"><span class="settings-row__label" data-i18n>Dirección IP</span></div>
             <span class="settings-row__value" id="deviceInfoIp">—</span>
           </div>
           <div class="settings-row-divider"></div>
           <div class="settings-row">
-            <div class="settings-row__body"><span class="settings-row__label">Espacio libre</span></div>
+            <div class="settings-row__body"><span class="settings-row__label" data-i18n>Espacio libre</span></div>
             <span class="settings-row__value" id="deviceInfoDisk">—</span>
           </div>
           <div class="settings-row-divider"></div>
           <div class="settings-row">
-            <div class="settings-row__body"><span class="settings-row__label">Tiempo encendido</span></div>
+            <div class="settings-row__body"><span class="settings-row__label" data-i18n>Tiempo encendido</span></div>
             <span class="settings-row__value" id="deviceInfoUptime">—</span>
           </div>
         </div>
@@ -512,25 +514,25 @@
       <section class="admin-view settings-page settings-subpage" id="view-sistema-avanzado" hidden>
         <button class="settings-back-btn" type="button" data-back="sistema">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Sistema
+          <span data-i18n>Sistema</span>
         </button>
-        <p class="settings-group-label">Parámetros avanzados</p>
+        <p class="settings-group-label" data-i18n>Parámetros avanzados</p>
         <div class="settings-group">
           <div class="settings-row settings-row--control settings-row--stacked">
             <div class="settings-row__body">
-              <span class="settings-row__label">Umbral de coincidencia</span>
-              <span class="settings-row__sub">Rango 1–200 · Menor = más estricto</span>
+              <span class="settings-row__label" data-i18n>Umbral de coincidencia</span>
+              <span class="settings-row__sub" data-i18n>Rango 1–200 · Menor = más estricto</span>
             </div>
             <div class="settings-advanced-input-wrap">
               <input id="cfgThreshold" class="settings-advanced-input" type="number" step="1" min="1" max="200" value="70" />
-              <button class="settings-advanced-apply" id="applyThresholdBtn" type="button">Aplicar</button>
+              <button class="settings-advanced-apply" id="applyThresholdBtn" type="button" data-i18n>Aplicar</button>
             </div>
           </div>
         </div>
         <div class="settings-advanced-hint">
-          <p><strong>Estricto (50)</strong> — Más exigente. Rechaza si hay la menor duda. Puede denegar a personas registradas en condiciones difíciles.</p>
-          <p><strong>Equilibrado (70)</strong> — Configuración recomendada para la mayoría de los casos.</p>
-          <p><strong>Permisivo (95)</strong> — Acepta con mayor flexibilidad. Útil cuando las personas cambian mucho de apariencia.</p>
+          <p data-i18n-html><strong>Estricto (50)</strong> — Más exigente. Rechaza si hay la menor duda. Puede denegar a personas registradas en condiciones difíciles.</p>
+          <p data-i18n-html><strong>Equilibrado (70)</strong> — Configuración recomendada para la mayoría de los casos.</p>
+          <p data-i18n-html><strong>Permisivo (95)</strong> — Acepta con mayor flexibilidad. Útil cuando las personas cambian mucho de apariencia.</p>
         </div>
       </section>
 
@@ -539,19 +541,19 @@
         <div class="settings-sheet__backdrop" id="passwordSheetBackdrop"></div>
         <div class="settings-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="passwordSheetTitle">
           <div class="settings-sheet__handle"></div>
-          <h2 class="settings-sheet__title" id="passwordSheetTitle">Cambiar contraseña</h2>
+          <h2 class="settings-sheet__title" id="passwordSheetTitle" data-i18n>Cambiar contraseña</h2>
           <div class="settings-sheet__field">
-            <label for="currentPasswordInput" class="settings-sheet__label">Contraseña actual</label>
+            <label for="currentPasswordInput" class="settings-sheet__label" data-i18n>Contraseña actual</label>
             <input id="currentPasswordInput" class="settings-sheet__input" type="password" autocomplete="current-password" placeholder="••••••••" />
           </div>
           <div class="settings-sheet__field">
-            <label for="newPasswordInput" class="settings-sheet__label">Nueva contraseña</label>
-            <input id="newPasswordInput" class="settings-sheet__input" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+            <label for="newPasswordInput" class="settings-sheet__label" data-i18n>Nueva contraseña</label>
+            <input id="newPasswordInput" class="settings-sheet__input" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" data-i18n-attr="placeholder:Mínimo 8 caracteres" />
           </div>
           <p id="passwordSheetError" class="settings-sheet__error" hidden></p>
           <div class="settings-sheet__actions">
-            <button class="btn btn-ghost" type="button" id="passwordSheetCancel">Cancelar</button>
-            <button class="btn btn-primary" type="button" id="passwordSheetConfirm">Cambiar</button>
+            <button class="btn btn-ghost" type="button" id="passwordSheetCancel" data-i18n>Cancelar</button>
+            <button class="btn btn-primary" type="button" id="passwordSheetConfirm" data-i18n>Cambiar</button>
           </div>
         </div>
       </div>
@@ -564,8 +566,8 @@
   </form>
 
   <div id="adminToast" class="admin-toast is-hidden" role="status" aria-live="polite">
-    <div id="adminToastText" class="access-toast-title">Notificación</div>
-    <div id="adminToastSub" class="access-toast-sub">Operación completada</div>
+    <div id="adminToastText" class="access-toast-title" data-i18n>Notificación</div>
+    <div id="adminToastSub" class="access-toast-sub" data-i18n>Operación completada</div>
   </div>
 
   <div id="adminDialog" class="admin-dialog is-hidden" aria-hidden="true">
@@ -587,17 +589,18 @@
         </svg>
       </div>
       <div class="admin-dialog__copy">
-        <p id="adminDialogEyebrow" class="admin-dialog__eyebrow">Confirmar acción</p>
-        <h2 id="adminDialogTitle" class="admin-dialog__title">¿Deseas continuar?</h2>
-        <p id="adminDialogText" class="admin-dialog__text">Esta acción requiere confirmación.</p>
+        <p id="adminDialogEyebrow" class="admin-dialog__eyebrow" data-i18n>Confirmar acción</p>
+        <h2 id="adminDialogTitle" class="admin-dialog__title" data-i18n>¿Deseas continuar?</h2>
+        <p id="adminDialogText" class="admin-dialog__text" data-i18n>Esta acción requiere confirmación.</p>
       </div>
       <div class="admin-dialog__actions">
-        <button id="adminDialogCancel" class="btn btn-ghost" type="button">Cancelar</button>
-        <button id="adminDialogConfirm" class="btn btn-primary" type="button">Continuar</button>
+        <button id="adminDialogCancel" class="btn btn-ghost" type="button" data-i18n>Cancelar</button>
+        <button id="adminDialogConfirm" class="btn btn-primary" type="button" data-i18n>Continuar</button>
       </div>
     </section>
   </div>
 
+  <script src="/static/js/i18n.js?v={{ asset_version }}"></script>
   <script src="/static/js/theme.js?v={{ asset_version }}"></script>
   <script src="/static/js/logo-navigation.js?v={{ asset_version }}"></script>
   <script src="/static/js/admin-layout.js?v={{ asset_version }}"></script>

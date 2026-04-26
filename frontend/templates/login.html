@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/login.css?v={{ asset_version }}" />
+  <link rel="stylesheet" href="/static/css/i18n.css?v={{ asset_version }}" />
   <script>
     (function(){try{var t=localStorage.getItem('camerapi_theme');document.documentElement.className=t||'theme-dark';}catch(e){document.documentElement.className='theme-dark';}})();
   </script>
@@ -14,11 +15,11 @@
 <body class="centered-body">
 
   <!-- Botón de retorno: pill flotante fuera del card, esquina superior izquierda -->
-  <a href="/" class="login-back-nav" aria-label="Volver al inicio">
+  <a href="/" class="login-back-nav" aria-label="Volver al inicio" data-i18n-attr="aria-label:Volver al inicio">
     <svg class="icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
     </svg>
-    <span>Inicio</span>
+    <span data-i18n>Inicio</span>
   </a>
 
   <main class="login-shell">
@@ -26,7 +27,7 @@
     <div class="login-sysid" aria-hidden="true">
       <span class="sysid-brand">OSVIUM</span>
       <span class="sysid-divider"></span>
-      <span class="sysid-desc">Control biométrico</span>
+      <span class="sysid-desc" data-i18n>Control biométrico</span>
     </div>
 
     <form class="login-card" action="/auth/login" method="post">
@@ -42,20 +43,20 @@
           <span class="scan-ring r2"></span>
         </div>
         <div>
-          <h1>Panel de administración</h1>
-          <p class="login-sub">Ingresa con tu cuenta para continuar</p>
+          <h1 data-i18n>Panel de administración</h1>
+          <p class="login-sub" data-i18n>Ingresa con tu cuenta para continuar</p>
         </div>
       </div>
 
       {% if login_error %}
       <div class="login-error" role="alert">
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#alert-filled"></use></svg>
-        <span>Credenciales inválidas.</span>
+        <span data-i18n>Credenciales inválidas.</span>
       </div>
       {% endif %}
 
       <div class="field-group">
-        <label for="username" class="label">Usuario</label>
+        <label for="username" class="label" data-i18n>Usuario</label>
         <div class="input-wrap">
           <svg class="icon input-leading-icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
           <input id="username" type="text" name="username" required autocomplete="username" />
@@ -63,7 +64,7 @@
       </div>
 
       <div class="field-group">
-        <label for="password" class="label">Contraseña</label>
+        <label for="password" class="label" data-i18n>Contraseña</label>
         <div class="input-wrap">
           <svg class="icon input-leading-icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
           <input id="password" type="password" name="password" required autocomplete="current-password" />
@@ -73,7 +74,7 @@
       <div class="login-actions">
         <button type="submit" class="btn btn-primary large-touch login-submit">
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg>
-          <span>Entrar</span>
+          <span data-i18n>Entrar</span>
         </button>
       </div>
     </form>
@@ -83,6 +84,7 @@
   <!-- Access animation: overlay flash + caption — viven fuera del shell -->
   <div class="login-access-overlay" aria-hidden="true"></div>
 
+  <script src="/static/js/i18n.js?v={{ asset_version }}"></script>
   <script src="/static/js/theme.js?v={{ asset_version }}"></script>
   <script src="/static/js/login.js?v={{ asset_version }}"></script>
 </body>

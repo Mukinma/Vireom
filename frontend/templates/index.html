@@ -8,6 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/images/logo-white.svg?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
   <link rel="stylesheet" href="/static/css/kiosk.css?v={{ asset_version }}" />
+  <link rel="stylesheet" href="/static/css/i18n.css?v={{ asset_version }}" />
   <script>
     (function(){
       try{
@@ -26,7 +27,7 @@
     })();
   </script>
 </head>
-<body class="kiosk-body">
+<body class="kiosk-body" data-i18n-toggle="true">
 
   <div class="lockscreen" id="lockScreen" role="dialog" aria-label="Pantalla de bloqueo">
     <div class="lockscreen__bg"></div>
@@ -37,7 +38,7 @@
         <span class="lockscreen__month" id="lockMonth">---</span>
         <span class="lockscreen__time" id="lockTime">--:--</span>
       </div>
-      <p class="lockscreen__hint">Toca para continuar</p>
+      <p class="lockscreen__hint" data-i18n>Toca para continuar</p>
     </div>
   </div>
 
@@ -97,7 +98,7 @@
                   stroke-dasharray="10 5" opacity="0.7"/>
               </svg>
               <!-- Guidance message -->
-              <div class="face-guide__msg" id="guidanceMessage">Coloca tu rostro dentro de la guía</div>
+              <div class="face-guide__msg" id="guidanceMessage" data-i18n>Coloca tu rostro dentro de la guía</div>
             </div>
 
             <div id="faceIndicator" class="face-indicator idle" aria-hidden="true" hidden></div>
@@ -106,8 +107,8 @@
 
         <aside class="kiosk-info" id="infoPanel">
           <div class="kiosk-info__header">
-            <h1 class="kiosk-info__title" id="infoTitle">Validando identidad</h1>
-            <p class="kiosk-info__desc" id="infoDesc">
+            <h1 class="kiosk-info__title" id="infoTitle" data-i18n>Validando identidad</h1>
+            <p class="kiosk-info__desc" id="infoDesc" data-i18n>
               Espera un momento mientras verificamos tu acceso
             </p>
           </div>
@@ -116,9 +117,7 @@
             <div class="kiosk-info__progress">
               <div class="kiosk-info__progress-bar is-idle" id="authProgressBar"></div>
             </div>
-            <div class="kiosk-info__hint">
-              Colócate a una distancia adecuada<br>y evita mover la cabeza
-            </div>
+            <div class="kiosk-info__hint" data-i18n-html>Colócate a una distancia adecuada<br>y evita mover la cabeza</div>
           </div>
         </aside>
 
@@ -126,6 +125,7 @@
     </main>
   </div>
 
+  <script src="/static/js/i18n.js?v={{ asset_version }}"></script>
   <script src="/static/js/theme.js?v={{ asset_version }}"></script>
   <script src="/static/js/lockscreen.js?v={{ asset_version }}"></script>
   <script src="/static/js/face-action.js?v={{ asset_version }}"></script>

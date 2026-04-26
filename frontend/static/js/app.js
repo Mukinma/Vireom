@@ -46,6 +46,16 @@ let lastAutoTriggerMs = 0;
 let toastTimer = null;
 const AUTH_PROGRESS_STATE_CLASSES = ['is-idle', 'is-processing', 'is-success', 'is-error'];
 
+/* i18n helper — devuelve el texto traducido al idioma actual.
+   Si window.i18n aún no cargó o no tiene la clave, devuelve el original. */
+function tr(text) {
+  try {
+    return window.i18n ? window.i18n.t(text) : text;
+  } catch (_) {
+    return text;
+  }
+}
+
 const toastMap = {
   granted: { text: 'Acceso concedido', sub: 'Validación biométrica exitosa', cls: 'success', timeout: 2600 },
   denied: { text: 'Acceso denegado', sub: 'Identidad no válida para ingreso', cls: 'error', timeout: 2300 },
@@ -132,8 +142,8 @@ function showToast(type) {
 
   const config = toastMap[type] || toastMap.processing;
 
-  accessToastText.textContent = config.text;
-  accessToastSub.textContent = config.sub;
+  accessToastText.textContent = tr(config.text);
+  accessToastSub.textContent = tr(config.sub);
   accessToast.classList.remove('is-hidden', 'success', 'error', 'warning', 'processing');
   accessToast.classList.add(config.cls, 'is-visible');
 
@@ -232,7 +242,7 @@ function updateFaceIndicator(stateKey) {
       nomodel:      { text: 'Sin modelo',          cls: 'is-idle'     },
     };
     const cfg = badgeCfg[stateKey] || badgeCfg.initializing;
-    cameraBadgeText.textContent = cfg.text;
+    cameraBadgeText.textContent = tr(cfg.text);
     cameraBadge.classList.add(cfg.cls);
   }
 
@@ -248,7 +258,7 @@ function updateFaceIndicator(stateKey) {
       initializing: 'Cargando<br>modelo',
       nomodel:      'Sin<br>modelo',
     };
-    infoTitle.innerHTML = titleMap[stateKey] || titleMap.processing;
+    infoTitle.innerHTML = tr(titleMap[stateKey] || titleMap.processing);
   }
 
   if (infoDesc) {
@@ -263,7 +273,7 @@ function updateFaceIndicator(stateKey) {
       initializing: 'Cargando modelo<br><strong>de reconocimiento</strong>',
       nomodel:      'Entrena un modelo desde<br><strong>el panel de administración</strong>',
     };
-    infoDesc.innerHTML = descMap[stateKey] || descMap.processing;
+    infoDesc.innerHTML = tr(descMap[stateKey] || descMap.processing);
   }
 
   if (cameraTitle) {
@@ -278,7 +288,7 @@ function updateFaceIndicator(stateKey) {
       initializing: 'Cargando modelo',
       nomodel:      'Sin modelo',
     };
-    cameraTitle.textContent = ctMap[stateKey] || ctMap.processing;
+    cameraTitle.textContent = tr(ctMap[stateKey] || ctMap.processing);
   }
 
   const authProgressBar = document.getElementById('authProgressBar');
@@ -334,7 +344,7 @@ function updateFaceGuidance(guidance, uiStateKey) {
   if (!guidance || !guidance.state) {
     setFaceGuideState('is-idle');
     if (guidanceMessage) {
-      guidanceMessage.textContent = 'Coloca tu rostro dentro de la guía';
+      guidanceMessage.textContent = tr('Coloca tu rostro dentro de la guía');
     }
     return;
   }
@@ -343,7 +353,7 @@ function updateFaceGuidance(guidance, uiStateKey) {
   setFaceGuideState(cls);
 
   if (guidanceMessage && guidance.message) {
-    guidanceMessage.textContent = guidance.message;
+    guidanceMessage.textContent = tr(guidance.message);
   }
 }
 
@@ -369,7 +379,7 @@ function showUserOverlay(data) {
     recognizedName.textContent = nameForCard;
   }
   recognizedId.textContent = data.last_user_id || userName.replace(/\D+/g, '') || '-';
-  recognizedArea.textContent = data.last_area || 'Acceso principal';
+  recognizedArea.textContent = data.last_area || tr('Acceso principal');
   confidence.textContent = data.last_confidence == null ? '-' : Number(data.last_confidence).toFixed(2);
 
   if (typeof data.last_user_photo === 'string' && data.last_user_photo.trim().length > 0) {
@@ -407,7 +417,9 @@ function updateClock() {
 }
 
 function setSystemBadge(text, variant) {
-  systemStateBadge.textContent = text;
+  systemStateBadge.textContent = tr(text);
+  /* Guardar original para retraducir cuando cambie idioma */
+  systemStateBadge.dataset.i18nKey = text;
   systemStateBadge.classList.remove('state-success', 'state-error', 'state-processing', 'state-warning', 'state-neutral');
   systemStateBadge.classList.add(variant);
 }
@@ -742,3 +754,14 @@ updateClock();
 setInterval(updateClock, 1000);
 startStatusPolling();
 loadStatus();
+
+/* Al cambiar idioma, re-aplicar inmediatamente:
+   - systemStateBadge guarda su clave original en dataset.i18nKey
+   - el resto se regenera en la siguiente llamada a loadStatus() */
+document.addEventListener('i18n:change', () => {
+  const badgeKey = systemStateBadge?.dataset?.i18nKey;
+  if (badgeKey) {
+    systemStateBadge.textContent = tr(badgeKey);
+  }
+  loadStatus();
+});

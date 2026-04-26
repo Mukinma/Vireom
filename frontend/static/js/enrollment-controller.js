@@ -18,6 +18,11 @@
 
   const POLL_MS = 350;
 
+  function tr(text) {
+    try { return (window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t(text) : text; }
+    catch (_) { return text; }
+  }
+
   const viewport = document.getElementById('enrollViewport');
   const stream = document.getElementById('enrollStream');
   const overlay = document.getElementById('enrollOverlay');
@@ -185,7 +190,7 @@
     try {
       const users = await api('/api/users');
       const current = getCurrentSelectedUserId();
-      userSelect.innerHTML = '<option value="">Seleccionar persona...</option>';
+      userSelect.innerHTML = `<option value="">${tr('Seleccionar persona...')}</option>`;
       users.forEach((user) => {
         const option = document.createElement('option');
         option.value = user.id;
@@ -440,15 +445,15 @@
   function phaseLabel(status = enrollmentStatus) {
     switch (status.phase) {
       case 'completed_review':
-        return 'Revision final';
+        return tr('Revision final');
       case 'recoverable_error':
-        return 'Atencion';
+        return tr('Atencion');
       case 'active':
-        if (status.state === 'holding') return 'Estable';
-        if (status.state === 'capturing') return 'Capturando';
-        return 'Guiado';
+        if (status.state === 'holding') return tr('Estable');
+        if (status.state === 'capturing') return tr('Capturando');
+        return tr('Guiado');
       default:
-        return 'Preparacion';
+        return tr('Preparacion');
     }
   }
 
@@ -510,7 +515,7 @@
 
       const label = doc.createElement('span');
       label.className = 'enrollment-step-item__label';
-      label.textContent = step.label;
+      label.textContent = tr(step.label);
 
       const samples = doc.createElement('span');
       samples.className = 'enrollment-step-item__samples';
@@ -574,21 +579,21 @@
     setReadinessState(cameraReadyItem, cameraReadyText, cameraReadyBadge, {
       itemClass: readiness.ready ? 'is-ready' : 'is-danger',
       value:
-        cameraState === 'online' ? 'En linea'
-          : cameraState === 'degraded' ? 'Disponible con alerta'
-            : cameraState === 'sleep' ? 'En reposo'
-              : cameraState === 'offline' ? 'Fuera de linea'
-                : cameraState === 'error' ? 'Con error'
-                  : 'Sin verificar',
-      badge: readiness.ready ? 'Lista' : 'Bloquea inicio',
+        cameraState === 'online' ? tr('En linea')
+          : cameraState === 'degraded' ? tr('Disponible con alerta')
+            : cameraState === 'sleep' ? tr('En reposo')
+              : cameraState === 'offline' ? tr('Fuera de linea')
+                : cameraState === 'error' ? tr('Con error')
+                  : tr('Sin verificar'),
+      badge: readiness.ready ? tr('Lista') : tr('Bloquea inicio'),
       badgeClass: readiness.ready ? '' : 'enrollment-readiness__badge--danger',
     });
 
     const modelValue =
-      modelState === 'loaded' ? 'Cargado'
-        : modelState === 'not_loaded' ? 'No cargado'
-          : modelState === 'error' ? 'Con error'
-            : 'Sin verificar';
+      modelState === 'loaded' ? tr('Cargado')
+        : modelState === 'not_loaded' ? tr('No cargado')
+          : modelState === 'error' ? tr('Con error')
+            : tr('Sin verificar');
     const modelTone =
       modelState === 'loaded' ? ''
         : modelState === 'error' ? 'enrollment-readiness__badge--warning'
@@ -597,14 +602,14 @@
     setReadinessState(modelReadyItem, modelReadyText, modelReadyBadge, {
       itemClass: modelState === 'error' ? 'is-warning' : '',
       value: modelValue,
-      badge: modelState === 'loaded' ? 'Disponible' : 'Informativo',
+      badge: modelState === 'loaded' ? tr('Disponible') : tr('Informativo'),
       badgeClass: modelTone,
     });
 
     if (readinessMeta) {
       readinessMeta.textContent = readiness.ready
-        ? 'Sistema listo para capturar'
-        : 'Hace falta revisar la camara';
+        ? tr('Sistema listo para capturar')
+        : tr('Hace falta revisar la camara');
     }
 
     updateStartState();
@@ -661,13 +666,13 @@
     if (userMeta) {
       userMeta.textContent = enrollmentStatus.user_name
         ? `${enrollmentStatus.user_name} · ${enrollmentStatus.total_captured}/${enrollmentStatus.total_needed}`
-        : 'Sin sesion activa';
+        : tr('Sin sesion activa');
     }
 
     if (stepBadge) stepBadge.textContent = stepBadgeText(enrollmentStatus);
     if (stepCounter) stepCounter.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
-    if (instruction) instruction.textContent = enrollmentStatus.guidance?.instruction || 'Selecciona una persona para iniciar';
-    if (message) message.textContent = enrollmentStatus.guidance?.hint || '';
+    if (instruction) instruction.textContent = tr(enrollmentStatus.guidance?.instruction || 'Selecciona una persona para iniciar');
+    if (message) message.textContent = tr(enrollmentStatus.guidance?.hint || '');
 
     const steps = enrollmentStatus.steps_summary || buildFallbackIdleStatus().steps_summary;
     renderDots(steps);
@@ -678,17 +683,17 @@
       : 0;
     if (totalFill) totalFill.style.width = `${progressPercent}%`;
     if (totalLabel) totalLabel.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
-    if (summaryUser) summaryUser.textContent = enrollmentStatus.user_name || 'Sin seleccionar';
+    if (summaryUser) summaryUser.textContent = enrollmentStatus.user_name || tr('Sin seleccionar');
     if (summaryPhase) summaryPhase.textContent = phaseLabel(enrollmentStatus);
     if (summaryTotal) summaryTotal.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
-    if (activeStepLabel) activeStepLabel.textContent = enrollmentStatus.guidance?.instruction || 'Preparacion';
-    if (activeStepHint) activeStepHint.textContent = enrollmentStatus.guidance?.hint || '';
-    if (activeStepSamples) activeStepSamples.textContent = `${enrollmentStatus.samples_this_step} / ${enrollmentStatus.samples_needed} muestras`;
-    if (activeTotalSamples) activeTotalSamples.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed} total`;
+    if (activeStepLabel) activeStepLabel.textContent = tr(enrollmentStatus.guidance?.instruction || 'Preparacion');
+    if (activeStepHint) activeStepHint.textContent = tr(enrollmentStatus.guidance?.hint || '');
+    if (activeStepSamples) activeStepSamples.textContent = `${enrollmentStatus.samples_this_step} / ${enrollmentStatus.samples_needed} ${tr('muestras')}`;
+    if (activeTotalSamples) activeTotalSamples.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed} ${tr('total')}`;
 
     if (errorBanner) errorBanner.classList.toggle('is-hidden', !isRecoverableError(enrollmentStatus));
-    if (errorTitle) errorTitle.textContent = 'Se detuvo el enrolamiento';
-    if (errorText) errorText.textContent = enrollmentStatus.guidance?.hint || 'Revisa la sesion y vuelve a intentarlo.';
+    if (errorTitle) errorTitle.textContent = tr('Se detuvo el enrolamiento');
+    if (errorText) errorText.textContent = tr(enrollmentStatus.guidance?.hint || 'Revisa la sesion y vuelve a intentarlo.');
 
     if (instructionsPanel) instructionsPanel.hidden = enrollmentStatus.phase !== 'preflight';
     if (stepsPanel) stepsPanel.hidden = enrollmentStatus.phase === 'preflight';
@@ -700,8 +705,8 @@
     if (completion) completion.classList.toggle('is-hidden', !shouldShowCompletion);
     if (completionSub) {
       completionSub.textContent = shouldShowCompletion
-        ? `${enrollmentStatus.total_captured} muestras listas para entrenar`
-        : `${enrollmentStatus.total_captured} muestras capturadas`;
+        ? `${enrollmentStatus.total_captured} ${tr('muestras listas para entrenar')}`
+        : `${enrollmentStatus.total_captured} ${tr('muestras capturadas')}`;
     }
 
     if (abortBtn) abortBtn.hidden = !enrollmentStatus.actions?.can_abort || isCompletedPhase(enrollmentStatus);
@@ -1012,4 +1017,18 @@
   } else {
     applySnapshot(buildFallbackIdleStatus());
   }
+
+  /* ── i18n live re-render ── */
+  document.addEventListener('i18n:change', () => {
+    try {
+      // Re-render labels that depend on tr()
+      if (enrollmentStatus) applySnapshot(enrollmentStatus);
+      renderSystemReadiness();
+      // Re-translate the empty-select option without losing selection
+      if (userSelect && userSelect.options.length > 0) {
+        const first = userSelect.options[0];
+        if (first && first.value === '') first.textContent = tr('Seleccionar persona...');
+      }
+    } catch (_) { /* silent */ }
+  });
 })();
