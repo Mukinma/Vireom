@@ -135,7 +135,11 @@ def admin(request: Request):
         return request.app.state.templates.TemplateResponse(
             request,
             "login.html",
-            _template_context(request, login_error=has_error),
+            _template_context(
+                request,
+                login_error=has_error,
+                admin_user=config.admin_user,
+            ),
         )
     return request.app.state.templates.TemplateResponse(
         request,
