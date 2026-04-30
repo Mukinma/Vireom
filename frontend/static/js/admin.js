@@ -1260,6 +1260,44 @@ passwordSheetConfirm?.addEventListener('click', async () => {
   }
 });
 
+/* ── Settings: Translator (linked to kiosk via localStorage 'osvium_lang') ── */
+
+const translatorRow = document.getElementById('translatorRow');
+const translatorLanguageSummary = document.getElementById('translatorLanguageSummary');
+
+function getCurrentLang() {
+  try {
+    if (window.i18n && typeof window.i18n.getLang === 'function') {
+      return window.i18n.getLang();
+    }
+    return localStorage.getItem('osvium_lang') === 'en' ? 'en' : 'es';
+  } catch (_) {
+    return 'es';
+  }
+}
+
+function refreshTranslatorSummary() {
+  if (!translatorLanguageSummary) return;
+  const lang = getCurrentLang();
+  // Mostrar el idioma activo en su propio nombre, no el destino.
+  translatorLanguageSummary.textContent = lang === 'en' ? 'English' : 'Español';
+}
+
+translatorRow?.addEventListener('click', () => {
+  const next = getCurrentLang() === 'es' ? 'en' : 'es';
+  try {
+    if (window.i18n && typeof window.i18n.setLang === 'function') {
+      window.i18n.setLang(next);
+    } else {
+      localStorage.setItem('osvium_lang', next);
+      document.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang: next } }));
+    }
+  } catch (_) { /* silent */ }
+  refreshTranslatorSummary();
+});
+
+refreshTranslatorSummary();
+
 /* ── Settings: back buttons ── */
 
 document.querySelectorAll('[data-back]').forEach((btn) => {
@@ -1381,5 +1419,7 @@ document.addEventListener('i18n:change', () => {
     loadDiagnostics().catch(() => {});
     // Re-render device info disk text fragment
     loadDeviceInfo().catch(() => {});
+    // Refresh translator row summary
+    refreshTranslatorSummary();
   } catch (_) { /* silent */ }
 });

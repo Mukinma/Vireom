@@ -43,8 +43,8 @@
           <span class="scan-ring r2"></span>
         </div>
         <div>
-          <h1 data-i18n>Panel de administración</h1>
-          <p class="login-sub" data-i18n>Ingresa con tu cuenta para continuar</p>
+          <h1 data-i18n>Inicio de sesión</h1>
+          <p class="login-sub" data-i18n>¡Bienvenido de vuelta! Ingresa tu contraseña para continuar.</p>
         </div>
       </div>
 
@@ -55,19 +55,15 @@
       </div>
       {% endif %}
 
-      <div class="field-group">
-        <label for="username" class="label" data-i18n>Usuario</label>
-        <div class="input-wrap">
-          <svg class="icon input-leading-icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
-          <input id="username" type="text" name="username" required autocomplete="username" />
-        </div>
-      </div>
+      <!-- Usuario fijo: el sistema solo tiene una cuenta de administrador.
+           Se envía oculto para mantener el contrato del endpoint /auth/login. -->
+      <input type="hidden" name="username" value="{{ admin_user | e }}" autocomplete="username" />
 
       <div class="field-group">
         <label for="password" class="label" data-i18n>Contraseña</label>
         <div class="input-wrap">
           <svg class="icon input-leading-icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
-          <input id="password" type="password" name="password" required autocomplete="current-password" />
+          <input id="password" type="password" name="password" required autocomplete="current-password" autofocus />
         </div>
       </div>
 
