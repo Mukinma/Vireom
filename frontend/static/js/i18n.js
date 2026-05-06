@@ -129,6 +129,10 @@
     'Volver al inicio': 'Back to home',
     'Inicio': 'Home',
     'Control biométrico': 'Biometric control',
+    'Inicio de sesión': 'Log in',
+    '¡Bienvenido de vuelta! Ingresa tu contraseña para continuar.':
+      'Welcome back! Enter your password to continue.',
+    /* Mantener compatibilidad: claves antiguas si quedan en código heredado. */
     'Panel de administración': 'Admin panel',
     'Ingresa con tu cuenta para continuar': 'Sign in to continue',
     'Credenciales inválidas.': 'Invalid credentials.',
@@ -212,6 +216,8 @@
     'Cargando…': 'Loading…',
     'Puerta': 'Door',
     'Mantenimiento': 'Maintenance',
+    'Traductor': 'Translator',
+    'Cambiar idioma del sistema': 'Change system language',
     'Sistema y cuenta': 'System and account',
     'Cuenta': 'Account',
     'Acerca de': 'About',
@@ -703,39 +709,16 @@
 
   /* ── Botón flotante (solo kiosk) ── */
 
-  const FLAG_US_SVG = `
-<svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect width="60" height="40" fill="#b22234"/>
-  <g fill="#ffffff">
-    <rect y="3.08" width="60" height="3.08"/>
-    <rect y="9.23" width="60" height="3.08"/>
-    <rect y="15.38" width="60" height="3.08"/>
-    <rect y="21.54" width="60" height="3.08"/>
-    <rect y="27.69" width="60" height="3.08"/>
-    <rect y="33.85" width="60" height="3.08"/>
-  </g>
-  <rect width="24" height="21.54" fill="#3c3b6e"/>
-  <g fill="#ffffff" font-family="Arial,Helvetica,sans-serif" font-size="3.2" text-anchor="middle">
-    <text x="3" y="4">★</text><text x="7" y="4">★</text><text x="11" y="4">★</text><text x="15" y="4">★</text><text x="19" y="4">★</text>
-    <text x="5" y="7">★</text><text x="9" y="7">★</text><text x="13" y="7">★</text><text x="17" y="7">★</text>
-    <text x="3" y="10">★</text><text x="7" y="10">★</text><text x="11" y="10">★</text><text x="15" y="10">★</text><text x="19" y="10">★</text>
-    <text x="5" y="13">★</text><text x="9" y="13">★</text><text x="13" y="13">★</text><text x="17" y="13">★</text>
-    <text x="3" y="16">★</text><text x="7" y="16">★</text><text x="11" y="16">★</text><text x="15" y="16">★</text><text x="19" y="16">★</text>
-    <text x="5" y="19">★</text><text x="9" y="19">★</text><text x="13" y="19">★</text><text x="17" y="19">★</text>
-    <text x="3" y="22">★</text><text x="7" y="22">★</text><text x="11" y="22">★</text><text x="15" y="22">★</text><text x="19" y="22">★</text>
-  </g>
-</svg>`.trim();
-
-  const FLAG_MX_SVG = `
-<svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect x="0"  width="20" height="40" fill="#006847"/>
-  <rect x="20" width="20" height="40" fill="#ffffff"/>
-  <rect x="40" width="20" height="40" fill="#ce1126"/>
-  <g transform="translate(30,20)" fill="none" stroke="#7a4a1f" stroke-width="0.6">
-    <ellipse cx="0" cy="0" rx="6" ry="4"/>
-    <path d="M-6 0 Q 0 -6 6 0" />
-    <path d="M-6 0 Q 0 6 6 0" />
-  </g>
+  /* Icono neutral de globo terráqueo. Sin emojis, líneas finas, escalable. */
+  const GLOBE_ICON_SVG = `
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+     fill="none" stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="9"/>
+  <ellipse cx="12" cy="12" rx="4.5" ry="9"/>
+  <path d="M3 12h18"/>
+  <path d="M4 7.5h16"/>
+  <path d="M4 16.5h16"/>
 </svg>`.trim();
 
   function ensureButton() {
@@ -756,16 +739,16 @@
   function renderToggleButton() {
     const btn = document.getElementById('i18nToggleBtn');
     if (!btn) return;
-    /* Cuando estás en ES, el botón ofrece pasar a EN → bandera USA.
-       Cuando estás en EN, el botón ofrece pasar a ES → bandera MX. */
-    const showUS = currentLang === 'es';
+    /* Botón neutro: siempre globo. La etiqueta indica al idioma destino:
+       en ES muestra "EN" (acción = pasar a inglés), en EN muestra "ES". */
+    const targetLabel = currentLang === 'es' ? 'EN' : 'ES';
     btn.innerHTML = `
-      <span class="i18n-toggle__flag">${showUS ? FLAG_US_SVG : FLAG_MX_SVG}</span>
-      <span class="i18n-toggle__label">${showUS ? 'EN' : 'ES'}</span>
+      <span class="i18n-toggle__icon">${GLOBE_ICON_SVG}</span>
+      <span class="i18n-toggle__label">${targetLabel}</span>
     `;
     btn.setAttribute(
       'title',
-      showUS ? 'Switch to English' : 'Cambiar a Español'
+      currentLang === 'es' ? 'Switch to English' : 'Cambiar a Español'
     );
   }
 
