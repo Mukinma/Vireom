@@ -1263,7 +1263,7 @@ passwordSheetConfirm?.addEventListener('click', async () => {
 /* ── Settings: Translator (linked to kiosk via localStorage 'osvium_lang') ── */
 
 const translatorRow = document.getElementById('translatorRow');
-const translatorLanguageSummary = document.getElementById('translatorLanguageSummary');
+const translatorPill = document.getElementById('translatorPill');
 
 function getCurrentLang() {
   try {
@@ -1276,11 +1276,12 @@ function getCurrentLang() {
   }
 }
 
-function refreshTranslatorSummary() {
-  if (!translatorLanguageSummary) return;
+function refreshTranslatorPill() {
+  if (!translatorPill) return;
   const lang = getCurrentLang();
-  // Mostrar el idioma activo en su propio nombre, no el destino.
-  translatorLanguageSummary.textContent = lang === 'en' ? 'English' : 'Español';
+  translatorPill.querySelectorAll('.admin-lang-pill__opt').forEach((opt) => {
+    opt.classList.toggle('is-active', opt.dataset.lang === lang);
+  });
 }
 
 translatorRow?.addEventListener('click', () => {
@@ -1293,10 +1294,10 @@ translatorRow?.addEventListener('click', () => {
       document.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang: next } }));
     }
   } catch (_) { /* silent */ }
-  refreshTranslatorSummary();
+  refreshTranslatorPill();
 });
 
-refreshTranslatorSummary();
+refreshTranslatorPill();
 
 /* ── Settings: back buttons ── */
 
@@ -1420,6 +1421,6 @@ document.addEventListener('i18n:change', () => {
     // Re-render device info disk text fragment
     loadDeviceInfo().catch(() => {});
     // Refresh translator row summary
-    refreshTranslatorSummary();
+    refreshTranslatorPill();
   } catch (_) { /* silent */ }
 });
