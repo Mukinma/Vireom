@@ -88,3 +88,55 @@ body:has(.lockscreen:not(.is-dismissed)) .i18n-toggle {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ═══════════════════════════════════════════════════════
+   Admin · Language segmented pill (settings row)
+   ═══════════════════════════════════════════════════════ */
+
+.admin-lang-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.admin-lang-pill__opt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 36px;
+  padding: 5px 10px;
+  border-radius: 999px;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+
+  color: rgba(255, 255, 255, 0.35);
+  background: transparent;
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.admin-lang-pill__opt.is-active {
+  color: #f4f6fb;
+  background: rgba(122, 166, 255, 0.18);
+  box-shadow: 0 0 8px rgba(122, 166, 255, 0.12);
+}
+
+/* Row-level hover feedback on the pill */
+.settings-row:hover .admin-lang-pill {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.settings-row:active .admin-lang-pill__opt.is-active {
+  background: rgba(122, 166, 255, 0.28);
+}
