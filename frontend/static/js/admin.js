@@ -5,6 +5,10 @@ const logsList = document.getElementById('logsList');
 const createUserBtn = document.getElementById('createUserBtn');
 const newUserName = document.getElementById('newUserName');
 const createResult = document.getElementById('createResult');
+const personasTitle = document.getElementById('personasTitle');
+const personasSubtitle = document.getElementById('personasSubtitle');
+const personasSummary = document.getElementById('personasSummary');
+const personasSearchWrap = document.getElementById('personasSearchWrap');
 const trainBtn = document.getElementById('trainBtn');
 const trainResult = document.getElementById('trainResult');
 const manualOpenAdminBtn = document.getElementById('manualOpenAdminBtn');
@@ -231,6 +235,10 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function jsStringForAttr(value) {
+  return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
 /* ── API helper ── */
 
 function getCsrfToken() {
@@ -418,59 +426,144 @@ function upperFirst(value) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/* ── Render: Users table ── */
+/* ── Render: Users cards ── */
 
-function renderUsers(users) {
-  if (!usersList) return;
-  const rows = users.map((user) => {
-    const escapedName = escapeHtml(user.nombre).replace(/'/g, "\\'");
+function formatPersonCount(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function getUserInitials(name) {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (!parts.length) return '?';
+  return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+}
+
+function updatePersonasHeader(query = '') {
+  const totalUsers = cachedUsers.length;
+  const activeUsers = cachedUsers.filter((user) => Boolean(user.activo)).length;
+  const isFirstUse = totalUsers === 0;
+
+  if (personasTitle) {
+    personasTitle.textContent = isFirstUse ? 'Agrega la primera persona' : 'Personas';
+  }
+  if (personasSubtitle) {
+    personasSubtitle.textContent = isFirstUse
+      ? 'Empieza con el nombre. Después registra su rostro.'
+      : 'Administra quién puede usar el acceso facial.';
+  }
+  if (personasSummary) {
+    personasSummary.textContent = isFirstUse
+      ? 'Nadie registrado todavía'
+      : `${formatPersonCount(totalUsers, 'persona')} · ${formatPersonCount(activeUsers, 'activa')}`;
+  }
+  if (personasSearchWrap) {
+    personasSearchWrap.hidden = isFirstUse;
+  }
+  if (isFirstUse && userSearch && query) {
+    userSearch.value = '';
+  }
+}
+
+function renderPersonasEmptyState({ isFirstUse, query = '' } = {}) {
+  if (isFirstUse) {
     return `
-    <tr>
-      <td>${user.id}</td>
-      <td>${escapeHtml(user.nombre)}</td>
-      <td><span class="badge ${user.activo ? 'badge--active' : 'badge--inactive'}">${user.activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td class="table-actions">
-        <button
-          class="user-action-btn user-action-btn--primary"
-          type="button"
-          onclick="startEnrollForUser(${user.id}, '${escapedName}')"
-          title="Registrar ${escapeHtml(user.nombre)}"
-          aria-label="Registrar ${escapeHtml(user.nombre)}"
-          ${user.activo ? '' : ' disabled'}
-        >
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-          <span>Registrar</span>
-        </button>
-        <button
-          class="user-action-btn user-action-btn--neutral"
-          type="button"
-          onclick="toggleUser(${user.id}, ${user.activo ? 'false' : 'true'})"
-          title="${user.activo ? 'Desactivar' : 'Activar'} ${escapeHtml(user.nombre)}"
-          aria-label="${user.activo ? 'Desactivar' : 'Activar'} ${escapeHtml(user.nombre)}"
-        >
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${user.activo ? 'lock' : 'unlock'}"></use></svg>
-          <span>${user.activo ? 'Desactivar' : 'Activar'}</span>
-        </button>
-        <button
-          class="user-action-btn user-action-btn--danger"
-          type="button"
-          onclick="deleteUser(${user.id}, '${escapedName}')"
-          title="Eliminar usuario"
-          aria-label="Eliminar ${escapeHtml(user.nombre)}"
-        >
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
-          <span>Eliminar</span>
-        </button>
-      </td>
-    </tr>`;
-  }).join('');
+      <section class="personas-empty-state" role="status">
+        <div class="personas-empty-state__icon" aria-hidden="true">
+          <svg class="icon"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
+        </div>
+        <h3>Aún no hay personas</h3>
+        <p>Agrega un nombre arriba. Luego podrás registrar su rostro con un botón grande y claro.</p>
+      </section>
+    `;
+  }
 
-  usersList.innerHTML = `
-    <table>
-      <thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Accion</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4" class="text-center muted">Sin personas registradas</td></tr>'}</tbody>
-    </table>
+  return `
+    <section class="personas-empty-state personas-empty-state--search" role="status">
+      <div class="personas-empty-state__icon" aria-hidden="true">
+        <svg class="icon"><use href="/static/icons/lucide/lucide-sprite.svg#search-filled"></use></svg>
+      </div>
+      <h3>No encontramos esa persona</h3>
+      <p>${query ? `No hay resultados para “${escapeHtml(query)}”.` : 'Prueba buscando por nombre o ID.'}</p>
+      <button class="btn btn-secondary btn--sm" type="button" onclick="clearUserSearch()">Limpiar búsqueda</button>
+    </section>
   `;
+}
+
+function renderPersonCard(user) {
+  const isActive = Boolean(user.activo);
+  const safeName = escapeHtml(user.nombre);
+  const jsName = jsStringForAttr(user.nombre);
+  const statusText = `${isActive ? 'Activa' : 'Inactiva'} · ID ${user.id}`;
+  const primaryAction = isActive
+    ? `onclick="startEnrollForUser(${user.id}, ${jsName})"`
+    : `onclick="toggleUser(${user.id}, true, ${jsName})"`;
+  const primaryIcon = isActive ? 'camera-filled' : 'unlock';
+  const primaryLabel = isActive ? 'Registrar rostro' : 'Activar persona';
+
+  return `
+    <article class="person-card ${isActive ? '' : 'person-card--inactive'}" data-user-id="${user.id}">
+      <div class="person-card__header">
+        <div class="person-card__avatar" aria-hidden="true">${escapeHtml(getUserInitials(user.nombre))}</div>
+        <div class="person-card__identity">
+          <h3>${safeName}</h3>
+          <p>${escapeHtml(statusText)}</p>
+        </div>
+      </div>
+
+      <div class="person-card__actions">
+        <button
+          class="person-card__primary"
+          type="button"
+          ${primaryAction}
+          aria-label="${escapeHtml(primaryLabel)} para ${safeName}"
+        >
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${primaryIcon}"></use></svg>
+          <span>${primaryLabel}</span>
+        </button>
+        <details class="person-card__menu-wrap">
+          <summary class="person-card__more" aria-label="Más acciones para ${safeName}">
+            <span aria-hidden="true">⋯</span>
+          </summary>
+          <div class="person-card__menu">
+            <button
+              type="button"
+              onclick="toggleUser(${user.id}, ${isActive ? 'false' : 'true'}, ${jsName})"
+            >
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${isActive ? 'lock' : 'unlock'}"></use></svg>
+              <span>${isActive ? 'Desactivar' : 'Activar'}</span>
+            </button>
+            <button
+              class="is-danger"
+              type="button"
+              onclick="deleteUser(${user.id}, ${jsName})"
+            >
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#trash-2"></use></svg>
+              <span>Eliminar</span>
+            </button>
+          </div>
+        </details>
+      </div>
+    </article>
+  `;
+}
+
+function renderUsers(users, { query = '' } = {}) {
+  if (!usersList) return;
+  const visibleUsers = Array.isArray(users) ? users : [];
+  const isFirstUse = cachedUsers.length === 0;
+
+  updatePersonasHeader(query);
+
+  if (!visibleUsers.length) {
+    usersList.innerHTML = renderPersonasEmptyState({ isFirstUse, query });
+    return;
+  }
+
+  usersList.innerHTML = visibleUsers.map(renderPersonCard).join('');
 }
 
 /* ── Render: Logs table ── */
@@ -782,8 +875,18 @@ function applyUserSearch() {
     renderUsers(cachedUsers);
     return;
   }
-  renderUsers(cachedUsers.filter((user) => user.nombre.toLowerCase().includes(q) || String(user.id).includes(q)));
+  renderUsers(
+    cachedUsers.filter((user) => user.nombre.toLowerCase().includes(q) || String(user.id).includes(q)),
+    { query: q },
+  );
 }
+
+window.clearUserSearch = function clearUserSearch() {
+  if (!userSearch) return;
+  userSearch.value = '';
+  applyUserSearch();
+  userSearch.focus({ preventScroll: true });
+};
 
 function applyLogFilter() {
   const filter = (logFilterResult?.value || '').toLowerCase();
@@ -860,7 +963,7 @@ logAdvancedReset?.addEventListener('click', () => {
 
 async function loadUsers() {
   cachedUsers = await api('/api/users');
-  renderUsers(cachedUsers);
+  applyUserSearch();
   if (dashboardReady) renderDashboardFromCache();
   return cachedUsers;
 }
@@ -1012,12 +1115,15 @@ async function loadDeviceInfo() {
 
 /* ── Actions: Users ── */
 
-window.toggleUser = async function (userId, active) {
-  const action = active ? 'activar' : 'desactivar';
+window.toggleUser = async function (userId, active, nombre = '') {
+  const displayName = String(nombre || '').trim();
+  const target = displayName || `ID ${userId}`;
   const confirmed = await openAdminConfirm({
     eyebrow: 'Estado de persona',
-    title: `${active ? 'Activar' : 'Desactivar'} usuario`,
-    text: `Se actualizara el estado operativo de la persona con ID ${userId}.`,
+    title: `${active ? 'Activar' : 'Desactivar'} persona`,
+    text: active
+      ? `${target} volverá a estar disponible para registro y acceso.`
+      : `${target} quedará pausada hasta que la actives de nuevo.`,
     confirmLabel: active ? 'Activar' : 'Desactivar',
     tone: 'primary',
   });
@@ -1030,7 +1136,7 @@ window.toggleUser = async function (userId, active) {
     await loadUsers();
     showAdminToast({
       text: active ? 'Persona activada' : 'Persona desactivada',
-      sub: `ID ${userId} actualizado`,
+      sub: `${target} actualizado`,
       cls: 'success',
     });
   } catch (error) {
@@ -1042,8 +1148,8 @@ window.toggleUser = async function (userId, active) {
 window.deleteUser = async function(userId, nombre) {
   const confirmed = await openAdminConfirm({
     eyebrow: 'Accion irreversible',
-    title: 'Eliminar usuario',
-    text: `${nombre} (ID ${userId}) sera eliminado junto con sus muestras y su relacion con los accesos. Esta accion no se puede deshacer.`,
+    title: 'Eliminar persona',
+    text: `${nombre} se eliminará junto con sus muestras de rostro. Esta acción no se puede deshacer.`,
     confirmLabel: 'Eliminar',
     tone: 'danger',
   });
@@ -1052,8 +1158,8 @@ window.deleteUser = async function(userId, nombre) {
     await api(`/api/users/${userId}`, { method: 'DELETE' });
     await loadUsers();
     showAdminToast({
-      text: 'Usuario eliminado',
-      sub: `${nombre} (ID ${userId}) fue eliminado`,
+      text: 'Persona eliminada',
+      sub: `${nombre} fue eliminado`,
       cls: 'success',
     });
   } catch (error) {
@@ -1080,12 +1186,16 @@ createUserBtn?.addEventListener('click', async () => {
 
     if (createResult) {
       const uid = user?.id ?? '';
+      const jsName = jsStringForAttr(nombre);
+      const registerAction = uid
+        ? ` <button class="link" onclick="startEnrollForUser(${uid}, ${jsName})">Registrar rostro</button>`
+        : '';
       createResult.hidden = false;
-      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} registrado${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">Registrar ahora &rarr;</button>`;
+      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} agregado${uid ? ` (ID ${uid})` : ''}.${registerAction}`;
       setTimeout(() => { createResult.hidden = true; }, 10000);
     }
 
-    showAdminToast({ text: 'Persona registrada', sub: `${nombre} fue agregado`, cls: 'success' });
+    showAdminToast({ text: 'Persona agregada', sub: `${nombre} ya aparece en la lista`, cls: 'success' });
   } catch (error) {
     console.error(error);
     showAdminToast({ text: 'No se pudo crear', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });

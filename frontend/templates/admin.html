@@ -120,27 +120,33 @@
 
       <!-- ═══════════════ VIEW: PERSONAS ═══════════════ -->
       <section class="admin-view" id="view-personas" hidden>
-        <div class="card">
-          <div class="admin-form-bar">
-            <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" />
-            <button id="createUserBtn" class="btn btn-primary" type="button">
+        <section class="card personas-hero" aria-labelledby="personasTitle">
+          <div class="personas-hero__copy">
+            <h2 id="personasTitle">Personas</h2>
+            <p id="personasSubtitle">Administra quién puede usar el acceso facial.</p>
+            <p id="personasSummary" class="personas-summary">Cargando personas…</p>
+          </div>
+          <div class="personas-create">
+            <label class="sr-only" for="newUserName">Nombre completo de la persona</label>
+            <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" autocomplete="off" />
+            <button id="createUserBtn" class="btn btn-primary personas-create__btn" type="button">
               <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
-              <span>Agregar</span>
+              <span>Agregar persona</span>
             </button>
           </div>
           <p id="createResult" class="create-result" hidden></p>
-        </div>
+        </section>
 
-        <div class="card">
-          <div class="section-head-row">
-            <h2>Personas registradas</h2>
+        <section class="personas-list-shell" aria-label="Personas registradas">
+          <div id="personasSearchWrap" class="personas-search-card">
+            <label class="sr-only" for="userSearch">Buscar persona</label>
             <div class="search-wrap">
               <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#search-filled"></use></svg>
-              <input id="userSearch" type="text" placeholder="Buscar…" />
+              <input id="userSearch" type="text" placeholder="Buscar por nombre o ID" autocomplete="off" />
             </div>
           </div>
-          <div id="usersList" class="table-wrap"></div>
-        </div>
+          <div id="usersList" class="personas-list" aria-live="polite"></div>
+        </section>
       </section>
 
       <!-- ═══════════════ VIEW: ENROLAMIENTO ═══════════════ -->
