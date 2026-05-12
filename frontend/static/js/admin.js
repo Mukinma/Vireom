@@ -84,8 +84,6 @@ const resumenMetricSuccess = document.getElementById('resumenMetricSuccess');
 const resumenMetricManual = document.getElementById('resumenMetricManual');
 const resumenActionHint = document.getElementById('resumenActionHint');
 const resumenActionStack = document.getElementById('resumenActionStack');
-const resumenTimelineList = document.getElementById('resumenTimelineList');
-const resumenTimelineMeta = document.getElementById('resumenTimelineMeta');
 
 const resumenActionButtons = {
   accesos: document.getElementById('resumenActionAccesos'),
@@ -329,7 +327,6 @@ function getAccessResultMeta(result) {
     return {
       label: 'Reconocido',
       badgeClass: 'badge--active',
-      timelineTone: 'is-success',
       isGranted: true,
       isDenied: false,
       isManual: false,
@@ -342,7 +339,6 @@ function getAccessResultMeta(result) {
     return {
       label: 'Manual',
       badgeClass: 'badge--manual',
-      timelineTone: 'is-manual',
       isGranted: false,
       isDenied: false,
       isManual: true,
@@ -355,7 +351,6 @@ function getAccessResultMeta(result) {
     return {
       label: 'Bloqueado',
       badgeClass: 'badge--blocked',
-      timelineTone: 'is-blocked',
       isGranted: false,
       isDenied: true,
       isManual: false,
@@ -374,7 +369,6 @@ function getAccessResultMeta(result) {
     return {
       label: 'Rechazado',
       badgeClass: 'badge--inactive',
-      timelineTone: 'is-danger',
       isGranted: false,
       isDenied: true,
       isManual: false,
@@ -386,7 +380,6 @@ function getAccessResultMeta(result) {
   return {
     label: result || tr('Sin dato'),
     badgeClass: 'badge--neutral',
-    timelineTone: 'is-neutral',
     isGranted: false,
     isDenied: false,
     isManual: false,
@@ -692,43 +685,7 @@ function computeResumenModel(users, logs, status) {
       modelReady,
       alertState,
     }),
-    timeline: logs.slice(0, 5),
   };
-}
-
-function renderResumenTimeline(items) {
-  if (!resumenTimelineList) return;
-  if (resumenTimelineMeta) {
-    resumenTimelineMeta.textContent = items.length ? `${items.length} ${tr('eventos')}` : tr('Sin movimiento');
-  }
-
-  if (!items.length) {
-    resumenTimelineList.innerHTML = `<p class="resumen-empty-state">${tr('Sin accesos recientes.')}</p>`;
-    return;
-  }
-
-  resumenTimelineList.innerHTML = items.map((item) => {
-    const resultMeta = getAccessResultMeta(item.resultado);
-    const confidenceMarkup = item.confianza == null
-      ? ''
-      : `<span class="resumen-timeline__confidence">${escapeHtml(formatConfidence(item.confianza))}</span>`;
-
-    return `
-      <article class="resumen-timeline__item ${resultMeta.timelineTone}">
-        <div class="resumen-timeline__marker" aria-hidden="true"></div>
-        <div class="resumen-timeline__content">
-          <div class="resumen-timeline__row">
-            <strong>${escapeHtml(item.nombre || tr('Desconocido'))}</strong>
-            <span class="badge ${resultMeta.badgeClass}">${escapeHtml(tr(resultMeta.label))}</span>
-          </div>
-          <div class="resumen-timeline__row resumen-timeline__row--meta">
-            <span class="resumen-timeline__time">${escapeHtml(formatLogMoment(item.fecha))}</span>
-            ${confidenceMarkup}
-          </div>
-        </div>
-      </article>
-    `;
-  }).join('');
 }
 
 function renderResumenActions(actionPlan) {
@@ -772,7 +729,6 @@ function renderResumen(model) {
   if (resumenMetricManual) resumenMetricManual.textContent = model.todayManual;
 
   renderResumenActions(model.actionPlan);
-  renderResumenTimeline(model.timeline);
   resumenHero.closest('.resumen-layout')?.classList.add('is-live');
 }
 

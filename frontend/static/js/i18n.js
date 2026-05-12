@@ -180,10 +180,6 @@
     'Revisa rechazos.': 'Review rejections.',
     'Agregar persona': 'Add person',
     'Crea identidad.': 'Create identity.',
-    'Actividad reciente': 'Recent activity',
-    'Lo último': 'Latest',
-    'Sin movimiento': 'No activity',
-    'Sin accesos recientes.': 'No recent access.',
 
     /* Admin — personas */
     'Nombre completo': 'Full name',
@@ -452,7 +448,6 @@
     'ultimo evento': 'last event',
     'Vigilar': 'Monitor',
     'Estable': 'Stable',
-    'eventos': 'events',
     'Desconocido': 'Unknown',
     'segundo': 'second',
     'segundos': 'seconds',
