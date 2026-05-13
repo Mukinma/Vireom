@@ -10,6 +10,7 @@ const ADMIN_SOURCE = readFileSync(
 
 const activeWindows = new Set();
 
+<<<<<<< HEAD
 function createResponse(data, ok = true, status = ok ? 200 : 400) {
   return {
     ok,
@@ -19,15 +20,36 @@ function createResponse(data, ok = true, status = ok ? 200 : 400) {
     },
     async text() {
       return typeof data === 'string' ? data : JSON.stringify(data);
+=======
+function responseJson(payload, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async json() {
+      return payload;
+    },
+    async text() {
+      return JSON.stringify(payload);
+>>>>>>> origin/Cris
     },
   };
 }
 
+<<<<<<< HEAD
 function createAdminDom({ users = [] } = {}) {
+=======
+async function flushAsyncWork() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+async function createAdminDom({ users = [] } = {}) {
+>>>>>>> origin/Cris
   const dom = new JSDOM(
     `<!doctype html>
     <html lang="es">
       <head>
+<<<<<<< HEAD
         <meta name="csrf-token" content="csrf-token" />
         <meta name="admin-user" content="admin" />
       </head>
@@ -78,6 +100,24 @@ function createAdminDom({ users = [] } = {}) {
             </section>
           </div>
         </main>
+=======
+        <meta name="csrf-token" content="test-csrf" />
+        <meta name="admin-user" content="admin" />
+      </head>
+      <body>
+        <section id="view-personas">
+          <h1 id="personasTitle">Personas</h1>
+          <p id="personasSubtitle"></p>
+          <p id="personasSummary"></p>
+          <div id="personasSearchWrap">
+            <input id="userSearch" type="text" />
+          </div>
+          <input id="newUserName" type="text" />
+          <button id="createUserBtn" type="button"></button>
+          <p id="createResult" hidden></p>
+          <div id="usersList"></div>
+        </section>
+>>>>>>> origin/Cris
       </body>
     </html>`,
     {
@@ -86,6 +126,7 @@ function createAdminDom({ users = [] } = {}) {
     },
   );
 
+<<<<<<< HEAD
   const { window } = dom;
   window.i18n = { t: (value) => value };
   window.CameraPIAdminLayout = { navigateToView: vi.fn() };
@@ -119,10 +160,38 @@ async function flushAsync() {
 
 afterEach(() => {
   activeWindows.forEach((windowRef) => windowRef.close());
+=======
+  const endpoints = new Map([
+    ['/api/users', users],
+    ['/api/access-logs?limit=200', []],
+    ['/api/status', { camera: 'online', model: 'loaded', door: 'ready' }],
+    ['/api/config', { umbral_confianza: 70, tiempo_apertura_seg: 5, max_intentos: 3 }],
+    ['/api/system/diagnostics', { summary: 'Todo listo', all_ok: true, checks: {} }],
+  ]);
+
+  dom.window.fetch = vi.fn(async (url) => responseJson(endpoints.get(String(url)) ?? {}));
+  dom.window.setInterval = vi.fn();
+  dom.window.requestAnimationFrame = (callback) => callback();
+  dom.window.CameraPITheme = {
+    initTheme: vi.fn(),
+    bindToggleButtons: vi.fn(),
+  };
+
+  dom.window.eval(ADMIN_SOURCE);
+  activeWindows.add(dom.window);
+  await flushAsyncWork();
+
+  return dom;
+}
+
+afterEach(() => {
+  activeWindows.forEach((windowObject) => windowObject.close());
+>>>>>>> origin/Cris
   activeWindows.clear();
   vi.restoreAllMocks();
 });
 
+<<<<<<< HEAD
 describe('admin personas redesigned UX', () => {
   it('renders visual person cards with thumbnail and primary action instead of a table', async () => {
     const { document } = createAdminDom({
@@ -190,5 +259,60 @@ describe('admin personas redesigned UX', () => {
     expect(detailActions.textContent).not.toContain('Entrenar');
     expect([...document.querySelectorAll('#personDetailPanel button')]
       .filter((button) => button.textContent.includes('Activar'))).toHaveLength(1);
+=======
+describe('admin personas view', () => {
+  it('renders a guided first-use empty state instead of an empty table', async () => {
+    const dom = await createAdminDom({ users: [] });
+    const { document } = dom.window;
+
+    expect(document.getElementById('personasTitle')?.textContent).toBe('Agrega la primera persona');
+    expect(document.getElementById('personasSubtitle')?.textContent).toContain('Empieza con el nombre');
+    expect(document.getElementById('personasSearchWrap')?.hidden).toBe(true);
+    expect(document.querySelector('#usersList table')).toBeNull();
+    expect(document.querySelector('.personas-empty-state')?.textContent).toContain('Aún no hay personas');
+  });
+
+  it('renders registered people as action-led cards without status badges', async () => {
+    const dom = await createAdminDom({
+      users: [
+        { id: 12, nombre: 'María López', activo: 1 },
+        { id: 13, nombre: 'Jorge Pérez', activo: 0 },
+      ],
+    });
+    const { document } = dom.window;
+
+    const cards = document.querySelectorAll('.person-card');
+    expect(cards).toHaveLength(2);
+    expect(document.querySelector('#usersList table')).toBeNull();
+    expect(document.querySelector('#usersList .badge')).toBeNull();
+
+    expect(cards[0].textContent).toContain('María López');
+    expect(cards[0].textContent).toContain('Activa · ID 12');
+    expect(cards[0].querySelector('.person-card__primary')?.textContent).toContain('Registrar rostro');
+    expect(cards[0].querySelector('.person-card__more')?.getAttribute('aria-label')).toBe('Más acciones para María López');
+
+    expect(cards[1].textContent).toContain('Jorge Pérez');
+    expect(cards[1].textContent).toContain('Inactiva · ID 13');
+    expect(cards[1].querySelector('.person-card__primary')?.textContent).toContain('Activar persona');
+  });
+
+  it('keeps card rendering when search filters the people list', async () => {
+    const dom = await createAdminDom({
+      users: [
+        { id: 12, nombre: 'María López', activo: 1 },
+        { id: 13, nombre: 'Jorge Pérez', activo: 1 },
+      ],
+    });
+    const { document, Event } = dom.window;
+    const search = document.getElementById('userSearch');
+
+    search.value = 'jorge';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const cards = document.querySelectorAll('.person-card');
+    expect(cards).toHaveLength(1);
+    expect(cards[0].textContent).toContain('Jorge Pérez');
+    expect(document.querySelector('#usersList table')).toBeNull();
+>>>>>>> origin/Cris
   });
 });
