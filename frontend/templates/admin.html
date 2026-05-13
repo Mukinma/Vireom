@@ -50,8 +50,29 @@
             <div class="resumen-hero__copy">
               <p class="resumen-hero__label" id="resumenStatusLabel" data-i18n>Estado actual</p>
               <h2 class="resumen-hero__title" id="resumenStatusTitle" data-i18n>Cargando estado operativo…</h2>
-              <p class="resumen-hero__meta" id="resumenStatusMeta" data-i18n>Sincronizando estado y actividad.</p>
-              <p class="resumen-hero__caption" id="resumenStatusCaption" data-i18n>Cámara, modelo y puerta en una sola lectura.</p>
+              <div class="resumen-sys-pills" role="list" aria-label="Estado de subsistemas" data-i18n-attr="aria-label:Estado de subsistemas">
+                <div class="resumen-sys-pill" role="listitem">
+                  <svg class="resumen-sys-pill__icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
+                  <div class="resumen-sys-pill__text">
+                    <span class="resumen-sys-pill__label" data-i18n>Cámara</span>
+                    <span class="resumen-sys-pill__state" id="resumenPillCameraState">—</span>
+                  </div>
+                </div>
+                <div class="resumen-sys-pill" role="listitem">
+                  <svg class="resumen-sys-pill__icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#database"></use></svg>
+                  <div class="resumen-sys-pill__text">
+                    <span class="resumen-sys-pill__label" data-i18n>Modelo</span>
+                    <span class="resumen-sys-pill__state" id="resumenPillModelState">—</span>
+                  </div>
+                </div>
+                <div class="resumen-sys-pill" role="listitem">
+                  <svg class="resumen-sys-pill__icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#door-filled"></use></svg>
+                  <div class="resumen-sys-pill__text">
+                    <span class="resumen-sys-pill__label" data-i18n>Puerta</span>
+                    <span class="resumen-sys-pill__state" id="resumenPillDoorState">—</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="resumen-alert-inline" id="resumenInlineAlert" hidden>
