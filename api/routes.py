@@ -4,9 +4,11 @@ import secrets
 import shutil
 import socket
 import time
+from pathlib import Path
 from typing import Optional
 
 import bcrypt
+import cv2
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
@@ -14,6 +16,7 @@ from pydantic import BaseModel, Field
 from config import config
 from database.db import db
 from rate_limit import limiter
+from vision.secure_storage import storage as _storage
 
 router = APIRouter()
 auth_logger = logging.getLogger("camerapi.auth")
@@ -299,6 +302,28 @@ def get_user_detail(user_id: int, request: Request):
         "samples_count": samples_count,
         "recent_logs": recent_logs,
     }
+
+
+@router.get("/api/users/{user_id}/thumbnail")
+def get_user_thumbnail(user_id: int, request: Request):
+    _admin_required(request)
+    image_ref = db.get_user_thumbnail_path(user_id)
+    if not image_ref:
+        return Response(status_code=204, headers={"Cache-Control": "no-store"})
+
+    image = _storage.read_image(Path(image_ref), flags=cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        return Response(status_code=204, headers={"Cache-Control": "no-store"})
+
+    ok, buffer = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 86])
+    if not ok:
+        return Response(status_code=204, headers={"Cache-Control": "no-store"})
+
+    return Response(
+        content=buffer.tobytes(),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.patch("/api/users/{user_id}")
