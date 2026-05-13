@@ -3,7 +3,7 @@
   <!-- ─────────────────────── ETAPA A: Preparación ─────────────────────── -->
   <div id="enrollInstructionsPanel" class="enroll-stage">
 
-    <div class="enroll-hud-strip">
+    <div class="enroll-hud-strip enroll-hud-strip--prep">
       <button
         id="enrollBackBtn"
         class="enroll-back-btn"
@@ -13,18 +13,20 @@
       >
         <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#chevron-left"></use></svg>
       </button>
-      <span class="enroll-hud-label">Osvium <span class="enroll-hud-sep" aria-hidden="true">·</span> <span data-i18n>Registro</span></span>
-      <span class="enroll-stage-tag" data-i18n>Paso 1 de 2</span>
+      <div class="enroll-title-block">
+        <h2 data-i18n>Registro facial</h2>
+        <p data-i18n>Primero elige a la persona. Después la cámara guiará los movimientos.</p>
+      </div>
     </div>
 
     <!-- Card: ¿Quién? -->
-    <div class="enroll-card">
+    <div class="enroll-card enroll-person-card">
       <span class="hud-corner hud-tl" aria-hidden="true"></span>
       <span class="hud-corner hud-tr" aria-hidden="true"></span>
       <span class="hud-corner hud-bl" aria-hidden="true"></span>
       <span class="hud-corner hud-br" aria-hidden="true"></span>
 
-      <p class="enroll-card-eyebrow" data-i18n>¿Quién se va a registrar?</p>
+      <h3 data-i18n>Persona</h3>
       <div class="enroll-select-wrap">
         <select id="enrollUserSelect" class="enroll-select" aria-label="Seleccionar persona" data-i18n-attr="aria-label:Seleccionar persona">
           <option value="" data-i18n>Elige una persona...</option>
@@ -38,7 +40,7 @@
 
     <!-- Card: Tips -->
     <div class="enroll-card enroll-tips-card">
-      <p class="enroll-card-eyebrow" data-i18n>Antes de empezar</p>
+      <h3 data-i18n>Antes de empezar</h3>
       <ul class="enroll-tips-list" aria-label="Condiciones recomendadas" data-i18n-attr="aria-label:Condiciones recomendadas">
         <li>
           <span class="enroll-tip-icon" aria-hidden="true">
@@ -64,7 +66,7 @@
     <!-- Card: Revisión rápida -->
     <div class="enroll-card enroll-readiness-card">
       <div class="enroll-readiness-head">
-        <p class="enroll-card-eyebrow" data-i18n>Revisión rápida</p>
+        <h3 data-i18n>Sistema</h3>
         <span class="enroll-readiness-meta" id="enrollReadinessMeta" data-i18n>Verificando...</span>
       </div>
       <div class="enroll-readiness-grid">
@@ -96,8 +98,8 @@
   <!-- ─────────────────────── ETAPA B: Captura ─────────────────────── -->
   <div id="enrollStepsPanel" class="enroll-stage" hidden>
 
-    <div class="enroll-hud-strip">
-      <span class="enroll-hud-label">Osvium <span class="enroll-hud-sep" aria-hidden="true">·</span> <span data-i18n>Registro</span></span>
+    <div class="enroll-hud-strip enroll-hud-strip--capture">
+      <span class="enroll-hud-label" data-i18n>Registro facial</span>
       <div class="enroll-hud-right">
         <span class="enroll-user-chip" id="enrollUserMeta">—</span>
         <span class="enroll-total-chip" id="enrollSummaryTotal">0 / 35</span>
@@ -161,9 +163,9 @@
         <div class="enroll-completion-actions">
           <button id="enrollTrainBtn" class="btn btn-primary" type="button">
             <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#sparkles"></use></svg>
-            <span data-i18n>Guardar</span>
+            <span data-i18n>Entrenar y terminar</span>
           </button>
-          <button id="enrollFinishBtn" class="btn btn-secondary" type="button" data-i18n>Salir</button>
+          <button id="enrollFinishBtn" class="btn btn-secondary" type="button" data-i18n>Guardar sin entrenar</button>
         </div>
       </div>
     </div>
@@ -186,7 +188,6 @@
 
       <!-- Active step focus -->
       <div class="enroll-step-focus" id="enrollStepFocus">
-        <p class="enroll-step-eyebrow" data-i18n>Paso actual</p>
         <h3 class="enroll-step-title" id="enrollActiveStepLabel" data-i18n>Mira de frente</h3>
         <p class="enroll-step-hint" id="enrollActiveStepHint" data-i18n>Sigue la guía hasta estabilizar el rostro.</p>
         <div class="enroll-step-stats">

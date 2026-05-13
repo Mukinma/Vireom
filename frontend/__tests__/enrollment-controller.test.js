@@ -326,4 +326,36 @@ describe('enrollment controller', () => {
     expect(fetchImpl).toHaveBeenCalledWith('/api/enrollment/finish', expect.objectContaining({ method: 'POST', credentials: 'same-origin' }));
     expect(window.showPersonasListMode).toHaveBeenCalled();
   });
+
+  it('starts enrollment programmatically after a person is preselected', async () => {
+    const activeSnapshot = { ...buildActiveSnapshot(), ok: true };
+    let started = false;
+    const fetchImpl = vi.fn(async (url) => {
+      if (url === '/api/users') {
+        return createResponse([{ id: 7, nombre: 'Ada Lovelace' }]);
+      }
+      if (url === '/api/status') {
+        return createResponse({ camera: 'online', model: 'loaded' });
+      }
+      if (url === '/api/enrollment/status') {
+        return createResponse(started ? activeSnapshot : { ...activeSnapshot, phase: 'preflight', state: 'idle', user_id: null });
+      }
+      if (url === '/api/enrollment/start') {
+        started = true;
+        return createResponse(activeSnapshot);
+      }
+      return createResponse({}, false, 404);
+    });
+
+    const { window, document } = createDom({ fetchImpl });
+    await window.CameraPIEnrollment.startForUser(7);
+    await flushAsync();
+
+    expect(fetchImpl).toHaveBeenCalledWith('/api/enrollment/start', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ user_id: 7 }),
+    }));
+    expect(document.getElementById('enrollInstructionsPanel').hidden).toBe(true);
+    expect(document.getElementById('enrollSummaryUser').textContent).toContain('Ada Lovelace');
+  });
 });

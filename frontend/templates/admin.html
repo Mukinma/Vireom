@@ -108,26 +108,42 @@
 
       <!-- ═══════════════ VIEW: PERSONAS ═══════════════ -->
       <section class="admin-view" id="view-personas" hidden>
-        <div class="card">
-          <div class="admin-form-bar">
-            <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" data-i18n-attr="placeholder:Nombre completo" />
-            <button id="createUserBtn" class="btn btn-primary" type="button">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#plus-filled"></use></svg>
-              <span data-i18n>Agregar</span>
-            </button>
-          </div>
-          <p id="createResult" class="create-result" hidden></p>
-        </div>
-
-        <div class="card">
-          <div class="section-head-row">
-            <h2 data-i18n>Personas registradas</h2>
-            <div class="search-wrap">
-              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#search-filled"></use></svg>
-              <input id="userSearch" type="text" placeholder="Buscar…" data-i18n-attr="placeholder:Buscar…" />
+        <div class="personas-shell">
+          <section class="personas-create-panel" aria-labelledby="personasCreateTitle">
+            <div class="personas-create-panel__icon" aria-hidden="true">
+              <svg class="icon"><use href="/static/icons/lucide/lucide-sprite.svg#user"></use></svg>
             </div>
-          </div>
-          <div id="usersList" class="table-wrap"></div>
+            <div class="personas-create-panel__body">
+              <h2 id="personasCreateTitle" data-i18n>Registrar persona</h2>
+              <p data-i18n>Escribe el nombre y el sistema abrirá la cámara para guardar su rostro.</p>
+              <div class="personas-create-form">
+                <label class="sr-only" for="newUserName" data-i18n>Nombre completo</label>
+                <input id="newUserName" type="text" placeholder="Nombre completo" maxlength="80" autocomplete="off" data-i18n-attr="placeholder:Nombre completo" />
+                <button id="createUserBtn" class="btn btn-primary personas-create-btn" type="button">
+                  <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera-filled"></use></svg>
+                  <span data-i18n>Crear y registrar rostro</span>
+                </button>
+              </div>
+              <p id="createResult" class="create-result" hidden aria-live="polite"></p>
+            </div>
+          </section>
+
+          <section class="personas-list-panel" aria-labelledby="personasListTitle">
+            <div class="personas-list-head">
+              <div>
+                <h2 id="personasListTitle" data-i18n>Personas</h2>
+                <p id="personasListSummary" data-i18n>Buscando personas registradas.</p>
+              </div>
+              <div class="search-wrap personas-search">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#search-filled"></use></svg>
+                <label class="sr-only" for="userSearch" data-i18n>Buscar persona</label>
+                <input id="userSearch" type="text" placeholder="Buscar por nombre" data-i18n-attr="placeholder:Buscar por nombre" />
+              </div>
+            </div>
+            <div id="usersList" class="personas-grid" aria-live="polite"></div>
+          </section>
+
+          <aside id="personDetailPanel" class="person-detail-panel" aria-live="polite" hidden></aside>
         </div>
       </section>
 

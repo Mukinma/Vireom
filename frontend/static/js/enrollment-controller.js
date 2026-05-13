@@ -88,6 +88,7 @@
   let isStarting = false;
   let isTraining = false;
   let pendingUserId = null;
+  let enterViewPromise = null;
   let animFrame = null;
 
   function buildFallbackIdleStatus() {
@@ -469,11 +470,17 @@
     if (status.phase === 'completed_review') return 'Revision final';
     if (status.phase === 'recoverable_error') return 'Sesion detenida';
     if (status.current_step == null) return 'Preparacion';
-    return `Paso ${status.current_step + 1} de ${status.total_steps}`;
+    return `${tr('Movimiento')} ${status.current_step + 1} ${tr('de')} ${status.total_steps}`;
   }
 
   function currentSamplesText(status = enrollmentStatus) {
-    return `${status.samples_this_step || 0} / ${status.samples_needed || 5}`;
+    const needed = status.samples_needed || 5;
+    return `${status.samples_this_step || 0} ${tr('de')} ${needed} ${tr(needed === 1 ? 'foto' : 'fotos')}`;
+  }
+
+  function totalSamplesText(status = enrollmentStatus) {
+    const total = status.total_needed || 35;
+    return `${status.total_captured || 0} ${tr('de')} ${total} ${tr(total === 1 ? 'foto' : 'fotos')}`;
   }
 
   function renderDots(steps) {
@@ -665,12 +672,12 @@
 
     if (userMeta) {
       userMeta.textContent = enrollmentStatus.user_name
-        ? `${enrollmentStatus.user_name} · ${enrollmentStatus.total_captured}/${enrollmentStatus.total_needed}`
+        ? enrollmentStatus.user_name
         : tr('Sin sesion activa');
     }
 
     if (stepBadge) stepBadge.textContent = stepBadgeText(enrollmentStatus);
-    if (stepCounter) stepCounter.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
+    if (stepCounter) stepCounter.textContent = totalSamplesText(enrollmentStatus);
     if (instruction) instruction.textContent = tr(enrollmentStatus.guidance?.instruction || 'Selecciona una persona para iniciar');
     if (message) message.textContent = tr(enrollmentStatus.guidance?.hint || '');
 
@@ -682,14 +689,14 @@
       ? Math.round((enrollmentStatus.total_captured / enrollmentStatus.total_needed) * 100)
       : 0;
     if (totalFill) totalFill.style.width = `${progressPercent}%`;
-    if (totalLabel) totalLabel.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
+    if (totalLabel) totalLabel.textContent = totalSamplesText(enrollmentStatus);
     if (summaryUser) summaryUser.textContent = enrollmentStatus.user_name || tr('Sin seleccionar');
     if (summaryPhase) summaryPhase.textContent = phaseLabel(enrollmentStatus);
-    if (summaryTotal) summaryTotal.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed}`;
+    if (summaryTotal) summaryTotal.textContent = totalSamplesText(enrollmentStatus);
     if (activeStepLabel) activeStepLabel.textContent = tr(enrollmentStatus.guidance?.instruction || 'Preparacion');
     if (activeStepHint) activeStepHint.textContent = tr(enrollmentStatus.guidance?.hint || '');
-    if (activeStepSamples) activeStepSamples.textContent = `${enrollmentStatus.samples_this_step} / ${enrollmentStatus.samples_needed} ${tr('muestras')}`;
-    if (activeTotalSamples) activeTotalSamples.textContent = `${enrollmentStatus.total_captured} / ${enrollmentStatus.total_needed} ${tr('total')}`;
+    if (activeStepSamples) activeStepSamples.textContent = currentSamplesText(enrollmentStatus);
+    if (activeTotalSamples) activeTotalSamples.textContent = totalSamplesText(enrollmentStatus);
 
     if (errorBanner) errorBanner.classList.toggle('is-hidden', !isRecoverableError(enrollmentStatus));
     if (errorTitle) errorTitle.textContent = tr('Se detuvo el enrolamiento');
@@ -744,22 +751,31 @@
     isViewActive = true;
     resizeCanvas();
 
-    await Promise.all([loadUsers(), loadSystemStatus()]);
+    const work = (async () => {
+      await Promise.all([loadUsers(), loadSystemStatus()]);
 
-    try {
-      const status = await fetchEnrollmentStatus();
-      if (isActivePhase(status)) {
-        scheduleNextPoll(0);
-      } else {
-        stopPolling();
+      try {
+        const status = await fetchEnrollmentStatus();
+        if (isActivePhase(status)) {
+          scheduleNextPoll(0);
+        } else {
+          stopPolling();
+        }
+      } catch (error) {
+        applySnapshot(buildFallbackIdleStatus());
+        showAdminToastSafe({
+          text: 'No se pudo recuperar la sesion',
+          sub: error.message,
+          cls: 'warning',
+        });
       }
-    } catch (error) {
-      applySnapshot(buildFallbackIdleStatus());
-      showAdminToastSafe({
-        text: 'No se pudo recuperar la sesion',
-        sub: error.message,
-        cls: 'warning',
-      });
+    })();
+
+    enterViewPromise = work;
+    try {
+      await work;
+    } finally {
+      if (enterViewPromise === work) enterViewPromise = null;
     }
   }
 
@@ -964,6 +980,17 @@
     updateStartState();
   }
 
+  async function startForUser(userId) {
+    prefillUser(userId);
+    if (!isViewActive) {
+      await enterEnrollmentView();
+    } else if (enterViewPromise) {
+      await enterViewPromise;
+    }
+    if (userSelect && pendingUserId != null) userSelect.value = pendingUserId;
+    await startEnrollment();
+  }
+
   function onViewChange(event) {
     const nextView = event.detail?.viewId;
     if (nextView === 'enrolamiento') {
@@ -1008,6 +1035,7 @@
   window.CameraPIEnrollment = {
     reset: resetUI,
     prefillUser,
+    startForUser,
     refresh: enterEnrollmentView,
   };
 
