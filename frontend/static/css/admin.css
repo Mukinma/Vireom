@@ -429,14 +429,40 @@ hr.separator, .separator {
 .resumen-hero__title {
   font-size: clamp(26px, 5vw, 38px); font-weight: 700;
   color: rgba(225, 238, 255, 0.97); letter-spacing: -0.015em;
-  line-height: 1.15; margin: 8px 0;
+  line-height: 1.15; margin: 8px 0 14px;
 }
-.resumen-hero__meta {
-  font-size: 17px; color: rgba(180, 200, 230, 0.65); margin: 0;
+
+.resumen-sys-pills {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin: 0 0 6px;
 }
-.resumen-hero__caption {
-  font-size: 14px; color: rgba(140, 165, 200, 0.38); margin: 4px 0 0;
+.resumen-sys-pill {
+  display: flex; align-items: center; gap: 12px;
+  flex: 1 1 140px; min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.22);
 }
+.resumen-sys-pill__icon {
+  width: 22px; height: 22px; flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.78);
+}
+.resumen-sys-pill__text { min-width: 0; }
+.resumen-sys-pill__label {
+  display: block;
+  font-size: 14px; font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+.resumen-sys-pill__state {
+  display: block;
+  font-size: 13px; font-weight: 700;
+  margin-top: 3px;
+  letter-spacing: 0.04em;
+}
+.resumen-sys-pill__state.is-ok { color: #4ade80; }
+.resumen-sys-pill__state.is-warn { color: #fbbf24; }
+.resumen-sys-pill__state.is-bad { color: #f87171; }
 
 /* Inline alert */
 .resumen-alert-inline {

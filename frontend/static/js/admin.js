@@ -73,8 +73,9 @@ const resumenHero = document.getElementById('resumenHero');
 const resumenStatusChip = document.getElementById('resumenStatusChip');
 const resumenStatusLabel = document.getElementById('resumenStatusLabel');
 const resumenStatusTitle = document.getElementById('resumenStatusTitle');
-const resumenStatusMeta = document.getElementById('resumenStatusMeta');
-const resumenStatusCaption = document.getElementById('resumenStatusCaption');
+const resumenPillCameraState = document.getElementById('resumenPillCameraState');
+const resumenPillModelState = document.getElementById('resumenPillModelState');
+const resumenPillDoorState = document.getElementById('resumenPillDoorState');
 const resumenInlineAlert = document.getElementById('resumenInlineAlert');
 const resumenInlineAlertBadge = document.getElementById('resumenInlineAlertBadge');
 const resumenInlineAlertText = document.getElementById('resumenInlineAlertText');
@@ -410,8 +411,33 @@ function getDoorSummary(state) {
   return tr('puerta sin estado');
 }
 
-function formatSystemCaption(status) {
-  return `${getCameraSummary(status?.camera)}, ${getModelSummary(status?.model)} ${tr('y')} ${getDoorSummary(getDoorState(status))}.`;
+function buildResumenPillCamera(status) {
+  const raw = String(status?.camera || '').toLowerCase();
+  if (raw === 'online') return { text: tr('Activa'), tone: 'ok' };
+  if (raw === 'degraded') return { text: tr('Degradada'), tone: 'warn' };
+  if (raw === 'error') return { text: tr('Error'), tone: 'bad' };
+  return { text: tr('Inactiva'), tone: 'bad' };
+}
+
+function buildResumenPillModel(status) {
+  const raw = String(status?.model || '').toLowerCase();
+  if (raw === 'loaded') return { text: tr('Cargado'), tone: 'ok' };
+  if (raw === 'error') return { text: tr('Error'), tone: 'bad' };
+  return { text: tr('No cargado'), tone: 'bad' };
+}
+
+function buildResumenPillDoor(doorState) {
+  if (doorState === 'mock') return { text: tr('Simulación'), tone: 'ok' };
+  if (doorState === 'ready' || doorState === 'closed') return { text: tr('Lista'), tone: 'ok' };
+  if (doorState) return { text: tr('Alerta'), tone: 'warn' };
+  return { text: tr('Sin estado'), tone: 'bad' };
+}
+
+function applyResumenPillState(el, pill) {
+  if (!el || !pill) return;
+  el.textContent = pill.text;
+  el.classList.remove('is-ok', 'is-warn', 'is-bad');
+  el.classList.add(pill.tone === 'ok' ? 'is-ok' : pill.tone === 'warn' ? 'is-warn' : 'is-bad');
 }
 
 function upperFirst(value) {
@@ -635,20 +661,10 @@ function computeResumenModel(users, logs, status) {
 
   const isOnboarding = activeUsers === 0;
   const heroHeadline = alertState === 'critical'
-    ? tr('Atencion inmediata')
+    ? tr('Acceso Rápido')
     : (alertState === 'warning' || isOnboarding)
       ? tr('Revision recomendada')
       : tr('Sistema listo');
-
-  const heroMetaParts = [
-    `${activeUsers} ${activeUsers === 1 ? tr('persona') : tr('personas')}`,
-    stats.today > 0 ? `${stats.today} ${tr('hoy')}` : tr('sin actividad hoy'),
-    `${stats.granted} ${tr('reconocidos')}`,
-  ];
-
-  if (lastEvent) {
-    heroMetaParts.push(`${tr('ultimo evento')} ${formatLogMoment(lastEvent.fecha)}`);
-  }
 
   const tone = alertState === 'critical' ? 'critical' : ((alertState === 'warning' || isOnboarding) ? 'warning' : 'ok');
   const statusChipText = alertState === 'critical'
@@ -668,8 +684,9 @@ function computeResumenModel(users, logs, status) {
     statusChipText,
     heroLabel: tr('Estado del sistema'),
     heroHeadline,
-    heroMeta: heroMetaParts.join(' · '),
-    statusCaption: formatSystemCaption(status),
+    pillCamera: buildResumenPillCamera(status),
+    pillModel: buildResumenPillModel(status),
+    pillDoor: buildResumenPillDoor(doorState),
     activeUsers,
     todayTotal: stats.today,
     todayGranted: stats.granted,
@@ -717,8 +734,9 @@ function renderResumen(model) {
   if (resumenStatusChip) resumenStatusChip.textContent = model.statusChipText;
   if (resumenStatusLabel) resumenStatusLabel.textContent = model.heroLabel;
   if (resumenStatusTitle) resumenStatusTitle.textContent = model.heroHeadline;
-  if (resumenStatusMeta) resumenStatusMeta.textContent = model.heroMeta;
-  if (resumenStatusCaption) resumenStatusCaption.textContent = model.statusCaption;
+  applyResumenPillState(resumenPillCameraState, model.pillCamera);
+  applyResumenPillState(resumenPillModelState, model.pillModel);
+  applyResumenPillState(resumenPillDoorState, model.pillDoor);
   if (resumenInlineAlert) resumenInlineAlert.hidden = !alertCopy.visible;
   if (resumenInlineAlertBadge) resumenInlineAlertBadge.textContent = alertCopy.badge;
   if (resumenInlineAlertText) resumenInlineAlertText.textContent = alertCopy.message;
