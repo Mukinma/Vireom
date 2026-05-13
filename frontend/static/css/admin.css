@@ -469,11 +469,47 @@ hr.separator, .separator {
   gap: 10px;
 }
 .resumen-metric {
-  display: flex; flex-direction: column; gap: 5px;
-  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.04); border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(12, 18, 29, 0.78);
+  border-radius: 18px;
+  border: 1px solid rgba(94, 180, 255, 0.12);
+  box-shadow: inset 0 0 24px rgba(40, 80, 130, 0.08);
+}
+.resumen-metric-sparkline {
+  position: relative;
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(72, 93, 139, 0.12), rgba(19, 24, 40, 0.2));
+  box-shadow: inset 0 0 20px rgba(40, 170, 255, 0.08);
+  overflow: hidden;
+}
+.resumen-metric-sparkline__svg {
+  width: 100%;
+  height: 100%;
+}
+.resumen-metric-sparkline__path {
+  fill: none;
+  stroke: rgba(96, 165, 250, 0.95);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.35));
+  transition: stroke 180ms ease;
+}
+.resumen-metric--accent .resumen-metric-sparkline__path {
+  stroke: rgba(110, 231, 183, 0.95);
+  filter: drop-shadow(0 0 10px rgba(110, 231, 183, 0.3));
+}
+.resumen-metric-sparkline::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.14), transparent 35%),
+              radial-gradient(circle at 80% 80%, rgba(129, 140, 248, 0.1), transparent 28%);
 }
 .resumen-metric__value {
   font-size: clamp(30px, 5vw, 48px); font-weight: 700;
