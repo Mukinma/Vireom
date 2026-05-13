@@ -79,11 +79,28 @@ const resumenInlineAlert = document.getElementById('resumenInlineAlert');
 const resumenInlineAlertBadge = document.getElementById('resumenInlineAlertBadge');
 const resumenInlineAlertText = document.getElementById('resumenInlineAlertText');
 const resumenMetricActiveUsers = document.getElementById('resumenMetricActiveUsers');
+const resumenMetricActiveUsersGraph = document.getElementById('resumenMetricActiveUsersGraph');
 const resumenMetricToday = document.getElementById('resumenMetricToday');
+const resumenMetricTodayGraph = document.getElementById('resumenMetricTodayGraph');
 const resumenMetricSuccess = document.getElementById('resumenMetricSuccess');
+const resumenMetricSuccessGraph = document.getElementById('resumenMetricSuccessGraph');
 const resumenMetricManual = document.getElementById('resumenMetricManual');
+const resumenMetricManualGraph = document.getElementById('resumenMetricManualGraph');
 const resumenActionHint = document.getElementById('resumenActionHint');
 const resumenActionStack = document.getElementById('resumenActionStack');
+
+const resumenSparklineState = {
+  activeUsers: [],
+  today: [],
+  success: [],
+  manual: [],
+};
+const resumenSparklineConfig = {
+  activeUsers: { min: 0, max: 20, points: 16 },
+  today: { min: 0, max: 100, points: 16 },
+  success: { min: 0, max: 100, points: 16 },
+  manual: { min: 0, max: 20, points: 16 },
+};
 
 const resumenActionButtons = {
   accesos: document.getElementById('resumenActionAccesos'),
@@ -688,6 +705,58 @@ function computeResumenModel(users, logs, status) {
   };
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function buildSparklinePath(values, min, max) {
+  if (!values || values.length === 0) return 'M0,20 L100,20';
+
+  const coords = values.map((value, index) => {
+    const x = index === 0 && values.length === 1 ? 100 : (index * 100) / (values.length - 1);
+    const ratio = values.length === 1 ? 0.5 : (value - min) / Math.max(1, max - min);
+    const y = clamp(28 - ratio * 18, 6, 28);
+    return [x, y];
+  });
+
+  let d = `M${coords[0][0]},${coords[0][1]}`;
+  for (let i = 1; i < coords.length; i += 1) {
+    const prev = coords[i - 1];
+    const current = coords[i];
+    const midX = (prev[0] + current[0]) / 2;
+    const midY = (prev[1] + current[1]) / 2;
+    d += ` Q${prev[0]},${prev[1]} ${midX},${midY}`;
+  }
+  if (coords.length > 1) {
+    const last = coords[coords.length - 1];
+    d += ` T${last[0]},${last[1]}`;
+  }
+  return d;
+}
+
+function updateSparklineHistory(history, target, min, max) {
+  const last = history.length ? history[history.length - 1] : target;
+  const drift = (target - last) * 0.24;
+  const noise = (Math.random() - 0.5) * Math.max(1, (max - min) * 0.12);
+  const next = clamp(last + drift + noise, min, max);
+  history.push(next);
+  return history;
+}
+
+function renderResumenSparkline(pathElement, history, target, config) {
+  if (!pathElement) return;
+  if (!history.length) {
+    for (let i = 0; i < config.points; i += 1) {
+      history.push(target);
+    }
+  }
+
+  updateSparklineHistory(history, target, config.min, config.max);
+  while (history.length > config.points) history.shift();
+
+  pathElement.setAttribute('d', buildSparklinePath(history, config.min, config.max));
+}
+
 function renderResumenActions(actionPlan) {
   if (!resumenActionStack) return;
 
@@ -727,6 +796,11 @@ function renderResumen(model) {
   if (resumenMetricToday) resumenMetricToday.textContent = model.todayTotal;
   if (resumenMetricSuccess) resumenMetricSuccess.textContent = formatPercent(model.successRateToday);
   if (resumenMetricManual) resumenMetricManual.textContent = model.todayManual;
+
+  renderResumenSparkline(resumenMetricActiveUsersGraph, resumenSparklineState.activeUsers, model.activeUsers, resumenSparklineConfig.activeUsers);
+  renderResumenSparkline(resumenMetricTodayGraph, resumenSparklineState.today, model.todayTotal, resumenSparklineConfig.today);
+  renderResumenSparkline(resumenMetricSuccessGraph, resumenSparklineState.success, Math.round((model.successRateToday ?? 0) * 100), resumenSparklineConfig.success);
+  renderResumenSparkline(resumenMetricManualGraph, resumenSparklineState.manual, model.todayManual, resumenSparklineConfig.manual);
 
   renderResumenActions(model.actionPlan);
   resumenHero.closest('.resumen-layout')?.classList.add('is-live');
@@ -1333,6 +1407,12 @@ async function init() {
 
   dashboardReady = true;
   renderDashboardFromCache();
+
+  setInterval(() => {
+    if (!dashboardReady) return;
+    const resumenModel = computeResumenModel(cachedUsers, cachedLogs, cachedStatus);
+    renderResumen(resumenModel);
+  }, 1200);
 
   setInterval(() => {
     Promise.all([loadLogs(), loadStatus()]).catch((error) => {
