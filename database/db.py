@@ -222,14 +222,77 @@ class Database:
             raise
 
     def list_users(self) -> list[dict[str, Any]]:
-        rows = self.fetch_all("SELECT id, nombre, activo, fecha_registro FROM usuarios ORDER BY id DESC")
-        return [dict(row) for row in rows]
+        rows = self.fetch_all(
+            """
+            SELECT
+                u.id,
+                u.nombre,
+                u.activo,
+                u.fecha_registro,
+                COUNT(m.id) AS samples_count,
+                MAX(m.fecha_captura) AS last_sample_at,
+                (
+                    SELECT a.fecha
+                    FROM accesos a
+                    WHERE a.usuario_id = u.id
+                    ORDER BY a.id DESC
+                    LIMIT 1
+                ) AS last_access_at,
+                (
+                    SELECT a.resultado
+                    FROM accesos a
+                    WHERE a.usuario_id = u.id
+                    ORDER BY a.id DESC
+                    LIMIT 1
+                ) AS last_access_result,
+                (
+                    SELECT mm.trained_at
+                    FROM model_meta mm
+                    WHERE mm.id = 1
+                ) AS model_trained_at
+            FROM usuarios u
+            LEFT JOIN muestras m ON m.usuario_id = u.id
+            GROUP BY u.id
+            ORDER BY u.id DESC
+            """
+        )
+
+        users: list[dict[str, Any]] = []
+        for row in rows:
+            user = dict(row)
+            samples_count = int(user.get("samples_count") or 0)
+            last_sample_at = user.get("last_sample_at")
+            model_trained_at = user.pop("model_trained_at", None)
+            user["samples_count"] = samples_count
+            user["needs_training"] = (
+                samples_count <= 0
+                or not model_trained_at
+                or (bool(last_sample_at) and str(last_sample_at) > str(model_trained_at))
+            )
+            user["thumbnail_url"] = f"/api/users/{user['id']}/thumbnail" if samples_count > 0 else None
+            users.append(user)
+        return users
 
     def get_user(self, user_id: int) -> Optional[dict[str, Any]]:
         if int(user_id) <= 0:
             raise ValueError("user_id inválido")
         row = self.fetch_one("SELECT id, nombre, activo FROM usuarios WHERE id=?", (int(user_id),))
         return dict(row) if row else None
+
+    def get_user_thumbnail_path(self, user_id: int) -> Optional[str]:
+        if int(user_id) <= 0:
+            raise ValueError("user_id inválido")
+        row = self.fetch_one(
+            """
+            SELECT imagen_ref
+            FROM muestras
+            WHERE usuario_id=?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (int(user_id),),
+        )
+        return str(row["imagen_ref"]) if row else None
 
     def _normalize_imagen_ref(self, imagen_ref: str) -> str:
         ref = (imagen_ref or "").strip()

@@ -80,11 +80,28 @@ const resumenInlineAlert = document.getElementById('resumenInlineAlert');
 const resumenInlineAlertBadge = document.getElementById('resumenInlineAlertBadge');
 const resumenInlineAlertText = document.getElementById('resumenInlineAlertText');
 const resumenMetricActiveUsers = document.getElementById('resumenMetricActiveUsers');
+const resumenMetricActiveUsersGraph = document.getElementById('resumenMetricActiveUsersGraph');
 const resumenMetricToday = document.getElementById('resumenMetricToday');
+const resumenMetricTodayGraph = document.getElementById('resumenMetricTodayGraph');
 const resumenMetricSuccess = document.getElementById('resumenMetricSuccess');
+const resumenMetricSuccessGraph = document.getElementById('resumenMetricSuccessGraph');
 const resumenMetricManual = document.getElementById('resumenMetricManual');
+const resumenMetricManualGraph = document.getElementById('resumenMetricManualGraph');
 const resumenActionHint = document.getElementById('resumenActionHint');
 const resumenActionStack = document.getElementById('resumenActionStack');
+
+const resumenSparklineState = {
+  activeUsers: [],
+  today: [],
+  success: [],
+  manual: [],
+};
+const resumenSparklineConfig = {
+  activeUsers: { min: 0, max: 20, points: 16 },
+  today: { min: 0, max: 100, points: 16 },
+  success: { min: 0, max: 100, points: 16 },
+  manual: { min: 0, max: 20, points: 16 },
+};
 
 const resumenActionButtons = {
   accesos: document.getElementById('resumenActionAccesos'),
@@ -92,6 +109,8 @@ const resumenActionButtons = {
 };
 
 const userSearch = document.getElementById('userSearch');
+const personasListSummary = document.getElementById('personasListSummary');
+const personDetailPanel = document.getElementById('personDetailPanel');
 const logFilterResult = document.getElementById('logFilterResult');
 const logAdvancedToggle = document.getElementById('logAdvancedToggle');
 const logAdvancedPanel = document.getElementById('logAdvancedPanel');
@@ -237,6 +256,13 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function escapeJsString(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, ' ');
 }
 
 /* ── API helper ── */
@@ -446,59 +472,255 @@ function upperFirst(value) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/* ── Render: Users table ── */
+/* ── Render: Personas ── */
+
+function personInitial(name) {
+  const clean = String(name || '').trim();
+  return clean ? clean.charAt(0).toUpperCase() : '?';
+}
+
+function formatCountLabel(count, singular, plural) {
+  const total = Number(count || 0);
+  return `${total} ${tr(total === 1 ? singular : plural)}`;
+}
+
+function getPersonState(user) {
+  const samples = Number(user.samples_count || 0);
+  if (!user.activo) {
+    return {
+      key: 'inactive',
+      icon: 'lock',
+      title: tr('Inactiva'),
+      text: tr('No abre la puerta'),
+    };
+  }
+  if (samples <= 0) {
+    return {
+      key: 'needs-face',
+      icon: 'camera',
+      title: tr('Falta rostro'),
+      text: tr('Necesita registro facial'),
+    };
+  }
+  if (user.needs_training) {
+    return {
+      key: 'needs-training',
+      icon: 'refresh-cw',
+      title: tr('Falta entrenar'),
+      text: tr('Actualizar modelo'),
+    };
+  }
+  return {
+    key: 'ready',
+    icon: 'check-filled',
+    title: tr('Lista'),
+    text: tr('Puede ser reconocida'),
+  };
+}
+
+function getPersonPrimaryAction(user) {
+  const samples = Number(user.samples_count || 0);
+  if (!user.activo) {
+    return {
+      label: tr('Activar'),
+      icon: 'unlock',
+      tone: 'neutral',
+      action: `toggleUser(${user.id}, true)`,
+    };
+  }
+  if (samples <= 0) {
+    const escapedName = escapeHtml(escapeJsString(user.nombre));
+    return {
+      label: tr('Registrar rostro'),
+      icon: 'camera-filled',
+      tone: 'primary',
+      action: `startEnrollForUser(${user.id}, '${escapedName}')`,
+    };
+  }
+  if (user.needs_training) {
+    return {
+      label: tr('Entrenar'),
+      icon: 'sparkles',
+      tone: 'primary',
+      action: `trainFromPersonas(${user.id})`,
+    };
+  }
+  return {
+    label: tr('Ver'),
+    icon: 'user',
+    tone: 'neutral',
+    action: `openPersonDetail(${user.id})`,
+  };
+}
+
+function renderPersonAvatar(user, sizeClass = '') {
+  const name = escapeHtml(user.nombre);
+  const initial = escapeHtml(personInitial(user.nombre));
+  const size = sizeClass ? ` ${sizeClass}` : '';
+  if (user.thumbnail_url) {
+    return `
+      <div class="person-avatar${size}">
+        <img src="${escapeHtml(user.thumbnail_url)}" alt="${name}" loading="lazy" onerror="this.closest('.person-avatar').classList.add('is-fallback'); this.remove();" />
+        <span aria-hidden="true">${initial}</span>
+      </div>`;
+  }
+  return `<div class="person-avatar${size} is-fallback" aria-hidden="true"><span>${initial}</span></div>`;
+}
+
+function renderPersonDetailAction(action, variant = 'primary') {
+  return `
+    <button class="btn ${variant === 'primary' ? 'btn-primary' : 'btn-secondary'}" type="button" onclick="${action.action}">
+      <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${action.icon}"></use></svg>
+      <span>${action.label}</span>
+    </button>`;
+}
 
 function renderUsers(users) {
   if (!usersList) return;
-  const rows = users.map((user) => {
-    const escapedName = escapeHtml(user.nombre).replace(/'/g, "\\'");
+
+  const total = cachedUsers.length;
+  const visible = users.length;
+  if (personasListSummary) {
+    personasListSummary.textContent = total === visible
+      ? formatCountLabel(total, 'persona registrada', 'personas registradas')
+      : `${visible} ${tr('de')} ${formatCountLabel(total, 'persona registrada', 'personas registradas')}`;
+  }
+
+  if (!users.length) {
+    usersList.innerHTML = `
+      <div class="personas-empty">
+        <div class="personas-empty__icon" aria-hidden="true">
+          <svg class="icon"><use href="/static/icons/lucide/lucide-sprite.svg#users"></use></svg>
+        </div>
+        <h3>${tr('Sin personas registradas')}</h3>
+        <p>${tr('Crea la primera persona para iniciar el registro facial.')}</p>
+      </div>`;
+    return;
+  }
+
+  usersList.innerHTML = users.map((user) => {
+    const state = getPersonState(user);
+    const action = getPersonPrimaryAction(user);
     return `
-    <tr>
-      <td>${user.id}</td>
-      <td>${escapeHtml(user.nombre)}</td>
-      <td><span class="badge ${user.activo ? 'badge--active' : 'badge--inactive'}">${user.activo ? tr('Activo') : tr('Inactivo')}</span></td>
-      <td class="table-actions">
-        <button
-          class="user-action-btn user-action-btn--primary"
-          type="button"
-          onclick="startEnrollForUser(${user.id}, '${escapedName}')"
-          title="${tr('Registrar')} ${escapeHtml(user.nombre)}"
-          aria-label="${tr('Registrar')} ${escapeHtml(user.nombre)}"
-          ${user.activo ? '' : ' disabled'}
-        >
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#camera"></use></svg>
-          <span>${tr('Registrar')}</span>
+      <article class="person-card person-card--${state.key}" data-person-card="${user.id}">
+        <button class="person-card__open" type="button" onclick="openPersonDetail(${user.id})" aria-label="${tr('Ver')} ${escapeHtml(user.nombre)}">
+          ${renderPersonAvatar(user)}
+          <span class="person-card__content">
+            <strong class="person-card__name">${escapeHtml(user.nombre)}</strong>
+            <span class="person-card__state">
+              <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${state.icon}"></use></svg>
+              <span>${state.title}</span>
+            </span>
+            <span class="person-card__meta">${formatCountLabel(user.samples_count, 'foto guardada', 'fotos guardadas')}</span>
+          </span>
         </button>
-        <button
-          class="user-action-btn user-action-btn--neutral"
-          type="button"
-          onclick="toggleUser(${user.id}, ${user.activo ? 'false' : 'true'})"
-          title="${user.activo ? tr('Desactivar') : tr('Activar')} ${escapeHtml(user.nombre)}"
-          aria-label="${user.activo ? tr('Desactivar') : tr('Activar')} ${escapeHtml(user.nombre)}"
-        >
-          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${user.activo ? 'lock' : 'unlock'}"></use></svg>
-          <span>${user.activo ? tr('Desactivar') : tr('Activar')}</span>
+        <button class="person-card__primary person-card__primary--${action.tone}" type="button" onclick="${action.action}" aria-label="${action.label} ${escapeHtml(user.nombre)}">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${action.icon}"></use></svg>
+          <span>${action.label}</span>
         </button>
-        <button
-          class="user-action-btn user-action-btn--danger"
-          type="button"
-          onclick="deleteUser(${user.id}, '${escapedName}')"
-          title="${tr('Eliminar usuario')}"
-          aria-label="${tr('Eliminar')} ${escapeHtml(user.nombre)}"
-        >
+      </article>`;
+  }).join('');
+}
+
+function renderPersonDetail(user, detail = null) {
+  if (!personDetailPanel) return;
+  const state = getPersonState(user);
+  const logs = Array.isArray(detail?.recent_logs) ? detail.recent_logs : [];
+  const escapedName = escapeHtml(escapeJsString(user.nombre));
+  const samplesCount = detail?.samples_count ?? user.samples_count ?? 0;
+  const detailActions = [];
+  const detailSecondaryToggle = user.activo
+    ? `
+      <button type="button" onclick="toggleUser(${user.id}, false)">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#lock"></use></svg>
+        <span>${tr('Desactivar')}</span>
+      </button>`
+    : '';
+
+  if (!user.activo) {
+    detailActions.push({
+      label: tr('Activar'),
+      icon: 'unlock',
+      action: `toggleUser(${user.id}, true)`,
+      variant: 'primary',
+    });
+  } else if (samplesCount <= 0) {
+    detailActions.push({
+      label: tr('Registrar rostro'),
+      icon: 'camera-filled',
+      action: `startEnrollForUser(${user.id}, '${escapedName}')`,
+      variant: 'primary',
+    });
+  } else if (user.needs_training) {
+    detailActions.push({
+      label: tr('Entrenar'),
+      icon: 'sparkles',
+      action: `trainFromPersonas(${user.id})`,
+      variant: 'primary',
+    });
+    detailActions.push({
+      label: tr('Registrar rostro'),
+      icon: 'camera-filled',
+      action: `startEnrollForUser(${user.id}, '${escapedName}')`,
+      variant: 'secondary',
+    });
+  } else {
+    detailActions.push({
+      label: tr('Registrar rostro'),
+      icon: 'camera-filled',
+      action: `startEnrollForUser(${user.id}, '${escapedName}')`,
+      variant: 'secondary',
+    });
+  }
+
+  const recentLogRows = logs.slice(0, 3).map((log) => {
+    const meta = getAccessResultMeta(log.resultado);
+    return `
+      <li class="person-detail-log">
+        <span>${escapeHtml(formatLogMoment(log.fecha))}</span>
+        <strong>${escapeHtml(tr(meta.label))}</strong>
+      </li>`;
+  }).join('');
+
+  personDetailPanel.hidden = false;
+  personDetailPanel.innerHTML = `
+    <div class="person-detail-card person-detail-card--${state.key}">
+      <button class="person-detail-close" type="button" onclick="closePersonDetail()" aria-label="${tr('Cerrar detalle')}">
+        <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
+      </button>
+      ${renderPersonAvatar(user, 'person-avatar--large')}
+      <div class="person-detail-card__copy">
+        <h3>${escapeHtml(user.nombre)}</h3>
+        <p class="person-detail-state">
+          <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#${state.icon}"></use></svg>
+          <span>${state.title}. ${state.text}.</span>
+        </p>
+      </div>
+      <div class="person-detail-actions">
+        ${detailActions.map((action) => renderPersonDetailAction(action, action.variant)).join('')}
+      </div>
+      <div class="person-detail-facts">
+        <div>
+          <strong>${samplesCount}</strong>
+          <span>${tr('fotos')}</span>
+        </div>
+        <div>
+          <strong>${user.activo ? tr('Activa') : tr('Inactiva')}</strong>
+          <span>${tr('estado')}</span>
+        </div>
+      </div>
+      <div class="person-detail-section">
+        <h4>${tr('Últimos accesos')}</h4>
+        <ul>${recentLogRows || `<li class="person-detail-log person-detail-log--empty">${tr('Sin accesos recientes')}</li>`}</ul>
+      </div>
+      <div class="person-detail-secondary${user.activo ? '' : ' person-detail-secondary--single'}">
+        ${detailSecondaryToggle}
+        <button class="is-danger" type="button" onclick="deleteUser(${user.id}, '${escapedName}')">
           <svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#x"></use></svg>
           <span>${tr('Eliminar')}</span>
         </button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  usersList.innerHTML = `
-    <table>
-      <thead><tr><th>${tr('ID')}</th><th>${tr('Nombre')}</th><th>${tr('Estado')}</th><th>${tr('Accion')}</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="4" class="text-center muted">${tr('Sin personas registradas')}</td></tr>`}</tbody>
-    </table>
-  `;
+      </div>
+    </div>`;
 }
 
 /* ── Render: Logs table ── */
@@ -705,6 +927,58 @@ function computeResumenModel(users, logs, status) {
   };
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function buildSparklinePath(values, min, max) {
+  if (!values || values.length === 0) return 'M0,20 L100,20';
+
+  const coords = values.map((value, index) => {
+    const x = index === 0 && values.length === 1 ? 100 : (index * 100) / (values.length - 1);
+    const ratio = values.length === 1 ? 0.5 : (value - min) / Math.max(1, max - min);
+    const y = clamp(28 - ratio * 18, 6, 28);
+    return [x, y];
+  });
+
+  let d = `M${coords[0][0]},${coords[0][1]}`;
+  for (let i = 1; i < coords.length; i += 1) {
+    const prev = coords[i - 1];
+    const current = coords[i];
+    const midX = (prev[0] + current[0]) / 2;
+    const midY = (prev[1] + current[1]) / 2;
+    d += ` Q${prev[0]},${prev[1]} ${midX},${midY}`;
+  }
+  if (coords.length > 1) {
+    const last = coords[coords.length - 1];
+    d += ` T${last[0]},${last[1]}`;
+  }
+  return d;
+}
+
+function updateSparklineHistory(history, target, min, max) {
+  const last = history.length ? history[history.length - 1] : target;
+  const drift = (target - last) * 0.24;
+  const noise = (Math.random() - 0.5) * Math.max(1, (max - min) * 0.12);
+  const next = clamp(last + drift + noise, min, max);
+  history.push(next);
+  return history;
+}
+
+function renderResumenSparkline(pathElement, history, target, config) {
+  if (!pathElement) return;
+  if (!history.length) {
+    for (let i = 0; i < config.points; i += 1) {
+      history.push(target);
+    }
+  }
+
+  updateSparklineHistory(history, target, config.min, config.max);
+  while (history.length > config.points) history.shift();
+
+  pathElement.setAttribute('d', buildSparklinePath(history, config.min, config.max));
+}
+
 function renderResumenActions(actionPlan) {
   if (!resumenActionStack) return;
 
@@ -746,6 +1020,11 @@ function renderResumen(model) {
   if (resumenMetricSuccess) resumenMetricSuccess.textContent = formatPercent(model.successRateToday);
   if (resumenMetricManual) resumenMetricManual.textContent = model.todayManual;
 
+  renderResumenSparkline(resumenMetricActiveUsersGraph, resumenSparklineState.activeUsers, model.activeUsers, resumenSparklineConfig.activeUsers);
+  renderResumenSparkline(resumenMetricTodayGraph, resumenSparklineState.today, model.todayTotal, resumenSparklineConfig.today);
+  renderResumenSparkline(resumenMetricSuccessGraph, resumenSparklineState.success, Math.round((model.successRateToday ?? 0) * 100), resumenSparklineConfig.success);
+  renderResumenSparkline(resumenMetricManualGraph, resumenSparklineState.manual, model.todayManual, resumenSparklineConfig.manual);
+
   renderResumenActions(model.actionPlan);
   resumenHero.closest('.resumen-layout')?.classList.add('is-live');
 }
@@ -765,7 +1044,7 @@ function applyUserSearch() {
     renderUsers(cachedUsers);
     return;
   }
-  renderUsers(cachedUsers.filter((user) => user.nombre.toLowerCase().includes(q) || String(user.id).includes(q)));
+  renderUsers(cachedUsers.filter((user) => String(user.nombre || '').toLowerCase().includes(q) || String(user.id).includes(q)));
 }
 
 function applyLogFilter() {
@@ -843,7 +1122,7 @@ logAdvancedReset?.addEventListener('click', () => {
 
 async function loadUsers() {
   cachedUsers = await api('/api/users');
-  renderUsers(cachedUsers);
+  applyUserSearch();
   if (dashboardReady) renderDashboardFromCache();
   return cachedUsers;
 }
@@ -1014,6 +1293,10 @@ window.toggleUser = async function (userId, active) {
       body: JSON.stringify({ activo: active }),
     });
     await loadUsers();
+    const updatedUser = cachedUsers.find((user) => Number(user.id) === Number(userId));
+    if (updatedUser && personDetailPanel && !personDetailPanel.hidden) {
+      renderPersonDetail(updatedUser);
+    }
     showAdminToast({
       text: active ? 'Persona activada' : 'Persona desactivada',
       sub: `ID ${userId} ${tr('actualizado')}`,
@@ -1037,6 +1320,7 @@ window.deleteUser = async function(userId, nombre) {
   try {
     await api(`/api/users/${userId}`, { method: 'DELETE' });
     await loadUsers();
+    if (personDetailPanel && !personDetailPanel.hidden) closePersonDetail();
     showAdminToast({
       text: 'Usuario eliminado',
       sub: `${nombre} (ID ${userId}) ${tr('fue eliminado')}`,
@@ -1050,6 +1334,48 @@ window.deleteUser = async function(userId, nombre) {
       cls: 'error',
       timeout: 3200,
     });
+  }
+};
+
+window.openPersonDetail = async function (userId) {
+  const cached = cachedUsers.find((user) => Number(user.id) === Number(userId));
+  if (!cached) return;
+  renderPersonDetail(cached);
+  try {
+    const detail = await api(`/api/users/${userId}`);
+    const merged = { ...cached, ...(detail?.user || {}), samples_count: detail?.samples_count ?? cached.samples_count };
+    renderPersonDetail(merged, detail);
+  } catch (error) {
+    console.error(error);
+    showAdminToast({ text: 'No se pudo cargar detalle', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
+  }
+};
+
+window.closePersonDetail = function () {
+  if (!personDetailPanel) return;
+  personDetailPanel.hidden = true;
+  personDetailPanel.innerHTML = '';
+};
+
+window.trainFromPersonas = async function (userId) {
+  const confirmed = await openAdminConfirm({
+    eyebrow: 'Entrenamiento final',
+    title: 'Actualizar modelo facial',
+    text: 'Se usaran las muestras guardadas para reconocer a las personas registradas.',
+    confirmLabel: 'Entrenar',
+    tone: 'primary',
+  });
+  if (!confirmed) return;
+  showAdminToast({ text: 'Entrenando modelo...', sub: 'Espera un momento', cls: 'processing', timeout: 15000 });
+  try {
+    const result = await api('/api/train', { method: 'POST' });
+    await Promise.all([loadUsers(), loadStatus()]);
+    const updatedUser = cachedUsers.find((user) => Number(user.id) === Number(userId));
+    if (updatedUser && personDetailPanel && !personDetailPanel.hidden) renderPersonDetail(updatedUser);
+    showAdminToast({ text: 'Modelo actualizado', sub: `${result.samples_used} ${tr('muestras de')} ${result.unique_users} ${tr('personas')}`, cls: 'success', timeout: 3200 });
+  } catch (error) {
+    console.error(error);
+    showAdminToast({ text: 'No se pudo entrenar', sub: getErrorMessage(error), cls: 'error', timeout: 3400 });
   }
 };
 
@@ -1067,11 +1393,12 @@ createUserBtn?.addEventListener('click', async () => {
     if (createResult) {
       const uid = user?.id ?? '';
       createResult.hidden = false;
-      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} ${tr('registrado')}${uid ? ` (ID ${uid})` : ''}. <button class="link" onclick="startEnrollForUser(${uid}, '${escapeHtml(nombre).replace(/'/g, "\\'")}')">${tr('Registrar ahora')} &rarr;</button>`;
+      createResult.innerHTML = `<svg class="icon" aria-hidden="true"><use href="/static/icons/lucide/lucide-sprite.svg#check-filled"></use></svg> ${escapeHtml(nombre)} ${tr('registrado')}. ${tr('Abriendo registro de rostro')}.`;
       setTimeout(() => { createResult.hidden = true; }, 10000);
     }
 
     showAdminToast({ text: 'Persona registrada', sub: `${nombre} ${tr('fue agregado')}`, cls: 'success' });
+    if (user?.id) window.startEnrollForUser(user.id, nombre);
   } catch (error) {
     console.error(error);
     showAdminToast({ text: 'No se pudo crear', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
@@ -1304,7 +1631,12 @@ window.showPersonasListMode = function showPersonasListMode() {
 window.startEnrollForUser = function (userId, userName) {
   navigateToAdminView('enrolamiento');
   window.requestAnimationFrame(() => {
-    if (window.CameraPIEnrollment?.prefillUser) {
+    if (window.CameraPIEnrollment?.startForUser) {
+      window.CameraPIEnrollment.startForUser(userId).catch((error) => {
+        console.error(error);
+        showAdminToast({ text: 'No se pudo iniciar registro', sub: getErrorMessage(error), cls: 'error', timeout: 3200 });
+      });
+    } else if (window.CameraPIEnrollment?.prefillUser) {
       window.CameraPIEnrollment.prefillUser(userId);
     } else {
       const enrollSelect = document.getElementById('enrollUserSelect');
@@ -1351,6 +1683,12 @@ async function init() {
 
   dashboardReady = true;
   renderDashboardFromCache();
+
+  setInterval(() => {
+    if (!dashboardReady) return;
+    const resumenModel = computeResumenModel(cachedUsers, cachedLogs, cachedStatus);
+    renderResumen(resumenModel);
+  }, 1200);
 
   setInterval(() => {
     Promise.all([loadLogs(), loadStatus()]).catch((error) => {
