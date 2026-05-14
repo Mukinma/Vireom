@@ -110,6 +110,7 @@ let cachedStatus = {};
 let dashboardReady = false;
 let adminDialogResolver = null;
 let adminDialogRestoreFocus = null;
+let personDetailTrigger = null;
 
 /* ── Toast ── */
 
@@ -1248,7 +1249,18 @@ window.deleteUser = async function(userId, nombre) {
 window.openPersonDetail = async function (userId) {
   const cached = cachedUsers.find((user) => Number(user.id) === Number(userId));
   if (!cached) return;
+  
+  personDetailTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  
   renderPersonDetail(cached);
+  if (personDetailPanel) {
+    personDetailPanel.hidden = false;
+    window.requestAnimationFrame(() => {
+      const closeBtn = personDetailPanel?.querySelector('.person-detail-close');
+      if (closeBtn) closeBtn.focus({ preventScroll: true });
+    });
+  }
+  
   try {
     const detail = await api(`/api/users/${userId}`);
     const merged = { ...cached, ...(detail?.user || {}), samples_count: detail?.samples_count ?? cached.samples_count };
@@ -1263,7 +1275,27 @@ window.closePersonDetail = function () {
   if (!personDetailPanel) return;
   personDetailPanel.hidden = true;
   personDetailPanel.innerHTML = '';
+  
+  if (personDetailTrigger?.focus) {
+    personDetailTrigger.focus({ preventScroll: true });
+  }
+  personDetailTrigger = null;
 };
+
+function handlePersonDetailKeydown(event) {
+  if (personDetailPanel?.hidden !== false) return;
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  closePersonDetail();
+}
+
+function handlePersonDetailBackdropClick(event) {
+  if (!personDetailPanel || personDetailPanel.hidden || event.target !== personDetailPanel) return;
+  closePersonDetail();
+}
+
+personDetailPanel?.addEventListener('click', handlePersonDetailBackdropClick);
+window.addEventListener('keydown', handlePersonDetailKeydown);
 
 window.trainFromPersonas = async function (userId) {
   const confirmed = await openAdminConfirm({
