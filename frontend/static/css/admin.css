@@ -575,7 +575,7 @@ hr.separator, .separator {
   color: rgba(225, 238, 255, 0.88);
   cursor: pointer; font-family: inherit;
   transition: background 150ms ease, border-color 150ms ease;
-  text-align: left; box-sizing: border-box;
+  text-align: center; box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 .resumen-action-btn:hover {
@@ -589,14 +589,13 @@ hr.separator, .separator {
 .resumen-action-btn .icon {
   width: 22px; height: 22px; flex-shrink: 0; color: rgba(255, 255, 255, 0.42);
 }
-.resumen-action-btn__content { display: flex; flex-direction: column; flex: 1; }
+.resumen-action-btn__content { display: flex; flex-direction: column; flex: 1; align-items: center; }
 .resumen-action-btn strong { font-size: 18px; font-weight: 600; display: block; }
 .resumen-action-btn small { font-size: 14px; color: rgba(180, 200, 230, 0.5); display: block; margin-top: 2px; }
 
 /* ══════════════════════════════════════════════════════
    VIEW: PERSONAS
    ══════════════════════════════════════════════════════ */
-<<<<<<< HEAD
 .personas-shell {
   display: flex;
   flex-direction: column;
@@ -604,24 +603,34 @@ hr.separator, .separator {
 }
 
 .personas-create-panel,
-.personas-list-panel,
-.person-detail-card {
+.personas-list-panel {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015) 56%),
-    rgba(3, 10, 23, 0.94);
+    linear-gradient(148deg, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
+    rgba(5, 12, 26, 0.82);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
   box-shadow:
-    0 18px 46px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 20px 48px rgba(0, 0, 0, 0.52),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.personas-create-panel::after {
+  content: "";
+  position: absolute; top: 0;
+  left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  pointer-events: none;
 }
 
 .personas-create-panel {
   display: grid;
   grid-template-columns: 62px 1fr;
-  gap: 16px;
-  padding: 18px;
+  gap: 18px;
+  padding: 24px;
   border-radius: 20px;
 }
 
@@ -633,8 +642,23 @@ hr.separator, .separator {
   width: 62px;
   height: 62px;
   border-radius: 18px;
-  color: #07101e;
-  background: rgba(255, 255, 255, 0.94);
+  color: rgba(225, 238, 255, 0.85);
+  background:
+    linear-gradient(145deg, rgba(100, 200, 255, 0.12), rgba(100, 150, 255, 0.08)),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(100, 180, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+.personas-create-panel__icon:hover,
+.personas-empty__icon:hover {
+  background:
+    linear-gradient(145deg, rgba(100, 200, 255, 0.16), rgba(100, 150, 255, 0.12)),
+    rgba(255, 255, 255, 0.07);
+  border-color: rgba(100, 180, 255, 0.28);
 }
 
 .personas-create-panel__icon .icon,
@@ -670,7 +694,7 @@ hr.separator, .separator {
 .personas-create-form {
   display: grid;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .personas-create-btn {
@@ -684,22 +708,41 @@ hr.separator, .separator {
 }
 
 .personas-create-panel .personas-create-btn {
-  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 20px;
   min-height: 64px;
-  flex-wrap: wrap;
-  padding-block: 12px;
   white-space: normal;
   line-height: 1.14;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(225, 238, 255, 0.88);
+  box-shadow: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms ease, border-color 150ms ease;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.personas-create-panel .personas-create-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
 }
 
 .personas-create-panel .personas-create-btn span {
   min-width: 0;
   overflow-wrap: anywhere;
+  text-align: center;
 }
 
-.personas-list-panel,
-.person-detail-card {
-  padding: 18px;
+.personas-list-panel {
+  padding: 24px;
   border-radius: 20px;
 }
 
@@ -721,7 +764,7 @@ hr.separator, .separator {
 
 .personas-grid {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .person-card {
@@ -859,18 +902,40 @@ hr.separator, .separator {
   width: 100%;
   padding: 0 18px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(100, 180, 255, 0.16);
   font-family: inherit;
   font-size: 19px;
   font-weight: 750;
   cursor: pointer;
-  color: rgba(245, 250, 255, 0.96);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(225, 238, 255, 0.9);
+  background:
+    linear-gradient(145deg, rgba(100, 200, 255, 0.08), rgba(100, 150, 255, 0.04)),
+    rgba(255, 255, 255, 0.04);
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.person-card__primary:hover {
+  background:
+    linear-gradient(145deg, rgba(100, 200, 255, 0.14), rgba(100, 150, 255, 0.08)),
+    rgba(255, 255, 255, 0.06);
+  border-color: rgba(100, 180, 255, 0.28);
+  color: rgba(225, 238, 255, 0.96);
 }
 
 .person-card__primary--primary {
-  color: rgba(5, 12, 26, 0.98);
-  background: rgba(255, 255, 255, 0.94);
+  color: rgba(225, 238, 255, 0.92);
+  background:
+    linear-gradient(145deg, rgba(100, 200, 255, 0.12), rgba(100, 150, 255, 0.08)),
+    rgba(255, 255, 255, 0.05);
+  border-color: rgba(100, 180, 255, 0.24);
+}
+
+.person-card__primary--primary:hover {
+  background:
+    linear-gradient(145deg, rgba(100, 200, 255, 0.18), rgba(100, 150, 255, 0.12)),
+    rgba(255, 255, 255, 0.08);
+  border-color: rgba(100, 180, 255, 0.36);
+  color: rgba(225, 238, 255, 0.98);
 }
 
 .person-card__primary .icon {
@@ -901,18 +966,83 @@ hr.separator, .separator {
   font-size: 17px;
 }
 
+/* Person Detail Modal Overlay */
+.person-detail-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: personDetailFadeIn 0.2s ease both;
+}
+
+@keyframes personDetailFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes personDetailSlideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 .person-detail-panel[hidden] {
   display: none;
 }
 
 .person-detail-card {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+  border-radius: 24px 24px 0 0;
+  padding: 24px;
+  background:
+    linear-gradient(148deg, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
+    rgba(5, 12, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 20px 48px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  animation: personDetailSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   text-align: center;
+  scroll-behavior: smooth;
+}
+
+.person-detail-card::after {
+  content: "";
+  position: absolute; top: 0;
+  left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  .person-detail-panel {
+    align-items: center;
+    padding: 24px;
+  }
+  .person-detail-card {
+    border-radius: 24px;
+    max-height: 85dvh;
+  }
 }
 
 .person-detail-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -921,8 +1051,15 @@ hr.separator, .separator {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 15px;
   color: rgba(245, 250, 255, 0.84);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.person-detail-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .person-detail-close .icon {
@@ -1121,54 +1258,6 @@ hr.separator, .separator {
 
 .admin-form-bar {
   display: flex; gap: 10px; flex-wrap: wrap;
-=======
-#view-personas { gap: 16px; }
-
-.personas-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.personas-hero__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.personas-hero__copy h2 {
-  margin: 0;
-  color: rgba(225, 238, 255, 0.96);
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.05;
-}
-
-.personas-hero__copy p {
-  margin: 0;
-  max-width: 34rem;
-}
-
-.personas-hero__copy #personasSubtitle {
-  color: rgba(180, 200, 230, 0.68);
-  font-size: 17px;
-}
-
-.personas-summary {
-  color: rgba(180, 200, 230, 0.48);
-  font-size: 14px;
-}
-
-.personas-create {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.personas-create__btn {
-  min-width: 210px;
->>>>>>> origin/Cris
 }
 
 .create-result {
